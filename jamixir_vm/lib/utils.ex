@@ -1,4 +1,5 @@
 defmodule PVM.Utils do
+  alias Instructions.Opcode
   use Codec.Decoder
 
   def skip(i, bitmask) when is_binary(bitmask) do
@@ -44,4 +45,38 @@ defmodule PVM.Utils do
   end
 
   def sign_extend(x, 0), do: x
+
+  @doc """
+  Builds the set of basic block start indices (ϖ).
+  Returns [0] ++ [n + 1 + skip(n)] for each n where:
+  - n is an index in the program
+  - bitmask[n] = 1 (marks an opcode)
+  - program[n] decodes to a termination instruction
+
+  Indices are returned in order of appearance in the program.
+  """
+
+  def basic_block_starts(<<>>, <<>>), do: [0]
+
+  def basic_block_starts(program, bitmask) when is_binary(program) and is_binary(bitmask) do
+    # Always start with [0]
+    # Check each program index in order
+    [0] ++
+      Enum.reduce(0..(byte_size(bitmask) - 1), [], fn i, acc ->
+        case binary_part(bitmask, i, 1) do
+          <<1>> ->
+            # If it's an opcode, check if it's a termination instruction
+            opcode = program |> binary_part(i, 1) |> :binary.first() |> Opcode.from_byte()
+
+            if Instructions.termination_instruction?(opcode) do
+              acc ++ [i + 1 + skip(i, bitmask)]
+            else
+              acc
+            end
+
+          _ ->
+            acc
+        end
+      end)
+  end
 end
