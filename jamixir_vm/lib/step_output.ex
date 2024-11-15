@@ -1,4 +1,13 @@
 defmodule StepOutput do
+  @type t :: %__MODULE__{
+          exit_status:
+            :continue | :panic | :out_of_gas | {:fault, non_neg_integer()} | {:ecall, integer()},
+          counter: non_neg_integer(),
+          gas: non_neg_integer(),
+          registers: list(integer()),
+          memory: Memory.t()
+        }
+
   defstruct exit_status: :continue,
             counter: 0,
             gas: 0,
