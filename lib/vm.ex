@@ -10,12 +10,14 @@ defmodule VM do
     case output.exit_status do
       :continue ->
         # If Continue, recursively call with updated state
-        execute(State.new(
-          state.program,
-          state.bitmask,
-          state.jump_table,
-          output
-        ))
+        execute(
+          State.new(
+            state.program,
+            state.bitmask,
+            state.jump_table,
+            output
+          )
+        )
 
       # Otherwise return the final state
       _ ->
@@ -59,9 +61,11 @@ defmodule VM do
 
       :store_imm_u8 ->
         {addr, value, _} = Utils.parse_two_immediates(state.program, state.counter, state.bitmask)
+
         case Memory.write(state.memory, addr, <<rem(value, 256)>>) do
           {:error, {:fault, fault_addr}} ->
             StepOutput.with_exit_status(output, {:fault, fault_addr})
+
           new_memory ->
             StepOutput.with_memory(output, new_memory)
         end
@@ -69,9 +73,11 @@ defmodule VM do
       :store_imm_u16 ->
         {addr, value, _} = Utils.parse_two_immediates(state.program, state.counter, state.bitmask)
         bytes = e_le(rem(value, 65536), 2)
+
         case Memory.write(state.memory, addr, bytes) do
           {:error, {:fault, fault_addr}} ->
             StepOutput.with_exit_status(output, {:fault, fault_addr})
+
           new_memory ->
             StepOutput.with_memory(output, new_memory)
         end
@@ -79,12 +85,30 @@ defmodule VM do
       :store_imm_u32 ->
         {addr, value, _} = Utils.parse_two_immediates(state.program, state.counter, state.bitmask)
         bytes = e_le(value, 4)
+
         case Memory.write(state.memory, addr, bytes) do
           {:error, {:fault, fault_addr}} ->
             StepOutput.with_exit_status(output, {:fault, fault_addr})
+
           new_memory ->
             StepOutput.with_memory(output, new_memory)
         end
+
+      :jump ->
+        # Parse the immediate value for the jump target
+        l = Utils.skip(state.counter, state.bitmask)
+        l_x = min(4, l)
+        x_bytes = binary_part(state.program, state.counter + 1, l_x)
+        x_value = x_bytes |> Utils.de_le(l_x)
+        v_x = state.counter + 1 + Transitions.z_n(x_value, l_x)
+
+        start_set = Utils.basic_block_starts(state.program, state.bitmask)
+        branch(v_x, true, state.counter, start_set)
     end
   end
+
+  def branch(_value, false, counter, _start_set), do: {:continue, counter}
+
+  def branch(value, true, counter, start_set),
+    do: if(value in start_set, do: {:continue, value}, else: {:panic, counter})
 end

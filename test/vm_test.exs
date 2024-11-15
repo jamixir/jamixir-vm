@@ -337,4 +337,115 @@ defmodule VMTest do
       assert Memory.read(output.memory, 1, 1) == <<5>>  # First instruction executed
     end
   end
+
+  describe "jump instruction" do
+    test "basic forward jump" do
+      # Program: jump +2 (to fallthrough instruction)
+      state = create_test_state(
+        <<
+          5,     # jump opcode
+          1,     # 1 byte immediate
+          2,     # jump offset +2
+          17     # fallthrough instruction (jump target)
+        >>,
+        <<1, 0, 0, 1>>  # Mark jump and fallthrough as instruction starts
+      )
+
+      output = VM.step(state)
+
+      assert output.exit_status == :continue
+      assert output.counter == 3  # Should jump to the fallthrough instruction
+    end
+
+    test "backward jump" do
+      # Program: fallthrough, then jump back to start
+      state = create_test_state(
+        <<
+          17,    # fallthrough
+          5,     # jump opcode
+          1,     # 1 byte immediate
+          254    # jump offset -2 (two's complement -2)
+        >>,
+        <<1, 1, 0, 0>>  # Mark both instructions as starts
+      )
+      state = %{state | counter: 1}  # Start at jump instruction
+
+      output = VM.step(state)
+
+      assert output.exit_status == :continue
+      assert output.counter == 0  # Should jump back to start
+    end
+
+    test "jump to invalid target panics" do
+      # Program: jump to middle of instruction (invalid)
+      state = create_test_state(
+        <<
+          5,     # jump opcode
+          1,     # 1 byte immediate
+          1,     # jump to non-instruction start
+          17     # fallthrough
+        >>,
+        <<1, 0, 0, 1>>  # Only first and last bytes are instruction starts
+      )
+
+      output = VM.step(state)
+
+      assert output.exit_status == :panic
+      assert output.counter == 0  # Counter should remain at jump instruction
+    end
+
+    test "multi-byte jump offset" do
+      # Program: jump with 2-byte offset
+      state = create_test_state(
+        <<
+          5,     # jump opcode
+          2,     # 2 byte immediate
+          0x03, 0x00,  # jump offset +3 (little-endian)
+          0,     # trap (not reached)
+          17     # fallthrough (jump target)
+        >>,
+        <<1, 0, 0, 0, 1, 1>>  # Mark jump and target as starts
+      )
+
+      output = VM.step(state)
+
+      assert output.exit_status == :continue
+      assert output.counter == 5  # Should jump to fallthrough instruction
+    end
+
+    test "jump past end of program panics" do
+      state = create_test_state(
+        <<
+          5,     # jump opcode
+          1,     # 1 byte immediate
+          10     # jump past end of program
+        >>,
+        <<1, 0, 0>>
+      )
+
+      output = VM.step(state)
+
+      assert output.exit_status == :panic
+      assert output.counter == 0
+    end
+
+    test "jump in instruction sequence" do
+      # Program: store value, jump over trap, fallthrough
+      state = create_test_state(
+        <<
+          0x3E, 0x01, 0x01, 0x05,  # store_imm_u8: 5 -> addr 1
+          5, 1, 2,                  # jump +2
+          0,                        # trap (should be skipped)
+          17                        # fallthrough (jump target)
+        >>,
+        <<1, 0, 0, 0, 1, 0, 0, 1, 1>>  # Mark instruction starts
+      )
+
+      output = VM.execute(state)
+
+      assert output.exit_status == :continue
+      assert output.counter == 8  # Should end at fallthrough
+      assert Memory.read(output.memory, 1, 1) == <<5>>  # Store should execute
+    end
+  end
 end

@@ -67,6 +67,7 @@ defmodule Instructions do
   def gas_cost(:store_imm_u8), do: 0
   def gas_cost(:store_imm_u16), do: 0
   def gas_cost(:store_imm_u32), do: 0
+  def gas_cost(:jump), do: 0
 
 
     @doc """
