@@ -53,22 +53,38 @@ defmodule VM do
       :fallthrough ->
         output
 
+      :ecalli ->
+        {value, _} = Utils.parse_immediate(state.program, state.counter)
+        StepOutput.with_exit_status(output, {:ecall, value})
+
       :store_imm_u8 ->
         {addr, value, _} = Utils.parse_two_immediates(state.program, state.counter, state.bitmask)
-        new_memory = Memory.write(state.memory, addr, <<rem(value, 256)>>)
-        StepOutput.with_memory(output, new_memory)
+        case Memory.write(state.memory, addr, <<rem(value, 256)>>) do
+          {:error, {:fault, fault_addr}} ->
+            StepOutput.with_exit_status(output, {:fault, fault_addr})
+          new_memory ->
+            StepOutput.with_memory(output, new_memory)
+        end
 
       :store_imm_u16 ->
         {addr, value, _} = Utils.parse_two_immediates(state.program, state.counter, state.bitmask)
         bytes = e_le(rem(value, 65536), 2)
-        new_memory = Memory.write(state.memory, addr, bytes)
-        StepOutput.with_memory(output, new_memory)
+        case Memory.write(state.memory, addr, bytes) do
+          {:error, {:fault, fault_addr}} ->
+            StepOutput.with_exit_status(output, {:fault, fault_addr})
+          new_memory ->
+            StepOutput.with_memory(output, new_memory)
+        end
 
       :store_imm_u32 ->
         {addr, value, _} = Utils.parse_two_immediates(state.program, state.counter, state.bitmask)
         bytes = e_le(value, 4)
-        new_memory = Memory.write(state.memory, addr, bytes)
-        StepOutput.with_memory(output, new_memory)
+        case Memory.write(state.memory, addr, bytes) do
+          {:error, {:fault, fault_addr}} ->
+            StepOutput.with_exit_status(output, {:fault, fault_addr})
+          new_memory ->
+            StepOutput.with_memory(output, new_memory)
+        end
     end
   end
 end
