@@ -180,4 +180,64 @@ defmodule VMTest do
       assert output.memory == state.memory  # Memory should be unchanged
     end
   end
+
+  describe "multi-instruction programs" do
+    test "executes sequence of store operations" do
+      # Program that stores:
+      # - u8(5) at address 1
+      # - u16(1000) at address 10
+      # - u32(100000) at address 20
+      # - fallthrough
+      state = create_test_state(
+        <<
+          0x3E, 0x01, 0x01, 0x05,           # store_imm_u8: 5 -> addr 1
+          0x4F, 0x01, 0x0A, 0xE8, 0x03,     # store_imm_u16: 1000 -> addr 10
+          0x26, 0x02, 0x14, 0x00, 0xA0, 0x86, 0x01, 0x00,  # store_imm_u32: 100000 -> addr 20
+          0x11                               # fallthrough
+        >>,
+        <<1, 0, 0, 0,                       # store_imm_u8 mask
+          1, 0, 0, 0, 0,                    # store_imm_u16 mask
+          1, 0, 0, 0, 0, 0, 0, 0,          # store_imm_u32 mask
+          1>>                               # fallthrough mask
+      )
+
+      output = VM.execute(state)
+
+      assert output.exit_status == :panic
+      assert output.counter == 18  # Total length of all instructions
+      assert Memory.read(output.memory, 1, 1) == <<5>>
+      assert Memory.read(output.memory, 10, 2) == <<232, 3>>  # 1000 in little-endian
+      assert Memory.read(output.memory, 20, 4) == <<160, 134, 1, 0>>  # 100000 in little-endian
+      assert output.gas == state.gas
+    end
+
+    test "executes until trap" do
+      # Program that:
+      # - stores u8(42) at address 5
+      # - stores u16(513) at address 10
+      # - trap
+      # - stores u32(1000) at address 15 (should never execute)
+      state = create_test_state(
+        <<
+          0x3E, 0x01, 0x05, 0x2A,           # store_imm_u8: 42 -> addr 5
+          0x4F, 0x01, 0x0A, 0x01, 0x02,     # store_imm_u16: 513 -> addr 10
+          0x00,                              # trap
+          0x26, 0x01, 0x0F, 0xE8, 0x03      # store_imm_u32: 1000 -> addr 15 (never reached)
+        >>,
+        <<1, 0, 0, 0,                       # store_imm_u8 mask
+          1, 0, 0, 0, 0,                    # store_imm_u16 mask
+          1,                                # trap mask
+          1, 0, 0, 0, 0>>                   # store_imm_u32 mask (never reached)
+      )
+
+      output = VM.execute(state)
+
+      assert output.exit_status == :panic
+      assert output.counter == 10  # Should stop at trap instruction
+      assert Memory.read(output.memory, 5, 1) == <<42>>
+      assert Memory.read(output.memory, 10, 2) == <<1, 2>>  # 513 in little-endian
+      assert Memory.read(output.memory, 15, 4) == <<0, 0, 0, 0>>  # Should never be written
+      assert output.gas == state.gas
+    end
+  end
 end

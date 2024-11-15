@@ -25,8 +25,9 @@ defmodule VM do
 
   def step(%State{} = state) do
     if state.counter >= byte_size(state.program) do
+      # trap if we've run out of program
       StepOutput.from_state(state)
-      |> StepOutput.with_exit_status(:halt)
+      |> StepOutput.with_exit_status(:panic)
     else
       opcode =
         state.program |> binary_part(state.counter, 1) |> :binary.first() |> Opcode.from_byte()
