@@ -10,7 +10,7 @@ Add JamixirVM to your project's dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:jamixir_vm, git: "https://github.com/jamixir/pvm.git"}
+    {:jamixir_vm, git: "https://github.com/jamixir/jamixir-vm.git"}
   ]
 end
 ```
