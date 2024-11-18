@@ -34,26 +34,6 @@ defmodule StepOutput do
     }
   end
 
-  def with_exit_status(%__MODULE__{} = output, exit_status) do
-    %{output | exit_status: exit_status}
-  end
-
-  def with_counter(%__MODULE__{} = output, counter) do
-    %{output | counter: counter}
-  end
-
-  def with_gas(%__MODULE__{} = output, gas) do
-    %{output | gas: gas}
-  end
-
-  def with_memory(%__MODULE__{} = output, memory) do
-    %{output | memory: memory}
-  end
-
-  def with_registers(%__MODULE__{} = output, registers) do
-    %{output | registers: registers}
-  end
-
   # Helper to create a standard transition
   def standard_transition(%PVM.State{} = state, skip_amount, gas_cost) do
     %__MODULE__{
