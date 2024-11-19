@@ -18,16 +18,14 @@ defmodule PVM.Utils do
 
   def parse_immediate(program, counter) do
     l_x = min(4, rem(binary_part(program, counter + 1, 1) |> :binary.first(), 8))
-    x_bytes = binary_part(program, counter + 2, l_x)
-    x_value = x_bytes |> de_le(l_x) |> sign_extend(l_x)
+    x_value = decode_bytes_signed(program, counter + 2, l_x)
     {x_value, l_x}
   end
 
   def parse_second_immediate(program, counter, l_x, bitmask) do
     l = skip(counter, bitmask)
     l_y = min(4, max(0, l - l_x - 1))
-    y_bytes = binary_part(program, counter + 2 + l_x, l_y)
-    y_value = y_bytes |> de_le(l_y) |> sign_extend(l_y)
+    y_value = decode_bytes_signed(program, counter + 2 + l_x, l_y)
     {y_value, l_y}
   end
 
@@ -78,5 +76,34 @@ defmodule PVM.Utils do
             acc
         end
       end)
+  end
+
+  def get_register_index(program, counter) do
+    min(12, rem(binary_part(program, counter + 1, 1) |> :binary.first(), 16))
+  end
+
+  def parse_address(program, counter, bitmask) do
+    l_x = min(4, skip(counter, bitmask) - 1)
+    decode_bytes_signed(program, counter + 2, l_x)
+  end
+
+  @doc """
+  Decodes a little-endian number from a binary starting at start_index for count bytes.
+  Returns the decoded number.
+  """
+  def decode_bytes(program, start_index, count) when is_binary(program) and count > 0 do
+    binary_part(program, start_index, count)
+    |> de_le(count)
+  end
+
+  @doc """
+  Decodes a little-endian number from a binary starting at start_index for count bytes,
+  and applies sign extension.
+  Returns the decoded and sign-extended number.
+  """
+  def decode_bytes_signed(program, start_index, count) when is_binary(program) and count > 0 do
+    binary_part(program, start_index, count)
+    |> de_le(count)
+    |> sign_extend(count)
   end
 end
