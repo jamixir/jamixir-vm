@@ -2,7 +2,23 @@ defmodule Instructions.RegImmediate do
   alias PVM.Utils
   import Bitwise
   use PVM.{Decoder, Encoder}
-  alias Instructions.Common
+  alias Instructions.{Common, Executor}
+
+  def execute(:jump_ind, state, output) do
+    {register_index, addr} = get_params(state)
+    register_value = Enum.at(state.registers, register_index)
+    start_set = Utils.basic_block_starts(state.program, state.bitmask)
+
+    {exit_status, counter} =
+      Executor.djump(
+        rem(register_value + addr, 1 <<< 32),
+        state.counter,
+        state.jump_table,
+        start_set
+      )
+
+    %StepOutput{output | exit_status: exit_status, counter: counter}
+  end
 
   def execute(:load_imm, state, output) do
     {register_index, value} = get_params(state)

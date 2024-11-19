@@ -18,6 +18,7 @@ defmodule Instructions.Executor do
       # Register and immediate
       op
       when op in [
+             :jump_ind,
              :load_imm,
              :load_u8,
              :load_i8,

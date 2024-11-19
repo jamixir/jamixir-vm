@@ -86,6 +86,7 @@ defmodule Instructions do
   def gas_cost(:store_imm_u16), do: 0
   def gas_cost(:store_imm_u32), do: 0
   def gas_cost(:jump), do: 0
+  def gas_cost(:jump_ind), do: 0
   def gas_cost(:load_imm), do: 0
   def gas_cost(:load_u8), do: 0
   def gas_cost(:load_i8), do: 0
@@ -96,24 +97,38 @@ defmodule Instructions do
   def gas_cost(:store_u16), do: 0
   def gas_cost(:store_u32), do: 0
 
-
-    @doc """
+  @doc """
   Returns true if the opcode is a termination instruction as defined in A.3
   """
   def termination_instruction?(opcode) do
     opcode in [
       # Trap and fallthrough
-      :trap, :fallthrough,
+      :trap,
+      :fallthrough,
       # Jumps
-      :jump, :jump_ind,
+      :jump,
+      :jump_ind,
       # Load-and-Jumps
-      :load_imm_jump, :load_imm_jump_ind,
+      :load_imm_jump,
+      :load_imm_jump_ind,
       # Branches
-      :branch_eq, :branch_ne, :branch_ge_u, :branch_ge_s,
-      :branch_lt_u, :branch_lt_s, :branch_eq_imm, :branch_ne_imm,
+      :branch_eq,
+      :branch_ne,
+      :branch_ge_u,
+      :branch_ge_s,
+      :branch_lt_u,
+      :branch_lt_s,
+      :branch_eq_imm,
+      :branch_ne_imm,
       # Immediate branches
-      :branch_lt_u_imm, :branch_lt_s_imm, :branch_le_u_imm, :branch_le_s_imm,
-      :branch_ge_u_imm, :branch_ge_s_imm, :branch_gt_u_imm, :branch_gt_s_imm
+      :branch_lt_u_imm,
+      :branch_lt_s_imm,
+      :branch_le_u_imm,
+      :branch_le_s_imm,
+      :branch_ge_u_imm,
+      :branch_ge_s_imm,
+      :branch_gt_u_imm,
+      :branch_gt_s_imm
     ]
   end
 end
