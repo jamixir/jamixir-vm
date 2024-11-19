@@ -1,6 +1,6 @@
 defmodule PVM.Utils do
   alias Instructions.Opcode
-  use Codec.Decoder
+  use PVM.Decoder
 
   def skip(i, bitmask) when is_binary(bitmask) do
     do_skip(i + 1, bitmask, 0)
@@ -17,7 +17,12 @@ defmodule PVM.Utils do
   end
 
   def parse_immediate(program, counter) do
-    l_x = min(4, rem(binary_part(program, counter + 1, 1) |> :binary.first(), 8))
+    l_x =
+      binary_part(program, counter + 1, 1)
+      |> :binary.first()
+      |> rem(8)
+      |> min(4)
+
     x_value = decode_bytes_signed(program, counter + 2, l_x)
     {x_value, l_x}
   end
@@ -25,14 +30,13 @@ defmodule PVM.Utils do
   def parse_second_immediate(program, counter, l_x, bitmask) do
     l = skip(counter, bitmask)
     l_y = min(4, max(0, l - l_x - 1))
-    y_value = decode_bytes_signed(program, counter + 2 + l_x, l_y)
-    {y_value, l_y}
+    decode_bytes_signed(program, counter + 2 + l_x, l_y)
   end
 
   def parse_two_immediates(program, counter, bitmask) do
     {x_value, l_x} = parse_immediate(program, counter)
-    {y_value, l_y} = parse_second_immediate(program, counter, l_x, bitmask)
-    {x_value, y_value, 2 + l_x + l_y}
+    y_value = parse_second_immediate(program, counter, l_x, bitmask)
+    {x_value, y_value}
   end
 
   # Implements the N₂₈ₙ → N₂₃₂ formula from spec (241)
@@ -76,15 +80,6 @@ defmodule PVM.Utils do
             acc
         end
       end)
-  end
-
-  def get_register_index(program, counter) do
-    min(12, rem(binary_part(program, counter + 1, 1) |> :binary.first(), 16))
-  end
-
-  def parse_address(program, counter, bitmask) do
-    l_x = min(4, skip(counter, bitmask) - 1)
-    decode_bytes_signed(program, counter + 2, l_x)
   end
 
   @doc """

@@ -1,4 +1,4 @@
-defmodule Codec.Decoder do
+defmodule PVM.Decoder do
   @moduledoc """
   A module for decoding binary data into data structures.
   """
@@ -11,7 +11,7 @@ defmodule Codec.Decoder do
 
   defmacro __using__(_) do
     quote do
-      def de_le(value, l), do: Codec.Decoder.decode_le(value, l)
+      def de_le(value, l), do: PVM.Decoder.decode_le(value, l)
     end
   end
 end

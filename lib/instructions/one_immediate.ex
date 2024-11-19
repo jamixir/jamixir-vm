@@ -9,9 +9,10 @@ defmodule Instructions.OneImmediate do
 
   def execute(:jump, state, output) do
     l_x = min(4, Utils.skip(state.counter, state.bitmask))
-    x_bytes = binary_part(state.program, state.counter + 1, l_x)
-    x_value = Utils.de_le(x_bytes, l_x)
-    shift_signed = Transitions.z_n(x_value, l_x)
+
+    shift_signed =
+      Utils.decode_bytes(state.program, state.counter + 1, l_x) |> Transitions.z_n(l_x)
+
     v_x = state.counter + shift_signed
 
     start_set = Utils.basic_block_starts(state.program, state.bitmask)
