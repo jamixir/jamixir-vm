@@ -1,4 +1,5 @@
 defmodule Transitions do
+  import Bitwise
   @moduledoc """
   Implements signed/unsigned transitions for various octet widths
   as defined in equations 243-246.
@@ -10,8 +11,8 @@ defmodule Transitions do
   """
   @spec z_n(non_neg_integer(), non_neg_integer()) :: integer()
   def z_n(a, n) do
-    threshold = :math.pow(2, 8 * n - 1) |> trunc()
-    if a < threshold, do: a, else: a - trunc(:math.pow(2, 8 * n))
+    threshold = 1 <<< (8 * n - 1)
+    if a < threshold, do: a, else: a - (1 <<< (8 * n))
   end
 
   @doc """
@@ -20,8 +21,8 @@ defmodule Transitions do
   """
   @spec z_n_inverse(integer(), non_neg_integer()) :: non_neg_integer()
   def z_n_inverse(a, n) do
-    modulus = trunc(:math.pow(2, 8 * n))
-    rem(trunc(:math.pow(2, 8 * n)) + a, modulus)
+    modulus = 1 <<< (8 * n)
+    rem(modulus + a, modulus)
   end
 
   @doc """
