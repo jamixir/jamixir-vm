@@ -1,6 +1,7 @@
 defmodule VMTest do
   use ExUnit.Case
   alias PVM.State
+  use PVM.Decoder
 
   def create_test_state(program, bitmask) do
     %State{
@@ -135,20 +136,130 @@ defmodule VMTest do
   end
 
   describe "VM.execute program scenarios" do
-    test "executes complete instruction sequence" do
-      # Keep the existing complex test from lines 211-268
+    test "executes basic control flow with trap and fallthrough" do
+      # Program:
+      # fallthrough (17)
+      # fallthrough (17)
+      # trap (0)
+      program = <<17, 17, 0>>
+      bitmask = <<1, 1, 1>>
+
+      state = create_test_state(program, bitmask)
+      output = VM.execute(state)
+
+      assert output.exit_status == :panic
+      assert output.counter == 3
     end
 
-    test "handles control flow correctly" do
-      # Keep the existing jump sequence test from lines 604-644
+    test "executes jump and jump_ind sequence skipping instructions" do
+      # Program:
+      # load_imm r1, 14        (4, 1, 14)      # offset 0
+      # jump_ind r1           (19, 1, 0)       # offset 3
+      # store_imm_u8 10, 42   (62, 1, 10, 42)  # offset 6 (skipped)
+      # trap                  (0)               # offset 10 (skipped)
+      # store_imm_u8 20, 99   (62, 1, 20, 99)  # offset 11 (skipped)
+      # load_imm r2, 55       (4, 2, 55)       # offset 15 (jumped to)
+      # fallthrough          (17)              # offset 18
+      program = <<
+        4, 1, 10,             # load_imm r1, 10
+        19, 1, 0,             # jump_ind r1
+        62, 1, 10, 42,        # store_imm_u8 (skipped)
+        0,                    # trap (skipped)
+        62, 1, 20, 99,        # store_imm_u8 (skipped)
+        17,                   # fallthrough (target)
+        4, 2, 55,             # load_imm r2, 55
+        17                    # fallthrough
+      >>
+
+      # Mark instruction starts
+      bitmask = <<
+        1, 0, 0,             # load_imm
+        1, 0, 0,             # jump_ind
+        1, 0, 0, 0,          # store_imm_u8
+        1,                   # trap
+        1, 0, 0, 0,          # store_imm_u8
+        1,                   # fallthrough
+        1, 0, 0,             # load_imm
+        1                    # fallthrough
+      >>
+
+      state = create_test_state(program, bitmask)
+      state = %{state |
+        jump_table: [2, 4, 6, 8, 16, 18], # 10 div 2 = 5, maps to offset 16 (fallthrough)
+        counter: 0
+      }
+
+      output = VM.execute(state)
+      assert output.exit_status == :panic
+      assert output.counter == 20  # Ended after fallthrough
+      assert Enum.at(output.registers, 1) == 10   # From first load_imm
+      assert Enum.at(output.registers, 2) == 55   # From jumped-to load_imm
+
+      # Verify skipped store_imm_u8 instructions didn't execute
+      assert Memory.read(output.memory, 10, 1) == <<0>>
+      assert Memory.read(output.memory, 20, 1) == <<0>>
     end
 
-    test "executes load/store sequence correctly" do
-      # Keep the existing load/store test from lines 648-663
+    test "executes memory operations sequence" do
+      # Program:
+      # store_imm_u8 addr=10, value=42  (62, 1, 10, 42)
+      # load_u8 r1, 10                  (60, 1, 10)
+      # store_u8 r1, 20                 (71, 1, 20)
+      # load_u8 r2, 20                  (60, 2, 20)
+
+      program = <<62, 1, 10, 42, 60, 1, 10, 71, 1, 20, 60, 2, 20>>
+      bitmask = <<1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0>>
+
+      state = create_test_state(program, bitmask)
+      output = VM.execute(state)
+
+      assert output.exit_status == :panic
+      assert output.counter == 13
+      assert Enum.at(output.registers, 1) == 42
+      assert Enum.at(output.registers, 2) == 42
+      assert Memory.read(output.memory, 10, 1) == <<42>>
+      assert Memory.read(output.memory, 20, 1) == <<42>>
     end
 
-    test "stops on memory fault" do
-      # Keep the existing fault test from lines 375-406
+    test "executes complex load/store with different sizes" do
+      # Program:
+      # store_imm_u32 addr=10, value=0x12345678 (38, 1, 10, 78, 56, 34, 12)
+      # load_u16 r1, 10                         (76, 1, 10)
+      # load_u16 r2, 12                         (76, 2, 12)
+      program = <<38, 1, 10, 78, 56, 34, 12, 76, 1, 10, 76, 2, 12>>
+      bitmask = <<1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0>>
+
+      state = create_test_state(program, bitmask)
+      output = VM.execute(state)
+
+      assert output.exit_status == :panic
+      assert output.counter == 13
+      assert Enum.at(output.registers, 1) == de_le(<<78, 56>>, 2)  # Lower 16 bits
+      assert Enum.at(output.registers, 2) == de_le(<<34, 12>>, 2)  # Upper 16 bits
+      assert Memory.read(output.memory, 10, 4) == <<78, 56, 34, 12>>
+    end
+
+    test "executes until trap with register operations" do
+      # Program:
+      # load_imm r1, 42                (4, 1, 42)
+      # load_imm r2, 24                (4, 2, 24)
+      # store_u8 r1, 100              (71, 1, 100)
+      # store_u8 r2, 101              (71, 2, 101)
+      # load_imm r3, 0xFFFF0000       (4, 3, 0)  # Value that will cause halt
+      # jump_ind r3                   (19, 3, 0)
+      program = <<4, 1, 42, 4, 2, 24, 71, 1, 100, 71, 2, 101, 4,3, 0, 0, 0xFF, 0xFF, 19, 3, 0>>
+      bitmask = <<1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0,0,0, 1, 0, 0>>
+
+      state = create_test_state(program, bitmask)
+      output = VM.execute(state)
+
+      assert output.exit_status == :halt
+      assert output.counter == 18  # Stopped at jump_ind
+      assert Enum.at(output.registers, 1) == 42
+      assert Enum.at(output.registers, 2) == 24
+      assert Enum.at(output.registers, 3) == 0xFFFF0000
+      assert Memory.read(output.memory, 100, 1) == <<42>>
+      assert Memory.read(output.memory, 101, 1) == <<24>>
     end
   end
 end
