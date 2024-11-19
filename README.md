@@ -30,7 +30,7 @@ state = %State{
   counter: 0,
   gas: 100,                      # Initial gas allocation
   registers: List.duplicate(0, 13),
-  memory: Memory.new(100)        # Initialize memory with size 100
+  memory: Memory.new()        # Initialize memory with size 100
 }
 
 # Execute the program
