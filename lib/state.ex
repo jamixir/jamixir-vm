@@ -5,7 +5,7 @@ defmodule PVM.State do
             counter: 0,
             gas: 100,
             registers: List.duplicate(0, 13),
-            memory: Memory.new(100)  # 100 bytes
+            memory: Memory.new()  # 100 bytes
 
   def new(program, bitmask, jump_table, %StepOutput{} = output) do
     %__MODULE__{
