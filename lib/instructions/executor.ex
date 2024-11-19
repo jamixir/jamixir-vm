@@ -1,5 +1,5 @@
 defmodule Instructions.Executor do
-  alias Instructions.{NoArgs, OneImmediate, TwoImmediates, RegImmediate}
+  alias Instructions.{NoArgs, OneImmediate, TwoImmediates, RegImmediate, RegTwoImm}
 
   def execute_instruction(opcode, state, output) do
     case opcode do
@@ -30,6 +30,10 @@ defmodule Instructions.Executor do
              :store_u32
            ] ->
         RegImmediate.execute(op, state, output)
+
+      # Register and two immediates
+      op when op in [:store_imm_ind_u8, :store_imm_ind_u16, :store_imm_ind_u32] ->
+        RegTwoImm.execute(op, state, output)
     end
   end
 

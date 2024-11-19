@@ -27,6 +27,10 @@ defmodule Instructions do
             | :store_u8
             | :store_u16
             | :store_u32
+            # Register and two immediates
+            | :store_imm_ind_u8
+            | :store_imm_ind_u16
+            | :store_imm_ind_u32
             # One register, one immediate and one offset argument
             | :load_imm_jump
             | :branch_eq_imm
@@ -52,12 +56,25 @@ defmodule Instructions do
 
     def from_byte(0), do: :trap
     def from_byte(17), do: :fallthrough
+
     def from_byte(78), do: :ecalli
     def from_byte(62), do: :store_imm_u8
     def from_byte(79), do: :store_imm_u16
     def from_byte(38), do: :store_imm_u32
     def from_byte(5), do: :jump
     def from_byte(19), do: :jump_ind
+    def from_byte(4), do: :load_imm
+    def from_byte(60), do: :load_u8
+    def from_byte(74), do: :load_i8
+    def from_byte(76), do: :load_u16
+    def from_byte(66), do: :load_i16
+    def from_byte(10), do: :load_u32
+    def from_byte(71), do: :store_u8
+    def from_byte(69), do: :store_u16
+    def from_byte(22), do: :store_u32
+    def from_byte(26), do: :store_imm_ind_u8
+    def from_byte(54), do: :store_imm_ind_u16
+    def from_byte(13), do: :store_imm_ind_u32
     def from_byte(6), do: :load_imm_jump
     def from_byte(42), do: :load_imm_jump_ind
     def from_byte(24), do: :branch_eq
@@ -76,15 +93,7 @@ defmodule Instructions do
     def from_byte(45), do: :branch_ge_s_imm
     def from_byte(50), do: :branch_gt_u_imm
     def from_byte(53), do: :branch_gt_s_imm
-    def from_byte(4), do: :load_imm
-    def from_byte(60), do: :load_u8
-    def from_byte(74), do: :load_i8
-    def from_byte(76), do: :load_u16
-    def from_byte(66), do: :load_i16
-    def from_byte(10), do: :load_u32
-    def from_byte(71), do: :store_u8
-    def from_byte(69), do: :store_u16
-    def from_byte(22), do: :store_u32
+
     def from_byte(_), do: :trap
   end
 
@@ -105,6 +114,9 @@ defmodule Instructions do
   def gas_cost(:store_u8), do: 0
   def gas_cost(:store_u16), do: 0
   def gas_cost(:store_u32), do: 0
+  def gas_cost(:store_imm_ind_u8), do: 0
+  def gas_cost(:store_imm_ind_u16), do: 0
+  def gas_cost(:store_imm_ind_u32), do: 0
 
   @doc """
   Returns true if the opcode is a termination instruction as defined in A.3
