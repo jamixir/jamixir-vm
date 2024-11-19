@@ -9,7 +9,7 @@ defmodule Instructions.TwoImmediatesTest do
       counter: 0,
       gas: 100,
       registers: List.duplicate(0, 13),
-      memory: Memory.new()
+      memory: %Memory{}
     }
   end
 

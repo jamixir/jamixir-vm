@@ -1,3 +1,5 @@
+# Formula (237) v0.4.5
+
 defmodule PVM.State do
   defstruct program: <<>>,
             bitmask: <<>>,
@@ -5,7 +7,7 @@ defmodule PVM.State do
             counter: 0,
             gas: 100,
             registers: List.duplicate(0, 13),
-            memory: Memory.new()  # 100 bytes
+            memory: %Memory{}
 
   def new(program, bitmask, jump_table, %StepOutput{} = output) do
     %__MODULE__{
@@ -19,19 +21,4 @@ defmodule PVM.State do
     }
   end
 
-  def with_counter(%__MODULE__{} = state, counter) do
-    %{state | counter: counter}
-  end
-
-  def with_gas(%__MODULE__{} = state, gas) do
-    %{state | gas: gas}
-  end
-
-  def with_memory(%__MODULE__{} = state, memory) do
-    %{state | memory: memory}
-  end
-
-  def with_registers(%__MODULE__{} = state, registers) do
-    %{state | registers: registers}
-  end
 end

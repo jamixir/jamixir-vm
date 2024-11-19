@@ -15,11 +15,12 @@ defmodule Instructions.NoArgsTest do
         exit_status: :continue,
         counter: 1,
         gas: 100,
-        registers: [0,1,2],
-        memory: Memory.new()
+        registers: [0, 1, 2],
+        memory: %Memory{}
       }
+
       output = NoArgs.execute(:fallthrough, initial_output)
       assert output == initial_output
     end
   end
-end 
+end

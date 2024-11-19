@@ -12,7 +12,7 @@ defmodule StepOutput do
             counter: 0,
             gas: 0,
             registers: List.duplicate(0, 13),
-            memory: Memory.new()
+            memory: %Memory{}
 
   def new(opts \\ []) do
     %__MODULE__{
@@ -20,7 +20,7 @@ defmodule StepOutput do
       counter: Keyword.get(opts, :counter, 0),
       gas: Keyword.get(opts, :gas, 0),
       registers: Keyword.get(opts, :registers, List.duplicate(0, 13)),
-      memory: Keyword.get(opts, :memory, Memory.new())
+      memory: Keyword.get(opts, :memory, %Memory{})
     }
   end
 

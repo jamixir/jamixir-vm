@@ -4,36 +4,34 @@ defmodule MemoryTest do
   doctest Memory
 
   describe "Memory" do
-    test "creates new empty memory" do
-      assert Memory.new() == %Memory{data: <<>>, access: %{}}
-    end
+
 
     test "writes and reads a single byte" do
-      memory = Memory.new()
+      memory = %Memory{}
       memory = Memory.write(memory, 0, <<42>>)
       assert Memory.read(memory, 0, 1) == <<42>>
     end
 
     test "writes and reads multiple bytes" do
-      memory = Memory.new()
+      memory = %Memory{}
       memory = Memory.write(memory, 0, <<1, 2, 3>>)
       assert Memory.read(memory, 0, 3) == <<1, 2, 3>>
     end
 
     test "writes to non-zero index" do
-      memory = Memory.new()
+      memory = %Memory{}
       memory = Memory.write(memory, 2, <<42>>)
       assert Memory.read(memory, 0, 3) == <<0, 0, 42>>
     end
 
     test "handles reads beyond written memory" do
-      memory = Memory.new()
+      memory = %Memory{}
       memory = Memory.write(memory, 0, <<1, 2>>)
       assert Memory.read(memory, 2, 2) == <<0, 0>>
     end
 
     test "handles index wrapping (32-bit)" do
-      memory = Memory.new()
+      memory = %Memory{}
       # Should wrap to index 5
       big_index = 5 + (1 <<< 32)
       memory = Memory.write(memory, big_index, <<42>>)
@@ -41,14 +39,14 @@ defmodule MemoryTest do
     end
 
     test "overwrites existing data" do
-      memory = Memory.new()
+      memory = %Memory{}
       memory = Memory.write(memory, 0, <<1, 2, 3>>)
       memory = Memory.write(memory, 1, <<99>>)
       assert Memory.read(memory, 0, 3) == <<1, 99, 3>>
     end
 
     test "handles multi-byte read wrapping at 32-bit boundary" do
-      memory = Memory.new()
+      memory = %Memory{}
       memory = Memory.write(memory, 0, <<1, 2, 3, 4>>)
 
       assert Memory.read(memory, 0, 4) == <<1, 2, 3, 4>>
@@ -59,7 +57,7 @@ defmodule MemoryTest do
     end
 
     test "handles large reads across 32-bit boundary" do
-      memory = Memory.new()
+      memory = %Memory{}
       memory = Memory.write(memory, 0, <<1, 2, 3, 4>>)
 
       # Start at last byte before wrap, read 4 bytes
@@ -68,7 +66,7 @@ defmodule MemoryTest do
     end
 
     test "handles reads starting beyond memory size" do
-      memory = Memory.new()
+      memory = %Memory{}
       memory = Memory.write(memory, 0, <<1, 2>>)
 
       # Read from index 3 (beyond memory size) should return zeros
@@ -76,7 +74,7 @@ defmodule MemoryTest do
     end
 
     test "handles sparse memory writes" do
-      memory = Memory.new()
+      memory = %Memory{}
       memory = Memory.write(memory, 0, <<1, 2>>)
       far_index = 100 * 1024 * 1024  # 100MB offset
       memory = Memory.write(memory, far_index, <<3, 4, 5>>)
@@ -93,7 +91,7 @@ defmodule MemoryTest do
 
     test "write fails on read-only memory" do
       memory =
-        Memory.new()
+        %Memory{}
         |> Memory.set_access(1, 1, :read)
 
       assert Memory.write(memory, 1, <<42>>) == {:error, {:fault, 1}}
@@ -102,7 +100,7 @@ defmodule MemoryTest do
 
     test "read succeeds with read or write permission" do
       memory =
-        Memory.new()
+        %Memory{}
         |> Memory.write(0, <<1, 2, 3>>)
         |> Memory.set_access(1, 1, :read)
 
@@ -111,7 +109,7 @@ defmodule MemoryTest do
 
     test "read fails on nil permission" do
       memory =
-        Memory.new()
+        %Memory{}
         |> Memory.write(0, <<1, 2, 3>>)
         |> Memory.set_access(1, 1, nil)
 
