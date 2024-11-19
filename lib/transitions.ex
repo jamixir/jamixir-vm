@@ -1,34 +1,22 @@
 defmodule Transitions do
   import Bitwise
-  @moduledoc """
-  Implements signed/unsigned transitions for various octet widths
-  as defined in equations 243-246.
-  """
 
-  @doc """
-  Implements transition Z_n (equation 243)
-  Maps natural numbers to integers in range [-2^(8n-1)..2^(8n-1)-1]
-  """
+
+  # Formula (243) v0.4.5
   @spec z_n(non_neg_integer(), non_neg_integer()) :: integer()
   def z_n(a, n) do
     threshold = 1 <<< (8 * n - 1)
     if a < threshold, do: a, else: a - (1 <<< (8 * n))
   end
 
-  @doc """
-  Implements transition Z_n^(-1) (equation 244)
-  Maps integers back to natural numbers
-  """
+  # Formula (244) v0.4.5
   @spec z_n_inverse(integer(), non_neg_integer()) :: non_neg_integer()
   def z_n_inverse(a, n) do
     modulus = 1 <<< (8 * n)
     rem(modulus + a, modulus)
   end
 
-  @doc """
-  Implements transition B_n (equation 245)
-  Converts number to its binary representation
-  """
+  # Formula (245) v0.4.5
   @spec b_n(non_neg_integer(), non_neg_integer()) :: list(0 | 1)
   def b_n(x, n) do
     x
@@ -41,10 +29,7 @@ defmodule Transitions do
     padding ++ digits
   end
 
-  @doc """
-  Implements transition B_n^(-1) (equation 246)
-  Converts binary representation back to number
-  """
+  # Formula (246) v0.4.5
   @spec b_n_inverse(list(0 | 1)) :: non_neg_integer()
   def b_n_inverse(bits), do: Integer.undigits(bits, 2)
 end

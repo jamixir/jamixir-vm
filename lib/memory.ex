@@ -1,6 +1,7 @@
 defmodule Memory do
   import Bitwise
 
+  # Formula (35) v0.4.5
   @type t :: %__MODULE__{
           data: binary(),
           access: map()
@@ -86,12 +87,14 @@ defmodule Memory do
     end
   end
 
+  # Formula (36) v0.4.5
   def valid_indices(%__MODULE__{} = memory) do
     Map.keys(memory.access)
     |> Enum.filter(fn idx -> Map.get(memory.access, idx) != nil end)
     |> Enum.sort()
   end
 
+  # Formula (36) v0.4.5
   def write_only_indices(%__MODULE__{} = memory) do
     Map.keys(memory.access)
     |> Enum.filter(fn idx -> Map.get(memory.access, idx) == :write end)

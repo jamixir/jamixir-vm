@@ -27,7 +27,7 @@ defmodule VM do
 
   def step(%State{} = state) do
     if state.counter >= byte_size(state.program) do
-      %StepOutput{StepOutput.from_state(state) | exit_status: :panic}
+      %{StepOutput.from_state(state) | exit_status: :panic}
     else
       opcode =
         state.program |> binary_part(state.counter, 1) |> :binary.first() |> Opcode.from_byte()
@@ -44,4 +44,3 @@ defmodule VM do
     end
   end
 end
-

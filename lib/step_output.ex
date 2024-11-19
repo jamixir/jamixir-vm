@@ -1,3 +1,5 @@
+# Formula (237) v0.4.5
+
 defmodule StepOutput do
   @type t :: %__MODULE__{
           exit_status:
@@ -13,16 +15,6 @@ defmodule StepOutput do
             gas: 0,
             registers: List.duplicate(0, 13),
             memory: %Memory{}
-
-  def new(opts \\ []) do
-    %__MODULE__{
-      exit_status: Keyword.get(opts, :exit_status, :continue),
-      counter: Keyword.get(opts, :counter, 0),
-      gas: Keyword.get(opts, :gas, 0),
-      registers: Keyword.get(opts, :registers, List.duplicate(0, 13)),
-      memory: Keyword.get(opts, :memory, %Memory{})
-    }
-  end
 
   def from_state(%PVM.State{} = state) do
     %__MODULE__{

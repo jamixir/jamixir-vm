@@ -33,11 +33,13 @@ defmodule Instructions.Executor do
     end
   end
 
+  # Formula (248) v0.4.5
   def branch(_value, false, counter, _start_set), do: {:continue, counter}
 
   def branch(value, true, counter, start_set),
     do: if(value in start_set, do: {:continue, value}, else: {:panic, counter})
 
+  # Formula (249) v0.4.5
   def djump(a, counter, jump_table, start_set) do
     alignment_factor = 2
     {quotient, remainder} = {div(a, alignment_factor), rem(a, alignment_factor)}

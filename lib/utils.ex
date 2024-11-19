@@ -2,6 +2,7 @@ defmodule PVM.Utils do
   alias Instructions.Opcode
   use PVM.Decoder
 
+  # Formula (250) v0.4.5
   def skip(i, bitmask) when is_binary(bitmask) do
     do_skip(i + 1, bitmask, 0)
   end
@@ -16,6 +17,7 @@ defmodule PVM.Utils do
     end
   end
 
+  # Formula (251) v0.4.5
   def parse_immediate(program, counter) do
     l_x =
       binary_part(program, counter + 1, 1)
@@ -27,19 +29,21 @@ defmodule PVM.Utils do
     {x_value, l_x}
   end
 
+  # Formula (252) v0.4.5
   def parse_second_immediate(program, counter, l_x, bitmask) do
     l = skip(counter, bitmask)
     l_y = min(4, max(0, l - l_x - 1))
     decode_bytes_signed(program, counter + 2 + l_x, l_y)
   end
 
+  # Formula (252) v0.4.5
   def parse_two_immediates(program, counter, bitmask) do
     {x_value, l_x} = parse_immediate(program, counter)
     y_value = parse_second_immediate(program, counter, l_x, bitmask)
     {x_value, y_value}
   end
 
-  # Implements the N₂₈ₙ → N₂₃₂ formula from spec (241)
+  # Formula (247) v0.4.5
   def sign_extend(x, n) when n > 0 and n <= 4 do
     x +
       div(x, trunc(:math.pow(2, 8 * n - 1))) *
@@ -48,21 +52,11 @@ defmodule PVM.Utils do
 
   def sign_extend(x, 0), do: x
 
-  @doc """
-  Builds the set of basic block start indices (ϖ).
-  Returns [0] ++ [n + 1 + skip(n)] for each n where:
-  - n is an index in the program
-  - bitmask[n] = 1 (marks an opcode)
-  - program[n] decodes to a termination instruction
-
-  Indices are returned in order of appearance in the program.
-  """
-
+  # Formula (240) v0.4.5
   def basic_block_starts(<<>>, <<>>), do: [0]
 
   def basic_block_starts(program, bitmask) when is_binary(program) and is_binary(bitmask) do
-    # Always start with [0]
-    # Check each program index in order
+
     [0] ++
       Enum.reduce(0..(byte_size(bitmask) - 1), [], fn i, acc ->
         case binary_part(bitmask, i, 1) do
@@ -97,8 +91,7 @@ defmodule PVM.Utils do
   Returns the decoded and sign-extended number.
   """
   def decode_bytes_signed(program, start_index, count) when is_binary(program) and count > 0 do
-    binary_part(program, start_index, count)
-    |> de_le(count)
+    decode_bytes(program, start_index, count)
     |> sign_extend(count)
   end
 end

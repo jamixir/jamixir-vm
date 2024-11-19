@@ -4,6 +4,7 @@ defmodule Instructions.RegImmediate do
   use PVM.{Decoder, Encoder}
   alias Instructions.{Common, Executor}
 
+  # Section (A.5.5) v0.4.5
   def execute(:jump_ind, state, output) do
     {register_index, addr} = get_params(state)
     register_value = Enum.at(state.registers, register_index)

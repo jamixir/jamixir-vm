@@ -2,11 +2,13 @@ defmodule Instructions.OneImmediate do
   alias PVM.Utils
   alias Instructions.Executor
 
+  # Section (A.5.2) v0.4.5
   def execute(:ecalli, state, output) do
     {value, _} = Utils.parse_immediate(state.program, state.counter)
     %StepOutput{output | exit_status: {:ecall, value}}
   end
 
+  # Section (A.5.4) v0.4.5
   def execute(:jump, state, output) do
     l_x = min(4, Utils.skip(state.counter, state.bitmask))
 

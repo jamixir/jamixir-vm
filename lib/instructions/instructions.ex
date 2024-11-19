@@ -4,33 +4,20 @@ defmodule Instructions do
   """
 
   defmodule Opcode do
+    # No arguments
     @type t ::
             :trap
             | :fallthrough
+            # One immediate argument
             | :ecalli
+            # Two immediate arguments
             | :store_imm_u8
             | :store_imm_u16
             | :store_imm_u32
+            # One offset argument
             | :jump
+            # One register and one immediate argument
             | :jump_ind
-            | :load_imm_jump
-            | :load_imm_jump_ind
-            | :branch_eq
-            | :branch_ne
-            | :branch_ge_u
-            | :branch_ge_s
-            | :branch_lt_u
-            | :branch_lt_s
-            | :branch_eq_imm
-            | :branch_ne_imm
-            | :branch_lt_u_imm
-            | :branch_lt_s_imm
-            | :branch_le_u_imm
-            | :branch_le_s_imm
-            | :branch_ge_u_imm
-            | :branch_ge_s_imm
-            | :branch_gt_u_imm
-            | :branch_gt_s_imm
             | :load_imm
             | :load_u8
             | :load_i8
@@ -40,6 +27,28 @@ defmodule Instructions do
             | :store_u8
             | :store_u16
             | :store_u32
+            # One register, one immediate and one offset argument
+            | :load_imm_jump
+            | :branch_eq_imm
+            | :branch_ne_imm
+            | :branch_lt_u_imm
+            | :branch_le_u_imm
+            | :branch_ge_u_imm
+            | :branch_gt_u_imm
+            | :branch_lt_s_imm
+            | :branch_le_s_imm
+            | :branch_ge_s_imm
+            | :branch_gt_s_imm
+
+            # Two registers and one immediate argument
+            | :branch_eq
+            | :branch_ne
+            | :branch_lt_u
+            | :branch_lt_s
+            | :branch_ge_u
+            | :branch_ge_s
+            # Two registers and two immediate argument
+            | :load_imm_jump_ind
 
     def from_byte(0), do: :trap
     def from_byte(17), do: :fallthrough
