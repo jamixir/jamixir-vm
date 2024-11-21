@@ -15,7 +15,6 @@ defmodule Instructions do
     end
   end
 
-  # No arguments
   @type t ::
           :trap
           | :fallthrough
@@ -154,6 +153,52 @@ defmodule Instructions do
     branch_gt_s_imm: 0
   }
 
+  @instruction_categories %{
+    no_args: [:trap, :fallthrough],
+    one_immediate: [:ecalli, :jump],
+    two_immediates: [:store_imm_u8, :store_imm_u16, :store_imm_u32, :store_imm_u64],
+    reg_immediate: [
+      :jump_ind,
+      :load_imm,
+      :load_imm_64,
+      :load_u8,
+      :load_i8,
+      :load_u16,
+      :load_i16,
+      :load_u32,
+      :load_i32,
+      :load_u64,
+      :store_u8,
+      :store_u16,
+      :store_u32,
+      :store_u64
+    ],
+    register_immediate_offset: [
+      :load_imm_jump,
+      :branch_eq_imm,
+      :branch_ne_imm,
+      :branch_lt_u_imm,
+      :branch_le_u_imm,
+      :branch_ge_u_imm,
+      :branch_gt_u_imm,
+      :branch_lt_s_imm,
+      :branch_le_s_imm,
+      :branch_ge_s_imm,
+      :branch_gt_s_imm
+    ],
+    two_registers_one_immediate: [
+      :branch_eq,
+      :branch_ne,
+      :branch_lt_u,
+      :branch_lt_s,
+      :branch_ge_u,
+      :branch_ge_s
+    ],
+    two_registers_two_immediate: [
+      :load_imm_jump_ind
+    ]
+  }
+
   # Generate from_byte/1 using the map
   for {instruction, byte} <- @opcode_map do
     def from_byte(unquote(byte)), do: unquote(instruction)
@@ -206,28 +251,17 @@ defmodule Instructions do
     ]
   end
 
-  # Add instruction category mapping
-  @instruction_categories %{
-    no_args: [:trap, :fallthrough],
-    one_immediate: [:ecalli, :jump],
-    two_immediates: [:store_imm_u8, :store_imm_u16, :store_imm_u32, :store_imm_u64],
-    reg_immediate: [
-      :jump_ind,
-      :load_imm,
-      :load_imm_64,
-      :load_u8,
-      :load_i8,
-      :load_u16,
-      :load_i16,
-      :load_u32,
-      :load_i32,
-      :load_u64,
-      :store_u8,
-      :store_u16,
-      :store_u32,
-      :store_u64
-    ]
-  }
+  def opcode_map do
+    @opcode_map
+  end
+
+  def gas_cost_map do
+    @gas_cost_map
+  end
+
+  def instruction_categories do
+    @instruction_categories
+  end
 
   # Add helper function to get instruction category
   def instruction_category(instruction) do
