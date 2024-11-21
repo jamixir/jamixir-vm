@@ -25,6 +25,7 @@ defmodule Instructions do
           | :store_imm_u8
           | :store_imm_u16
           | :store_imm_u32
+          | :store_imm_u64
           # One offset argument
           | :jump
           # One register and one (extended) immediate argument
@@ -114,9 +115,11 @@ defmodule Instructions do
     trap: 0,
     fallthrough: 0,
     ecalli: 0,
+    load_imm_64: 0,
     store_imm_u8: 0,
     store_imm_u16: 0,
     store_imm_u32: 0,
+    store_imm_u64: 0,
     jump: 0,
     jump_ind: 0,
     load_imm: 0,

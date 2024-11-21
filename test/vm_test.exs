@@ -267,6 +267,38 @@ defmodule VMTest do
       assert Memory.read(output.memory, 100, 1) == <<42>>
       assert Memory.read(output.memory, 101, 1) == <<24>>
     end
+
+
+    test "executes 64-bit load and store operations" do
+      # Program:
+      # store_imm_u64 addr=16, value=0x12345678 (zero-extended to 64 bits)
+      # load_imm_64 r1, 0xDCBA987654321001 (full 64-bit value)
+      # store_u64 r1, 24
+      program = <<
+        op(:store_imm_u64), 1, 16, 0x78, 0x56, 0x34, 0x12,  # Only 32-bit immediate
+        op(:load_imm_64), 0x01, 0x10, 0x32, 0x54, 0x76, 0x98, 0xBA, 0xDC,
+        op(:store_u64), 1, 24
+      >>
+
+      bitmask = <<
+        1, 0, 0, 0, 0, 0,0,              # store_imm_u64 (4-byte immediate)
+        1, 0, 0, 0, 0, 0, 0, 0, 0,  # load_imm_64 (8-byte immediate)
+        1, 0, 0                         # store_u64
+      >>
+
+      state = create_test_state(program, bitmask)
+      output = VM.execute(state)
+
+      assert output.exit_status == :panic
+      assert output.counter == 19
+      # Verify the 64-bit immediate load worked
+      assert Enum.at(output.registers, 1) == 0xDCBA987654321001
+      # Verify memory contents:
+      # First location should have zero-extended 32-bit value
+      assert Memory.read(output.memory, 16, 8) == <<0x78, 0x56, 0x34, 0x12, 0, 0, 0, 0>>
+      # Second location should have full 64-bit value from register
+      assert Memory.read(output.memory, 24, 8) == <<0x01,0x10, 0x32, 0x54, 0x76, 0x98, 0xBA, 0xDC>>
+    end
   end
 
   describe "VM.execute memory faults" do
