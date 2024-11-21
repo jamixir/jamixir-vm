@@ -56,7 +56,6 @@ defmodule PVM.Utils do
   def basic_block_starts(<<>>, <<>>), do: [0]
 
   def basic_block_starts(program, bitmask) when is_binary(program) and is_binary(bitmask) do
-
     [0] ++
       Enum.reduce(0..(byte_size(bitmask) - 1), [], fn i, acc ->
         case binary_part(bitmask, i, 1) do
@@ -93,5 +92,25 @@ defmodule PVM.Utils do
   def decode_bytes_signed(program, start_index, count) when is_binary(program) and count > 0 do
     decode_bytes(program, start_index, count)
     |> sign_extend(count)
+  end
+
+  @doc """
+  Determines the next counter position based on execution output.
+  For successful execution:
+    - Uses instruction's counter if provided (jumps)
+    - Otherwise advances by 1 + skip
+  For halt/panic, keeps the original counter.
+  """
+  def next_counter(%{exit_status: status, counter: _counter}, state)
+      when status in [:halt, :panic] do
+    state.counter
+  end
+
+  def next_counter(%{counter: counter}, state) do
+    if counter != state.counter do
+      counter
+    else
+      state.counter + 1 + skip(state.counter, state.bitmask)
+    end
   end
 end

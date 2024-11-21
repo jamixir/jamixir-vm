@@ -26,20 +26,32 @@ defmodule VM do
   end
 
   def step(%State{} = state) do
+    output = StepOutput.from_state(state)
+
     if state.counter >= byte_size(state.program) do
-      %{StepOutput.from_state(state) | exit_status: :panic}
+      %{output | exit_status: :panic}
     else
       opcode =
         state.program |> binary_part(state.counter, 1) |> :binary.first() |> Opcode.from_byte()
 
       gas_cost = Instructions.gas_cost(opcode)
-      skip_amount = Utils.skip(state.counter, state.bitmask)
-      output = StepOutput.standard_transition(state, skip_amount, gas_cost)
 
       if state.gas < gas_cost do
-        %StepOutput{output | exit_status: :out_of_gas}
+        %{output | exit_status: :out_of_gas}
       else
-        Executor.execute_instruction(opcode, state, output)
+        output_ = Executor.execute_instruction(opcode, state, output)
+        output_ = %{output_ | counter: Utils.next_counter(output_, state)}
+
+        # Execute instruction first, before any state transition
+        case output_.exit_status do
+          # On fault, return without state transition
+          {:fault, page} ->
+            %{output | exit_status: {:fault, page}}
+
+          # For all other cases (continue, panic, out_of_gas, ecall), apply state transition
+          _ ->
+            %{output_ | gas: output.gas - gas_cost}
+        end
       end
     end
   end

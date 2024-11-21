@@ -25,15 +25,4 @@ defmodule StepOutput do
       memory: state.memory
     }
   end
-
-  # Helper to create a standard transition
-  def standard_transition(%PVM.State{} = state, skip_amount, gas_cost) do
-    %__MODULE__{
-      exit_status: :continue,
-      counter: state.counter + 1 + skip_amount,
-      gas: state.gas - gas_cost,
-      registers: state.registers,
-      memory: state.memory
-    }
-  end
 end
