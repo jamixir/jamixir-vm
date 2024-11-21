@@ -30,7 +30,7 @@ defmodule Instructions.RegTwoImm do
     Common.do_write(output, w_a + v_x, state.memory, e_le(v_y, 8))
   end
 
-  # Formula (255) v0.4.5
+  # Formula (A.20) v0.5
   defp get_params(state) do
     r_a =
       binary_part(state.program, state.counter + 1, 1) |> :binary.first() |> rem(16) |> min(12)

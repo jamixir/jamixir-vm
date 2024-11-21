@@ -1,4 +1,4 @@
-# Formula (237) v0.4.5
+# Formula (A.5) v0.5
 
 defmodule StepOutput do
   @type t :: %__MODULE__{

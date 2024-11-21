@@ -2,21 +2,21 @@ defmodule Transitions do
   import Bitwise
 
 
-  # Formula (243) v0.4.5
+  # Formula (A.7) v0.5
   @spec z_n(non_neg_integer(), non_neg_integer()) :: integer()
   def z_n(a, n) do
     threshold = 1 <<< (8 * n - 1)
     if a < threshold, do: a, else: a - (1 <<< (8 * n))
   end
 
-  # Formula (244) v0.4.5
+  # Formula (A.8) v0.5
   @spec z_n_inverse(integer(), non_neg_integer()) :: non_neg_integer()
   def z_n_inverse(a, n) do
     modulus = 1 <<< (8 * n)
     rem(modulus + a, modulus)
   end
 
-  # Formula (245) v0.4.5
+  # Formula (A.9) v0.5
   @spec b_n(non_neg_integer(), non_neg_integer()) :: list(0 | 1)
   def b_n(x, n) do
     x
@@ -29,7 +29,7 @@ defmodule Transitions do
     padding ++ digits
   end
 
-  # Formula (246) v0.4.5
+  # Formula (A.10) v0.5
   @spec b_n_inverse(list(0 | 1)) :: non_neg_integer()
   def b_n_inverse(bits), do: Integer.undigits(bits, 2)
 end

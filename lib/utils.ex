@@ -3,7 +3,7 @@ defmodule PVM.Utils do
   use PVM.Decoder
   import Bitwise
 
-  # Formula (250) v0.4.5
+  # Formula (A.2) v0.5
   def skip(i, bitmask) when is_binary(bitmask) do
     do_skip(i + 1, bitmask, 0)
   end
@@ -18,7 +18,7 @@ defmodule PVM.Utils do
     end
   end
 
-  # Formula (251) v0.4.5
+  # Formula (A.15) v0.5
   def parse_immediate(program, counter) do
     l_x =
       binary_part(program, counter + 1, 1)
@@ -30,14 +30,14 @@ defmodule PVM.Utils do
     {x_value, l_x}
   end
 
-  # Formula (252) v0.4.5
+  # Formula (A.17) v0.5
   def parse_second_immediate(program, counter, l_x, bitmask) do
     l = skip(counter, bitmask)
     l_y = min(4, max(0, l - l_x - 1))
     decode_bytes_signed(program, counter + 2 + l_x, l_y)
   end
 
-  # Formula (252) v0.4.5
+  # Formula (A.17) v0.5
   def parse_two_immediates(program, counter, bitmask) do
     {x_value, l_x} = parse_immediate(program, counter)
     y_value = parse_second_immediate(program, counter, l_x, bitmask)
@@ -51,7 +51,7 @@ defmodule PVM.Utils do
 
   def sign_extend(x, 0), do: x
 
-  # Formula (240) v0.4.5
+  # Formula (A.4) v0.5
   def basic_block_starts(<<>>, <<>>), do: [0]
 
   def basic_block_starts(program, bitmask) when is_binary(program) and is_binary(bitmask) do
