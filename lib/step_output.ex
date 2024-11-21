@@ -1,3 +1,5 @@
+# Formula (237) v0.4.5
+
 defmodule StepOutput do
   @type t :: %__MODULE__{
           exit_status:
@@ -12,17 +14,7 @@ defmodule StepOutput do
             counter: 0,
             gas: 0,
             registers: List.duplicate(0, 13),
-            memory: Memory.new()
-
-  def new(opts \\ []) do
-    %__MODULE__{
-      exit_status: Keyword.get(opts, :exit_status, :continue),
-      counter: Keyword.get(opts, :counter, 0),
-      gas: Keyword.get(opts, :gas, 0),
-      registers: Keyword.get(opts, :registers, List.duplicate(0, 13)),
-      memory: Keyword.get(opts, :memory, Memory.new())
-    }
-  end
+            memory: %Memory{}
 
   def from_state(%PVM.State{} = state) do
     %__MODULE__{
@@ -32,26 +24,6 @@ defmodule StepOutput do
       registers: state.registers,
       memory: state.memory
     }
-  end
-
-  def with_exit_status(%__MODULE__{} = output, exit_status) do
-    %{output | exit_status: exit_status}
-  end
-
-  def with_counter(%__MODULE__{} = output, counter) do
-    %{output | counter: counter}
-  end
-
-  def with_gas(%__MODULE__{} = output, gas) do
-    %{output | gas: gas}
-  end
-
-  def with_memory(%__MODULE__{} = output, memory) do
-    %{output | memory: memory}
-  end
-
-  def with_registers(%__MODULE__{} = output, registers) do
-    %{output | registers: registers}
   end
 
   # Helper to create a standard transition
