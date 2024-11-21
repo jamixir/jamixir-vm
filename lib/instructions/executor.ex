@@ -20,7 +20,7 @@ defmodule Instructions.Executor do
       when op in [
              :jump_ind,
              :load_imm,
-             :load_imm_u64,
+             :load_imm_64,
              :load_u8,
              :load_i8,
              :load_u16,

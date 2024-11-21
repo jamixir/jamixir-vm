@@ -28,7 +28,7 @@ defmodule Instructions do
           # One offset argument
           | :jump
           # One register and one (extended) immediate argument
-          | :load_imm_u64
+          | :load_imm_64
           # One register and one immediate argument
           | :jump_ind
           | :load_imm
@@ -68,7 +68,7 @@ defmodule Instructions do
     trap: 0,
     fallthrough: 1,
     ecalli: 10,
-    load_imm_u64: 20,
+    load_imm_64: 20,
     store_imm_u8: 30,
     store_imm_u16: 31,
     store_imm_u32: 32,
