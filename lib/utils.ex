@@ -1,5 +1,5 @@
 defmodule PVM.Utils do
-  alias Instructions.Opcode
+  use Instructions
   use PVM.Decoder
   import Bitwise
 
@@ -60,7 +60,7 @@ defmodule PVM.Utils do
         case binary_part(bitmask, i, 1) do
           <<1>> ->
             # If it's an opcode, check if it's a termination instruction
-            opcode = program |> binary_part(i, 1) |> :binary.first() |> Opcode.from_byte()
+            opcode = program |> binary_part(i, 1) |> :binary.first() |> op()
 
             if Instructions.termination_instruction?(opcode) do
               acc ++ [i + 1 + skip(i, bitmask)]

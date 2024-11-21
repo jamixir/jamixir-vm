@@ -2,7 +2,7 @@ defmodule VMTest do
   use ExUnit.Case
   alias PVM.State
   use PVM.Decoder
-  use Instructions.Opcode
+  use Instructions
   def create_test_state(program, bitmask) do
     %State{
       program: program,

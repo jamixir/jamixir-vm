@@ -1,8 +1,9 @@
 defmodule VM do
-  alias Instructions.{Opcode, Executor}
+  alias Instructions.Executor
   use PVM.Encoder
   alias PVM.Utils
   alias PVM.State
+  use Instructions
 
   def execute(%State{} = state) do
     output = step(state)
@@ -32,7 +33,7 @@ defmodule VM do
       %{output | exit_status: :panic}
     else
       opcode =
-        state.program |> binary_part(state.counter, 1) |> :binary.first() |> Opcode.from_byte()
+        state.program |> binary_part(state.counter, 1) |> :binary.first() |> op()
 
       gas_cost = Instructions.gas_cost(opcode)
 

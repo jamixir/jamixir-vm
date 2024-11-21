@@ -1,6 +1,6 @@
 defmodule Instructions.OneImmediateTest do
   use ExUnit.Case
-  use Instructions.Opcode
+  use Instructions
   alias Instructions.OneImmediate
 
   def create_test_state(program, bitmask) do

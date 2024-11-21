@@ -1,6 +1,6 @@
 defmodule Instructions.RegImmediateTest do
   use ExUnit.Case
-  use Instructions.Opcode
+  use Instructions
   alias Instructions.RegImmediate
   import Bitwise
 
