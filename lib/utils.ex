@@ -1,8 +1,9 @@
 defmodule PVM.Utils do
-  alias Instructions.Opcode
+  use Instructions
   use PVM.Decoder
+  import Bitwise
 
-  # Formula (250) v0.4.5
+  # Formula (A.2) v0.5
   def skip(i, bitmask) when is_binary(bitmask) do
     do_skip(i + 1, bitmask, 0)
   end
@@ -17,7 +18,7 @@ defmodule PVM.Utils do
     end
   end
 
-  # Formula (251) v0.4.5
+  # Formula (A.15) v0.5
   def parse_immediate(program, counter) do
     l_x =
       binary_part(program, counter + 1, 1)
@@ -29,40 +30,37 @@ defmodule PVM.Utils do
     {x_value, l_x}
   end
 
-  # Formula (252) v0.4.5
+  # Formula (A.17) v0.5
   def parse_second_immediate(program, counter, l_x, bitmask) do
     l = skip(counter, bitmask)
     l_y = min(4, max(0, l - l_x - 1))
     decode_bytes_signed(program, counter + 2 + l_x, l_y)
   end
 
-  # Formula (252) v0.4.5
+  # Formula (A.17) v0.5
   def parse_two_immediates(program, counter, bitmask) do
     {x_value, l_x} = parse_immediate(program, counter)
     y_value = parse_second_immediate(program, counter, l_x, bitmask)
     {x_value, y_value}
   end
 
-  # Formula (247) v0.4.5
-  def sign_extend(x, n) when n > 0 and n <= 4 do
-    x +
-      div(x, trunc(:math.pow(2, 8 * n - 1))) *
-        (trunc(:math.pow(2, 32)) - trunc(:math.pow(2, 8 * n)))
-  end
+  # Formula (A.11) v0.5
+  def sign_extend(x, n) when n > 0 and n <= 4, do:
+    x + div(x, 1 <<< (8 * n - 1)) * ((1 <<< 64) - (1 <<< (8 * n)))
+
 
   def sign_extend(x, 0), do: x
 
-  # Formula (240) v0.4.5
+  # Formula (A.4) v0.5
   def basic_block_starts(<<>>, <<>>), do: [0]
 
   def basic_block_starts(program, bitmask) when is_binary(program) and is_binary(bitmask) do
-
     [0] ++
       Enum.reduce(0..(byte_size(bitmask) - 1), [], fn i, acc ->
         case binary_part(bitmask, i, 1) do
           <<1>> ->
             # If it's an opcode, check if it's a termination instruction
-            opcode = program |> binary_part(i, 1) |> :binary.first() |> Opcode.from_byte()
+            opcode = program |> binary_part(i, 1) |> :binary.first() |> op()
 
             if Instructions.termination_instruction?(opcode) do
               acc ++ [i + 1 + skip(i, bitmask)]
@@ -93,5 +91,25 @@ defmodule PVM.Utils do
   def decode_bytes_signed(program, start_index, count) when is_binary(program) and count > 0 do
     decode_bytes(program, start_index, count)
     |> sign_extend(count)
+  end
+
+  @doc """
+  Determines the next counter position based on execution output.
+  For successful execution:
+    - Uses instruction's counter if provided (jumps)
+    - Otherwise advances by 1 + skip
+  For halt/panic, keeps the original counter.
+  """
+  def next_counter(%{exit_status: status, counter: _counter}, state)
+      when status in [:halt, :panic] do
+    state.counter
+  end
+
+  def next_counter(%{counter: counter}, state) do
+    if counter != state.counter do
+      counter
+    else
+      state.counter + 1 + skip(state.counter, state.bitmask)
+    end
   end
 end

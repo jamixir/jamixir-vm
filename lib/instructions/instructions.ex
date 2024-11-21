@@ -3,108 +3,237 @@ defmodule Instructions do
   Defines opcodes and gas costs for the PVM
   """
 
-  defmodule Opcode do
-    # No arguments
-    @type t ::
-            :trap
-            | :fallthrough
-            # One immediate argument
-            | :ecalli
-            # Two immediate arguments
-            | :store_imm_u8
-            | :store_imm_u16
-            | :store_imm_u32
-            # One offset argument
-            | :jump
-            # One register and one immediate argument
-            | :jump_ind
-            | :load_imm
-            | :load_u8
-            | :load_i8
-            | :load_u16
-            | :load_i16
-            | :load_u32
-            | :store_u8
-            | :store_u16
-            | :store_u32
-            # One register, one immediate and one offset argument
-            | :load_imm_jump
-            | :branch_eq_imm
-            | :branch_ne_imm
-            | :branch_lt_u_imm
-            | :branch_le_u_imm
-            | :branch_ge_u_imm
-            | :branch_gt_u_imm
-            | :branch_lt_s_imm
-            | :branch_le_s_imm
-            | :branch_ge_s_imm
-            | :branch_gt_s_imm
+  defmacro __using__(_opts) do
+    quote do
+      def op(instruction) when is_atom(instruction),
+        do: Instructions.to_byte(instruction)
 
-            # Two registers and one immediate argument
-            | :branch_eq
-            | :branch_ne
-            | :branch_lt_u
-            | :branch_lt_s
-            | :branch_ge_u
-            | :branch_ge_s
-            # Two registers and two immediate argument
-            | :load_imm_jump_ind
+      def op(byte) when is_integer(byte), do: Instructions.from_byte(byte)
 
-    def from_byte(0), do: :trap
-    def from_byte(17), do: :fallthrough
-    def from_byte(78), do: :ecalli
-    def from_byte(62), do: :store_imm_u8
-    def from_byte(79), do: :store_imm_u16
-    def from_byte(38), do: :store_imm_u32
-    def from_byte(5), do: :jump
-    def from_byte(19), do: :jump_ind
-    def from_byte(6), do: :load_imm_jump
-    def from_byte(42), do: :load_imm_jump_ind
-    def from_byte(24), do: :branch_eq
-    def from_byte(30), do: :branch_ne
-    def from_byte(41), do: :branch_ge_u
-    def from_byte(43), do: :branch_ge_s
-    def from_byte(47), do: :branch_lt_u
-    def from_byte(48), do: :branch_lt_s
-    def from_byte(7), do: :branch_eq_imm
-    def from_byte(15), do: :branch_ne_imm
-    def from_byte(44), do: :branch_lt_u_imm
-    def from_byte(32), do: :branch_lt_s_imm
-    def from_byte(59), do: :branch_le_u_imm
-    def from_byte(49), do: :branch_le_s_imm
-    def from_byte(52), do: :branch_ge_u_imm
-    def from_byte(45), do: :branch_ge_s_imm
-    def from_byte(50), do: :branch_gt_u_imm
-    def from_byte(53), do: :branch_gt_s_imm
-    def from_byte(4), do: :load_imm
-    def from_byte(60), do: :load_u8
-    def from_byte(74), do: :load_i8
-    def from_byte(76), do: :load_u16
-    def from_byte(66), do: :load_i16
-    def from_byte(10), do: :load_u32
-    def from_byte(71), do: :store_u8
-    def from_byte(69), do: :store_u16
-    def from_byte(22), do: :store_u32
-    def from_byte(_), do: :trap
+      def gas_cost(instruction) when is_atom(instruction),
+        do: Instructions.gas_cost(instruction)
+    end
   end
 
-  def gas_cost(:trap), do: 0
-  def gas_cost(:fallthrough), do: 0
-  def gas_cost(:ecalli), do: 0
-  def gas_cost(:store_imm_u8), do: 0
-  def gas_cost(:store_imm_u16), do: 0
-  def gas_cost(:store_imm_u32), do: 0
-  def gas_cost(:jump), do: 0
-  def gas_cost(:jump_ind), do: 0
-  def gas_cost(:load_imm), do: 0
-  def gas_cost(:load_u8), do: 0
-  def gas_cost(:load_i8), do: 0
-  def gas_cost(:load_u16), do: 0
-  def gas_cost(:load_i16), do: 0
-  def gas_cost(:load_u32), do: 0
-  def gas_cost(:store_u8), do: 0
-  def gas_cost(:store_u16), do: 0
-  def gas_cost(:store_u32), do: 0
+  @type t ::
+          :trap
+          | :fallthrough
+          # One immediate argument
+          | :ecalli
+          # Two immediate arguments
+          | :store_imm_u8
+          | :store_imm_u16
+          | :store_imm_u32
+          | :store_imm_u64
+          # One offset argument
+          | :jump
+          # One register and one (extended) immediate argument
+          | :load_imm_64
+          # One register and one immediate argument
+          | :jump_ind
+          | :load_imm
+          | :load_u8
+          | :load_i8
+          | :load_u16
+          | :load_i16
+          | :load_u32
+          | :load_i32
+          | :load_u64
+          | :store_u8
+          | :store_u16
+          | :store_u32
+          | :store_u64
+          # Register and two immediates
+          | :store_imm_ind_u8
+          | :store_imm_ind_u16
+          | :store_imm_ind_u32
+          | :store_imm_ind_u64
+          # One register, one immediate and one offset argument
+          | :load_imm_jump
+          | :branch_eq_imm
+          | :branch_ne_imm
+          | :branch_lt_u_imm
+          | :branch_le_u_imm
+          | :branch_ge_u_imm
+          | :branch_gt_u_imm
+          | :branch_lt_s_imm
+          | :branch_le_s_imm
+          | :branch_ge_s_imm
+          | :branch_gt_s_imm
+
+          # Two registers and one immediate argument
+          | :branch_eq
+          | :branch_ne
+          | :branch_lt_u
+          | :branch_lt_s
+          | :branch_ge_u
+          | :branch_ge_s
+          # Two registers and two immediate argument
+          | :load_imm_jump_ind
+
+  # Define a map for the two-way mapping
+  @opcode_map %{
+    trap: 0,
+    fallthrough: 1,
+    ecalli: 10,
+    load_imm_64: 20,
+    store_imm_u8: 30,
+    store_imm_u16: 31,
+    store_imm_u32: 32,
+    store_imm_u64: 33,
+    jump: 40,
+    jump_ind: 50,
+    load_imm: 51,
+    load_u8: 52,
+    load_i8: 53,
+    load_u16: 54,
+    load_i16: 55,
+    load_u32: 56,
+    load_i32: 57,
+    load_u64: 58,
+    store_u8: 59,
+    store_u16: 60,
+    store_u32: 61,
+    store_u64: 62,
+    store_imm_ind_u8: 70,
+    store_imm_ind_u16: 71,
+    store_imm_ind_u32: 72,
+    store_imm_ind_u64: 73,
+    load_imm_jump: 80,
+    load_imm_jump_ind: 61,
+    branch_eq_imm: 81,
+    branch_ne_imm: 82,
+    branch_lt_u_imm: 83,
+    branch_le_u_imm: 84,
+    branch_ge_u_imm: 85,
+    branch_gt_u_imm: 86,
+    branch_lt_s_imm: 87,
+    branch_le_s_imm: 88,
+    branch_ge_s_imm: 89,
+    branch_gt_s_imm: 90,
+    branch_eq: 150,
+    branch_ne: 151,
+    branch_lt_u: 152,
+    branch_lt_s: 153,
+    branch_ge_u: 154,
+    branch_ge_s: 155
+  }
+
+  @gas_cost_map %{
+    trap: 0,
+    fallthrough: 0,
+    ecalli: 0,
+    load_imm_64: 0,
+    store_imm_u8: 0,
+    store_imm_u16: 0,
+    store_imm_u32: 0,
+    store_imm_u64: 0,
+    jump: 0,
+    jump_ind: 0,
+    load_imm: 0,
+    load_u8: 0,
+    load_i8: 0,
+    load_u16: 0,
+    load_i16: 0,
+    load_u32: 0,
+    load_i32: 0,
+    load_u64: 0,
+    store_u8: 0,
+    store_u16: 0,
+    store_u32: 0,
+    store_u64: 0,
+    store_imm_ind_u8: 0,
+    store_imm_ind_u16: 0,
+    store_imm_ind_u32: 0,
+    store_imm_ind_u64: 0,
+    load_imm_jump: 0,
+    load_imm_jump_ind: 0,
+    branch_eq: 0,
+    branch_ne: 0,
+    branch_ge_u: 0,
+    branch_ge_s: 0,
+    branch_lt_u: 0,
+    branch_lt_s: 0,
+    branch_eq_imm: 0,
+    branch_ne_imm: 0,
+    branch_lt_u_imm: 0,
+    branch_lt_s_imm: 0,
+    branch_le_u_imm: 0,
+    branch_le_s_imm: 0,
+    branch_ge_u_imm: 0,
+    branch_ge_s_imm: 0,
+    branch_gt_u_imm: 0,
+    branch_gt_s_imm: 0
+  }
+
+  @instruction_categories %{
+    no_args: [:trap, :fallthrough],
+    one_immediate: [:ecalli, :jump],
+    two_immediates: [:store_imm_u8, :store_imm_u16, :store_imm_u32, :store_imm_u64],
+    reg_immediate: [
+      :jump_ind,
+      :load_imm,
+      :load_imm_64,
+      :load_u8,
+      :load_i8,
+      :load_u16,
+      :load_i16,
+      :load_u32,
+      :load_i32,
+      :load_u64,
+      :store_u8,
+      :store_u16,
+      :store_u32,
+      :store_u64
+    ],
+    register_two_immediate: [
+      :store_imm_ind_u8,
+      :store_imm_ind_u16,
+      :store_imm_ind_u32,
+      :store_imm_ind_u64
+    ],
+    register_immediate_offset: [
+      :load_imm_jump,
+      :branch_eq_imm,
+      :branch_ne_imm,
+      :branch_lt_u_imm,
+      :branch_le_u_imm,
+      :branch_ge_u_imm,
+      :branch_gt_u_imm,
+      :branch_lt_s_imm,
+      :branch_le_s_imm,
+      :branch_ge_s_imm,
+      :branch_gt_s_imm
+    ],
+    two_registers_one_immediate: [
+      :branch_eq,
+      :branch_ne,
+      :branch_lt_u,
+      :branch_lt_s,
+      :branch_ge_u,
+      :branch_ge_s
+    ],
+    two_registers_two_immediate: [
+      :load_imm_jump_ind
+    ]
+  }
+
+  # Generate from_byte/1 using the map
+  for {instruction, byte} <- @opcode_map do
+    def from_byte(unquote(byte)), do: unquote(instruction)
+  end
+
+  def from_byte(_), do: :trap
+
+  # Generate to_byte/1 using the map
+  for {instruction, byte} <- @opcode_map do
+    def to_byte(unquote(instruction)), do: unquote(byte)
+  end
+
+  # Generate gas_cost/1 using the map
+  for {instruction, cost} <- @gas_cost_map do
+    def gas_cost(unquote(instruction)), do: unquote(cost)
+  end
 
   @doc """
   Returns true if the opcode is a termination instruction as defined in A.3
@@ -139,5 +268,24 @@ defmodule Instructions do
       :branch_gt_u_imm,
       :branch_gt_s_imm
     ]
+  end
+
+  def opcode_map do
+    @opcode_map
+  end
+
+  def gas_cost_map do
+    @gas_cost_map
+  end
+
+  def instruction_categories do
+    @instruction_categories
+  end
+
+  # Add helper function to get instruction category
+  def instruction_category(instruction) do
+    Enum.find_value(@instruction_categories, fn {category, instructions} ->
+      if instruction in instructions, do: category
+    end)
   end
 end

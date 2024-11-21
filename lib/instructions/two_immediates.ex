@@ -3,7 +3,7 @@ defmodule Instructions.TwoImmediates do
   import Bitwise
   use PVM.Encoder
   alias Instructions.Common
-  # Section (A.5.3) v0.4.5
+  # Section (A.17) v0.5
 
   def execute(:store_imm_u8, state, output) do
     {addr, value} = Utils.parse_two_immediates(state.program, state.counter, state.bitmask)
@@ -17,6 +17,11 @@ defmodule Instructions.TwoImmediates do
 
   def execute(:store_imm_u32, state, output) do
     {addr, value} = Utils.parse_two_immediates(state.program, state.counter, state.bitmask)
-    Common.do_write(output, addr, state.memory, e_le(value, 4))
+    Common.do_write(output, addr, state.memory, e_le(rem(value, 1 <<< 32), 4))
+  end
+
+  def execute(:store_imm_u64, state, output) do
+    {addr, value} = Utils.parse_two_immediates(state.program, state.counter, state.bitmask)
+    Common.do_write(output, addr, state.memory, e_le(value, 8))
   end
 end

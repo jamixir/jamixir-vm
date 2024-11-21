@@ -2,44 +2,21 @@ defmodule Instructions.Executor do
   alias Instructions.{NoArgs, OneImmediate, TwoImmediates, RegImmediate}
 
   def execute_instruction(opcode, state, output) do
-    case opcode do
-      # No arguments
-      op when op in [:trap, :fallthrough] ->
-        NoArgs.execute(op, output)
-
-      # One immediate
-      op when op in [:ecalli, :jump] ->
-        OneImmediate.execute(op, state, output)
-
-      # Two immediates
-      op when op in [:store_imm_u8, :store_imm_u16, :store_imm_u32] ->
-        TwoImmediates.execute(op, state, output)
-
-      # Register and immediate
-      op
-      when op in [
-             :jump_ind,
-             :load_imm,
-             :load_u8,
-             :load_i8,
-             :load_u16,
-             :load_i16,
-             :load_u32,
-             :store_u8,
-             :store_u16,
-             :store_u32
-           ] ->
-        RegImmediate.execute(op, state, output)
+    case Instructions.instruction_category(opcode) do
+      :no_args -> NoArgs.execute(opcode, output)
+      :one_immediate -> OneImmediate.execute(opcode, state, output)
+      :two_immediates -> TwoImmediates.execute(opcode, state, output)
+      :reg_immediate -> RegImmediate.execute(opcode, state, output)
     end
   end
 
-  # Formula (248) v0.4.5
+  # Formula (A.12) v0.5
   def branch(_value, false, counter, _start_set), do: {:continue, counter}
 
   def branch(value, true, counter, start_set),
     do: if(value in start_set, do: {:continue, value}, else: {:panic, counter})
 
-  # Formula (249) v0.4.5
+  # Formula (A.13) v0.5
   def djump(a, counter, jump_table, start_set) do
     alignment_factor = 2
     {quotient, remainder} = {div(a, alignment_factor), rem(a, alignment_factor)}

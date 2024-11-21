@@ -1,6 +1,18 @@
-# Formula (237) v0.4.5
+# Formula (A.5) v0.5
 
 defmodule PVM.State do
+  # 2^64 - 1
+  @type u64 :: 0..18_446_744_073_709_551_615
+
+  @type t :: %__MODULE__{
+          program: binary(),
+          bitmask: binary(),
+          jump_table: list(non_neg_integer()),
+          counter: non_neg_integer(),
+          gas: non_neg_integer(),
+          registers: list(u64),
+          memory: Memory.t()
+        }
   defstruct program: <<>>,
             bitmask: <<>>,
             jump_table: [],

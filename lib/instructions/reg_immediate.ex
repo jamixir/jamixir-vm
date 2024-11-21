@@ -4,7 +4,7 @@ defmodule Instructions.RegImmediate do
   use PVM.{Decoder, Encoder}
   alias Instructions.{Common, Executor}
 
-  # Section (A.5.5) v0.4.5
+  # Section (A.19) v0.5
   def execute(:jump_ind, state, output) do
     {register_index, addr} = get_params(state)
     register_value = Enum.at(state.registers, register_index)
@@ -49,8 +49,7 @@ defmodule Instructions.RegImmediate do
         signed_value =
           value
           |> :binary.first()
-          |> Transitions.z_n(1)
-          |> Transitions.z_n_inverse(4)
+          |> Utils.sign_extend(1)
 
         Common.update_register(output, state.registers, register_index, signed_value)
     end
@@ -79,8 +78,7 @@ defmodule Instructions.RegImmediate do
         signed_value =
           value
           |> de_le(2)
-          |> Transitions.z_n(2)
-          |> Transitions.z_n_inverse(4)
+          |> Utils.sign_extend(2)
 
         Common.update_register(output, state.registers, register_index, signed_value)
     end
@@ -95,6 +93,34 @@ defmodule Instructions.RegImmediate do
 
       value ->
         Common.update_register(output, state.registers, register_index, de_le(value, 4))
+    end
+  end
+  def execute(:load_i32, state, output) do
+    {register_index, addr} = get_params(state)
+
+    case Memory.read(state.memory, addr, 4) do
+      {:error, {:fault, fault_addr}} ->
+        %StepOutput{output | exit_status: {:fault, fault_addr}}
+
+      value ->
+        signed_value =
+          value
+          |> de_le(4)
+          |> Utils.sign_extend(4)
+
+        Common.update_register(output, state.registers, register_index, signed_value)
+    end
+  end
+
+  def execute(:load_u64, state, output) do
+    {register_index, addr} = get_params(state)
+
+    case Memory.read(state.memory, addr, 8) do
+      {:error, {:fault, fault_addr}} ->
+        %StepOutput{output | exit_status: {:fault, fault_addr}}
+
+      value ->
+        Common.update_register(output, state.registers, register_index, de_le(value, 8))
     end
   end
 
@@ -113,7 +139,21 @@ defmodule Instructions.RegImmediate do
   def execute(:store_u32, state, output) do
     {register_index, addr} = get_params(state)
     value = Enum.at(state.registers, register_index)
-    Common.do_write(output, addr, state.memory, e_le(value, 4))
+    Common.do_write(output, addr, state.memory, e_le(rem(value, 1 <<< 32), 4))
+  end
+
+  def execute(:store_u64, state, output) do
+    {register_index, addr} = get_params(state)
+    value = Enum.at(state.registers, register_index)
+    Common.do_write(output, addr, state.memory, e_le(value, 8))
+  end
+
+  def execute(:load_imm_64, state, output) do
+    register_index =
+      min(12, rem(binary_part(state.program, state.counter + 1, 1) |> :binary.first(), 16))
+
+    value = de_le(binary_part(state.program, state.counter + 1, 8), 8)
+    Common.update_register(output, state.registers, register_index, value)
   end
 
   # Helper functions

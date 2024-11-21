@@ -2,7 +2,7 @@ defmodule VMTest do
   use ExUnit.Case
   alias PVM.State
   use PVM.Decoder
-
+  use Instructions
   def create_test_state(program, bitmask) do
     %State{
       program: program,
@@ -17,14 +17,14 @@ defmodule VMTest do
 
   describe "VM.step basic functionality" do
     test "step trap instruction" do
-      state = create_test_state(<<0>>, <<1>>)
+      state = create_test_state(<<op(:trap)>>, <<1>>)
       output = VM.step(state)
       assert output.exit_status == :panic
-      assert output.counter == 1
+      assert output.counter == 0
     end
 
     test "step out of bounds panics" do
-      state = create_test_state(<<0>>, <<1>>)
+      state = create_test_state(<<op(:trap)>>, <<1>>)
       state = %{state | counter: 4}
       output = VM.step(state)
       assert output.exit_status == :panic
@@ -32,7 +32,7 @@ defmodule VMTest do
     end
 
     test "step fallthrough" do
-      state = create_test_state(<<17>>, <<1>>)
+      state = create_test_state(<<op(:fallthrough)>>, <<1>>)
       output = VM.step(state)
       assert output.exit_status == :continue
       assert output.counter == 1
@@ -42,7 +42,7 @@ defmodule VMTest do
   describe "VM.step instruction coverage" do
     test "steps all no-arg instructions" do
       # Test each no-arg instruction in sequence
-      state = create_test_state(<<0, 17>>, <<1, 1>>)
+      state = create_test_state(<<op(:trap), op(:fallthrough)>>, <<1, 1>>)
 
       output = VM.step(state)
       assert output.exit_status == :panic
@@ -55,10 +55,8 @@ defmodule VMTest do
     test "steps all one-immediate instructions" do
       state = create_test_state(
         <<
-          # ecalli 42
-          78, 1, 42,
-          # jump +2
-          5, 2
+          op(:ecalli), 1, 42,
+          op(:jump), 2
         >>,
         <<1, 0, 0, 1, 0>>
       )
@@ -75,12 +73,9 @@ defmodule VMTest do
     test "steps reg_immediate instructions" do
       state = create_test_state(
         <<
-          # load_imm r1, 42
-          4, 1, 42,
-          # store_u8 r1, 10
-          71, 1, 10,
-          # load_u8 r2, 10
-          60, 2, 10
+          op(:load_imm), 1, 42,
+          op(:store_u8), 1, 10,
+          op(:load_u8), 2, 10
         >>,
         <<1, 0, 0, 1, 0, 0, 1, 0, 0>>
       )
@@ -106,12 +101,9 @@ defmodule VMTest do
     test "steps two_immediates instructions" do
       state = create_test_state(
         <<
-          # store_imm_u8 addr=10, value=42
-          0x3E, 0x01, 10, 42,
-          # store_imm_u16 addr=20, value=1234
-          0x4F, 0x01, 20, 0x34, 0x12,
-          # store_imm_u32 addr=30, value=12345678
-          0x26, 0x01, 30, 0x78, 0x56, 0x34, 0x12
+          op(:store_imm_u8), 0x01, 10, 42,
+          op(:store_imm_u16), 0x01, 20, 0x34, 0x12,
+          op(:store_imm_u32), 0x01, 30, 0x78, 0x56, 0x34, 0x12
         >>,
         <<1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0>>
       )
@@ -141,14 +133,14 @@ defmodule VMTest do
       # fallthrough (17)
       # fallthrough (17)
       # trap (0)
-      program = <<17, 17, 0>>
+      program = <<op(:fallthrough), op(:fallthrough), op(:trap)>>
       bitmask = <<1, 1, 1>>
 
       state = create_test_state(program, bitmask)
       output = VM.execute(state)
 
       assert output.exit_status == :panic
-      assert output.counter == 3
+      assert output.counter == 2
     end
 
     test "executes jump and jump_ind sequence skipping instructions" do
@@ -161,14 +153,14 @@ defmodule VMTest do
       # load_imm r2, 55       (4, 2, 55)       # offset 15 (jumped to)
       # fallthrough          (17)              # offset 18
       program = <<
-        4, 1, 10,             # load_imm r1, 10
-        19, 1, 0,             # jump_ind r1
-        62, 1, 10, 42,        # store_imm_u8 (skipped)
-        0,                    # trap (skipped)
-        62, 1, 20, 99,        # store_imm_u8 (skipped)
-        17,                   # fallthrough (target)
-        4, 2, 55,             # load_imm r2, 55
-        17                    # fallthrough
+        op(:load_imm), 1, 10,
+        op(:jump_ind), 1, 0,
+        op(:store_imm_u8), 1, 10, 42,
+        op(:trap),
+        op(:store_imm_u8), 1, 20, 99,
+        op(:fallthrough),
+        op(:load_imm), 2, 55,
+        op(:fallthrough)
       >>
 
       # Mark instruction starts
@@ -207,7 +199,12 @@ defmodule VMTest do
       # store_u8 r1, 20                 (71, 1, 20)
       # load_u8 r2, 20                  (60, 2, 20)
 
-      program = <<62, 1, 10, 42, 60, 1, 10, 71, 1, 20, 60, 2, 20>>
+      program = <<
+        op(:store_imm_u8), 1, 10, 42,
+        op(:load_u8), 1, 10,
+        op(:store_u8), 1, 20,
+        op(:load_u8), 2, 20
+      >>
       bitmask = <<1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0>>
 
       state = create_test_state(program, bitmask)
@@ -226,7 +223,9 @@ defmodule VMTest do
       # store_imm_u32 addr=10, value=0x12345678 (38, 1, 10, 78, 56, 34, 12)
       # load_u16 r1, 10                         (76, 1, 10)
       # load_u16 r2, 12                         (76, 2, 12)
-      program = <<38, 1, 10, 78, 56, 34, 12, 76, 1, 10, 76, 2, 12>>
+      program = <<op(:store_imm_u32), 1, 10, 78, 56, 34, 12,
+       op(:load_u16), 1, 10,
+       op(:load_u16), 2, 12>>
       bitmask = <<1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0>>
 
       state = create_test_state(program, bitmask)
@@ -245,21 +244,88 @@ defmodule VMTest do
       # load_imm r2, 24                (4, 2, 24)
       # store_u8 r1, 100              (71, 1, 100)
       # store_u8 r2, 101              (71, 2, 101)
-      # load_imm r3, 0xFFFF0000       (4, 3, 0)  # Value that will cause halt
+      # load_imm r3, 0xFFFF0000       (4, 3, 0, 0, 0xFF, 0xFF)  # Value that will cause halt
       # jump_ind r3                   (19, 3, 0)
-      program = <<4, 1, 42, 4, 2, 24, 71, 1, 100, 71, 2, 101, 4,3, 0, 0, 0xFF, 0xFF, 19, 3, 0>>
-      bitmask = <<1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0,0,0, 1, 0, 0>>
+      program = <<
+        op(:load_imm), 1, 42,
+        op(:load_imm), 2, 24,
+        op(:store_u8), 1, 100,
+        op(:store_u8), 2, 101,
+        op(:load_imm), 3, 0, 0, 0xFF, 0xFF,
+        op(:jump_ind), 3, 0>>
+      bitmask = <<1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0>>
 
       state = create_test_state(program, bitmask)
       output = VM.execute(state)
 
       assert output.exit_status == :halt
-      assert output.counter == 18  # Stopped at jump_ind
+      # Stopped at jump_ind
+      assert output.counter == 18
       assert Enum.at(output.registers, 1) == 42
       assert Enum.at(output.registers, 2) == 24
-      assert Enum.at(output.registers, 3) == 0xFFFF0000
+      assert Enum.at(output.registers, 3) == 0xFFFF_FFFF_FFFF_0000
       assert Memory.read(output.memory, 100, 1) == <<42>>
       assert Memory.read(output.memory, 101, 1) == <<24>>
+    end
+
+
+    test "executes 64-bit load and store operations" do
+      # Program:
+      # store_imm_u64 addr=16, value=0x12345678 (zero-extended to 64 bits)
+      # load_imm_64 r1, 0xDCBA987654321001 (full 64-bit value)
+      # store_u64 r1, 24
+      program = <<
+        op(:store_imm_u64), 1, 16, 0x78, 0x56, 0x34, 0x12,  # Only 32-bit immediate
+        op(:load_imm_64), 0x01, 0x10, 0x32, 0x54, 0x76, 0x98, 0xBA, 0xDC,
+        op(:store_u64), 1, 24
+      >>
+
+      bitmask = <<
+        1, 0, 0, 0, 0, 0,0,              # store_imm_u64 (4-byte immediate)
+        1, 0, 0, 0, 0, 0, 0, 0, 0,  # load_imm_64 (8-byte immediate)
+        1, 0, 0                         # store_u64
+      >>
+
+      state = create_test_state(program, bitmask)
+      output = VM.execute(state)
+
+      assert output.exit_status == :panic
+      assert output.counter == 19
+      # Verify the 64-bit immediate load worked
+      assert Enum.at(output.registers, 1) == 0xDCBA987654321001
+      # Verify memory contents:
+      # First location should have zero-extended 32-bit value
+      assert Memory.read(output.memory, 16, 8) == <<0x78, 0x56, 0x34, 0x12, 0, 0, 0, 0>>
+      # Second location should have full 64-bit value from register
+      assert Memory.read(output.memory, 24, 8) == <<0x01,0x10, 0x32, 0x54, 0x76, 0x98, 0xBA, 0xDC>>
+    end
+  end
+
+  describe "VM.execute memory faults" do
+    test "handles memory write fault correctly" do
+      # Program:
+      # store_imm_u8 addr=4096, value=42  (62, 2,0x00 10, 42)
+      program = <<op(:store_imm_u8), 2, 0x00, 0x10, 42>>
+      bitmask = <<1, 0, 0, 0, 0>>
+
+      state = create_test_state(program, bitmask)
+
+      # Mark page 1 (starting at 4096) as read-only
+      state = %{state | memory: Memory.set_access(state.memory, 4096, 2, :read)}
+
+      # Initial register state to verify no changes
+      initial_registers = state.registers
+
+      output = VM.execute(state)
+
+      # Should return page-aligned address
+      assert output.exit_status == {:fault, 1}
+      # Counter should not advance
+      assert output.counter == 0
+      # Registers should be unchanged
+      assert output.registers == initial_registers
+      # Memory should be unchanged
+      assert Memory.read(output.memory, 4096, 1) == <<0>>
     end
   end
 end
