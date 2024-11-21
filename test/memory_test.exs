@@ -9,7 +9,6 @@ defmodule MemoryTest do
   describe "basic operations" do
     test "writes and reads a single byte" do
       memory = %Memory{}
-      memory = %Memory{}
       memory = Memory.write(memory, 0, <<42>>)
       assert Memory.read(memory, 0, 1) == <<42>>
     end
