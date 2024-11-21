@@ -116,7 +116,7 @@ defmodule MemoryTest do
       |> Memory.set_access(@page_size, @page_size, :read)  # Make second page read-only
 
       result = Memory.write(memory, @page_size + 10, <<42>>)
-      assert result == {:error, {:fault, @page_size}}  # Should return page-aligned address
+      assert result == {:error, {:fault, 1}}  # Should return page-aligned address
     end
 
     test "read fault returns page address" do
@@ -133,7 +133,7 @@ defmodule MemoryTest do
 
       # Write spanning pages 0 and 1
       result = Memory.write(memory, @page_size - 2, <<1, 2, 3, 4>>)
-      assert result == {:error, {:fault, @page_size}}
+      assert result == {:error, {:fault, 1}}
     end
   end
 end

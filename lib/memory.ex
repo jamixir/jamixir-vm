@@ -78,7 +78,8 @@ defmodule Memory do
         start_offset = rem(wrapped_address, @page_size)
 
         new_data =
-          Enum.reduce(page_range(start_page, end_page), {memory.data, 0}, fn page_num, {acc, bytes_written} ->
+          Enum.reduce(page_range(start_page, end_page), {memory.data, 0}, fn page_num,
+                                                                             {acc, bytes_written} ->
             page_offset = if page_num == start_page, do: start_offset, else: 0
             current_page = Map.get(acc, page_num, <<0::size(@page_size * 8)>>)
 
@@ -87,25 +88,29 @@ defmodule Memory do
             bytes_in_page = min(bytes_remaining, @page_size - page_offset)
 
             # Extract the portion of data for this page
-            <<_::binary-size(bytes_written), page_data::binary-size(bytes_in_page), _::binary>> = value
+            <<_::binary-size(bytes_written), page_data::binary-size(bytes_in_page), _::binary>> =
+              value
 
             # Create new page with the correct portion of data
-            new_page = case current_page do
-              <<pre::binary-size(page_offset), _::binary-size(bytes_in_page), post::binary>> ->
-                pre <> page_data <> post
-              _ ->
-                pad_pre = binary_part(current_page, 0, page_offset)
-                pad_pre <> page_data
-            end
+            new_page =
+              case current_page do
+                <<pre::binary-size(page_offset), _::binary-size(bytes_in_page), post::binary>> ->
+                  pre <> page_data <> post
+
+                _ ->
+                  pad_pre = binary_part(current_page, 0, page_offset)
+                  pad_pre <> page_data
+              end
 
             {Map.put(acc, page_num, new_page), bytes_written + bytes_in_page}
           end)
-          |> elem(0)  # Get just the map, discard bytes_written
+          # Get just the map, discard bytes_written
+          |> elem(0)
 
         %__MODULE__{memory | data: new_data}
 
       {:error, page} ->
-        {:error, {:fault, page * @page_size}}
+        {:error, {:fault, page}}
     end
   end
 

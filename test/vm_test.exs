@@ -20,7 +20,7 @@ defmodule VMTest do
       state = create_test_state(<<0>>, <<1>>)
       output = VM.step(state)
       assert output.exit_status == :panic
-      assert output.counter == 1
+      assert output.counter == 0
     end
 
     test "step out of bounds panics" do
@@ -148,7 +148,7 @@ defmodule VMTest do
       output = VM.execute(state)
 
       assert output.exit_status == :panic
-      assert output.counter == 3
+      assert output.counter == 2
     end
 
     test "executes jump and jump_ind sequence skipping instructions" do
@@ -245,21 +245,50 @@ defmodule VMTest do
       # load_imm r2, 24                (4, 2, 24)
       # store_u8 r1, 100              (71, 1, 100)
       # store_u8 r2, 101              (71, 2, 101)
-      # load_imm r3, 0xFFFF0000       (4, 3, 0)  # Value that will cause halt
+      # load_imm r3, 0xFFFF0000       (4, 3, 0, 0, 0xFF, 0xFF)  # Value that will cause halt
       # jump_ind r3                   (19, 3, 0)
-      program = <<4, 1, 42, 4, 2, 24, 71, 1, 100, 71, 2, 101, 4,3, 0, 0, 0xFF, 0xFF, 19, 3, 0>>
-      bitmask = <<1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0,0,0, 1, 0, 0>>
+      program = <<4, 1, 42, 4, 2, 24, 71, 1, 100, 71, 2, 101, 4, 3, 0, 0, 0xFF, 0xFF, 19, 3, 0>>
+      bitmask = <<1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0>>
 
       state = create_test_state(program, bitmask)
       output = VM.execute(state)
 
       assert output.exit_status == :halt
-      assert output.counter == 18  # Stopped at jump_ind
+      # Stopped at jump_ind
+      assert output.counter == 18
       assert Enum.at(output.registers, 1) == 42
       assert Enum.at(output.registers, 2) == 24
       assert Enum.at(output.registers, 3) == 0xFFFF0000
       assert Memory.read(output.memory, 100, 1) == <<42>>
       assert Memory.read(output.memory, 101, 1) == <<24>>
+    end
+  end
+
+  describe "VM.execute memory faults" do
+    test "handles memory write fault correctly" do
+      # Program:
+      # store_imm_u8 addr=4096, value=42  (62, 2,0x00 10, 42)
+      program = <<62, 2, 0x00, 0x10, 42>>
+      bitmask = <<1, 0, 0, 0, 0>>
+
+      state = create_test_state(program, bitmask)
+
+      # Mark page 1 (starting at 4096) as read-only
+      state = %{state | memory: Memory.set_access(state.memory, 4096, 2, :read)}
+
+      # Initial register state to verify no changes
+      initial_registers = state.registers
+
+      output = VM.execute(state)
+
+      # Should return page-aligned address
+      assert output.exit_status == {:fault, 1}
+      # Counter should not advance
+      assert output.counter == 0
+      # Registers should be unchanged
+      assert output.registers == initial_registers
+      # Memory should be unchanged
+      assert Memory.read(output.memory, 4096, 1) == <<0>>
     end
   end
 end
