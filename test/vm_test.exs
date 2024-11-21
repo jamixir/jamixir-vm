@@ -55,19 +55,19 @@ defmodule VMTest do
     test "steps all one-immediate instructions" do
       state = create_test_state(
         <<
-          op(:ecalli), 1, 42,
+          op(:ecalli), 42,
           op(:jump), 2
         >>,
-        <<1, 0, 0, 1, 0>>
+        <<1, 0, 1, 0>>
       )
 
       output = VM.step(state)
       assert output.exit_status == {:ecall, 42}
 
-      state = %{state | counter: 3}
+      state = %{state | counter: 2}
       output = VM.step(state)
       assert output.exit_status == :continue
-      assert output.counter == 5
+      assert output.counter == 4
     end
 
     test "steps reg_immediate instructions" do

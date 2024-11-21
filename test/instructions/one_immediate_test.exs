@@ -16,13 +16,13 @@ defmodule Instructions.OneImmediateTest do
 
   describe "ecalli" do
     test "sets ecall exit status with immediate value" do
-      state = create_test_state(<<op(:ecalli), 1, 42>>, <<1, 0, 0>>)
+      state = create_test_state(<<op(:ecalli), 42>>, <<1, 0>>)
       output = OneImmediate.execute(:ecalli, state, %StepOutput{})
       assert output.exit_status == {:ecall, 42}
     end
 
     test "handles multi-byte immediate" do
-      state = create_test_state(<<op(:ecalli), 4, 0x78, 0x56, 0x34, 0x12>>, <<1, 0, 0, 0, 0, 0>>)
+      state = create_test_state(<<op(:ecalli), 0x78, 0x56, 0x34, 0x12>>, <<1, 0, 0, 0, 0>>)
       output = OneImmediate.execute(:ecalli, state, %StepOutput{})
       assert output.exit_status == {:ecall, 0x12345678}
     end

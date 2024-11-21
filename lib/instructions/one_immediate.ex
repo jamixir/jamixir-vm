@@ -4,7 +4,8 @@ defmodule Instructions.OneImmediate do
 
   # Section (A.5.2) v0.4.5
   def execute(:ecalli, state, output) do
-    {value, _} = Utils.parse_immediate(state.program, state.counter)
+    l_x = min(4, Utils.skip(state.counter, state.bitmask))
+    value = Utils.decode_bytes_signed(state.program, state.counter + 1, l_x)
     %StepOutput{output | exit_status: {:ecall, value}}
   end
 
