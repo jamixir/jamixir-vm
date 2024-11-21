@@ -1,6 +1,6 @@
 defmodule Instructions.TwoImmediatesTest do
   use ExUnit.Case
-  use Instructions.Opcode
+  use Instructions
   alias Instructions.TwoImmediates
 
   def create_test_state(program, bitmask) do
@@ -28,9 +28,25 @@ defmodule Instructions.TwoImmediatesTest do
     end
 
     test "store_imm_u32 writes 32-bit value" do
-      state = create_test_state(<<op(:store_imm_u32), 0x01, 10, 0x78, 0x56, 0x34, 0x12>>, <<1, 0, 0, 0, 0, 0, 0>>)
+      state =
+        create_test_state(
+          <<op(:store_imm_u32), 0x01, 10, 0x78, 0x56, 0x34, 0x12>>,
+          <<1, 0, 0, 0, 0, 0, 0>>
+        )
+
       output = TwoImmediates.execute(:store_imm_u32, state, %StepOutput{})
       assert Memory.read(output.memory, 10, 4) == <<0x78, 0x56, 0x34, 0x12>>
+    end
+
+    test "store_imm_u64 writes 64-bit value" do
+      state =
+        create_test_state(
+          <<op(:store_imm_u64), 0x01, 10, 0x78, 0x56, 0x34, 0x12>>,
+          <<1, 0, 0, 0, 0, 0, 0>>
+        )
+
+      output = TwoImmediates.execute(:store_imm_u64, state, %StepOutput{})
+      assert Memory.read(output.memory, 10, 8) == <<0x78, 0x56, 0x34, 0x12, 0, 0, 0, 0>>
     end
   end
 end
