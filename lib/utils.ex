@@ -18,36 +18,9 @@ defmodule PVM.Utils do
     end
   end
 
-  # Formula (A.15) v0.5
-  def parse_immediate(program, counter) do
-    l_x =
-      binary_part(program, counter + 1, 1)
-      |> :binary.first()
-      |> rem(8)
-      |> min(4)
-
-    x_value = decode_bytes_signed(program, counter + 2, l_x)
-    {x_value, l_x}
-  end
-
-  # Formula (A.17) v0.5
-  def parse_second_immediate(program, counter, l_x, bitmask) do
-    l = skip(counter, bitmask)
-    l_y = min(4, max(0, l - l_x - 1))
-    decode_bytes_signed(program, counter + 2 + l_x, l_y)
-  end
-
-  # Formula (A.17) v0.5
-  def parse_two_immediates(program, counter, bitmask) do
-    {x_value, l_x} = parse_immediate(program, counter)
-    y_value = parse_second_immediate(program, counter, l_x, bitmask)
-    {x_value, y_value}
-  end
-
   # Formula (A.11) v0.5
-  def sign_extend(x, n) when n > 0 and n <= 4, do:
-    x + div(x, 1 <<< (8 * n - 1)) * ((1 <<< 64) - (1 <<< (8 * n)))
-
+  def sign_extend(x, n) when n > 0 and n <= 4,
+    do: x + div(x, 1 <<< (8 * n - 1)) * ((1 <<< 64) - (1 <<< (8 * n)))
 
   def sign_extend(x, 0), do: x
 

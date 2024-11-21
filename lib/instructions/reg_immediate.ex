@@ -156,7 +156,6 @@ defmodule Instructions.RegImmediate do
     Common.update_register(output, state.registers, register_index, value)
   end
 
-  # Helper functions
   defp get_params(state) do
     register_index =
       min(12, rem(binary_part(state.program, state.counter + 1, 1) |> :binary.first(), 16))
