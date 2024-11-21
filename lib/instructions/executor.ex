@@ -12,7 +12,7 @@ defmodule Instructions.Executor do
         OneImmediate.execute(op, state, output)
 
       # Two immediates
-      op when op in [:store_imm_u8, :store_imm_u16, :store_imm_u32] ->
+      op when op in [:store_imm_u8, :store_imm_u16, :store_imm_u32, :store_imm_u64] ->
         TwoImmediates.execute(op, state, output)
 
       # Register and immediate
