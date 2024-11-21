@@ -43,6 +43,11 @@ defmodule Instructions do
           | :store_u16
           | :store_u32
           | :store_u64
+          # Register and two immediates
+          | :store_imm_ind_u8
+          | :store_imm_ind_u16
+          | :store_imm_ind_u32
+          | :store_imm_ind_u64
           # One register, one immediate and one offset argument
           | :load_imm_jump
           | :branch_eq_imm
@@ -90,6 +95,10 @@ defmodule Instructions do
     store_u16: 60,
     store_u32: 61,
     store_u64: 62,
+    store_imm_ind_u8: 70,
+    store_imm_ind_u16: 71,
+    store_imm_ind_u32: 72,
+    store_imm_ind_u64: 73,
     load_imm_jump: 80,
     load_imm_jump_ind: 61,
     branch_eq_imm: 81,
@@ -133,6 +142,10 @@ defmodule Instructions do
     store_u16: 0,
     store_u32: 0,
     store_u64: 0,
+    store_imm_ind_u8: 0,
+    store_imm_ind_u16: 0,
+    store_imm_ind_u32: 0,
+    store_imm_ind_u64: 0,
     load_imm_jump: 0,
     load_imm_jump_ind: 0,
     branch_eq: 0,
@@ -172,6 +185,12 @@ defmodule Instructions do
       :store_u16,
       :store_u32,
       :store_u64
+    ],
+    register_two_immediate: [
+      :store_imm_ind_u8,
+      :store_imm_ind_u16,
+      :store_imm_ind_u32,
+      :store_imm_ind_u64
     ],
     register_immediate_offset: [
       :load_imm_jump,
