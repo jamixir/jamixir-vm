@@ -4,6 +4,13 @@ defmodule Instructions do
   """
 
   defmodule Opcode do
+    defmacro __using__(_opts) do
+      quote do
+        def op(instruction) when is_atom(instruction), do: Instructions.Opcode.to_byte(instruction)
+        def op(byte) when is_integer(byte), do: Instructions.Opcode.from_byte(byte)
+      end
+    end
+
     # No arguments
     @type t ::
             :trap
@@ -52,43 +59,56 @@ defmodule Instructions do
             # Two registers and two immediate argument
             | :load_imm_jump_ind
 
-    def from_byte(0), do: :trap
-    def from_byte(17), do: :fallthrough
-    def from_byte(78), do: :ecalli
-    def from_byte(62), do: :store_imm_u8
-    def from_byte(79), do: :store_imm_u16
-    def from_byte(38), do: :store_imm_u32
-    def from_byte(5), do: :jump
-    def from_byte(20), do: :load_imm_u64
-    def from_byte(19), do: :jump_ind
-    def from_byte(6), do: :load_imm_jump
-    def from_byte(42), do: :load_imm_jump_ind
-    def from_byte(24), do: :branch_eq
-    def from_byte(30), do: :branch_ne
-    def from_byte(41), do: :branch_ge_u
-    def from_byte(43), do: :branch_ge_s
-    def from_byte(47), do: :branch_lt_u
-    def from_byte(48), do: :branch_lt_s
-    def from_byte(7), do: :branch_eq_imm
-    def from_byte(15), do: :branch_ne_imm
-    def from_byte(44), do: :branch_lt_u_imm
-    def from_byte(32), do: :branch_lt_s_imm
-    def from_byte(59), do: :branch_le_u_imm
-    def from_byte(49), do: :branch_le_s_imm
-    def from_byte(52), do: :branch_ge_u_imm
-    def from_byte(45), do: :branch_ge_s_imm
-    def from_byte(50), do: :branch_gt_u_imm
-    def from_byte(53), do: :branch_gt_s_imm
-    def from_byte(4), do: :load_imm
-    def from_byte(60), do: :load_u8
-    def from_byte(74), do: :load_i8
-    def from_byte(76), do: :load_u16
-    def from_byte(66), do: :load_i16
-    def from_byte(10), do: :load_u32
-    def from_byte(71), do: :store_u8
-    def from_byte(69), do: :store_u16
-    def from_byte(22), do: :store_u32
+    # Define a map for the two-way mapping
+    @opcode_map %{
+      trap: 0,
+      fallthrough: 1,
+      ecalli: 78,
+      store_imm_u8: 62,
+      store_imm_u16: 79,
+      store_imm_u32: 38,
+      jump: 5,
+      load_imm_u64: 20,
+      jump_ind: 19,
+      load_imm_jump: 6,
+      load_imm_jump_ind: 42,
+      branch_eq: 24,
+      branch_ne: 30,
+      branch_ge_u: 41,
+      branch_ge_s: 43,
+      branch_lt_u: 47,
+      branch_lt_s: 48,
+      branch_eq_imm: 7,
+      branch_ne_imm: 15,
+      branch_lt_u_imm: 44,
+      branch_lt_s_imm: 32,
+      branch_le_u_imm: 59,
+      branch_le_s_imm: 49,
+      branch_ge_u_imm: 52,
+      branch_ge_s_imm: 45,
+      branch_gt_u_imm: 50,
+      branch_gt_s_imm: 53,
+      load_imm: 4,
+      load_u8: 60,
+      load_i8: 74,
+      load_u16: 76,
+      load_i16: 66,
+      load_u32: 10,
+      store_u8: 71,
+      store_u16: 69,
+      store_u32: 22
+    }
+
+    # Generate from_byte/1 using the map
+    for {instruction, byte} <- @opcode_map do
+      def from_byte(unquote(byte)), do: unquote(instruction)
+    end
     def from_byte(_), do: :trap
+
+    # Generate to_byte/1 using the map
+    for {instruction, byte} <- @opcode_map do
+      def to_byte(unquote(instruction)), do: unquote(byte)
+    end
   end
 
   def gas_cost(:trap), do: 0

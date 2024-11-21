@@ -2,7 +2,7 @@ defmodule VMTest do
   use ExUnit.Case
   alias PVM.State
   use PVM.Decoder
-
+  use Instructions.Opcode
   def create_test_state(program, bitmask) do
     %State{
       program: program,
@@ -17,14 +17,14 @@ defmodule VMTest do
 
   describe "VM.step basic functionality" do
     test "step trap instruction" do
-      state = create_test_state(<<0>>, <<1>>)
+      state = create_test_state(<<op(:trap)>>, <<1>>)
       output = VM.step(state)
       assert output.exit_status == :panic
       assert output.counter == 0
     end
 
     test "step out of bounds panics" do
-      state = create_test_state(<<0>>, <<1>>)
+      state = create_test_state(<<op(:trap)>>, <<1>>)
       state = %{state | counter: 4}
       output = VM.step(state)
       assert output.exit_status == :panic
@@ -32,7 +32,7 @@ defmodule VMTest do
     end
 
     test "step fallthrough" do
-      state = create_test_state(<<17>>, <<1>>)
+      state = create_test_state(<<op(:fallthrough)>>, <<1>>)
       output = VM.step(state)
       assert output.exit_status == :continue
       assert output.counter == 1
@@ -42,7 +42,7 @@ defmodule VMTest do
   describe "VM.step instruction coverage" do
     test "steps all no-arg instructions" do
       # Test each no-arg instruction in sequence
-      state = create_test_state(<<0, 17>>, <<1, 1>>)
+      state = create_test_state(<<op(:trap), op(:fallthrough)>>, <<1, 1>>)
 
       output = VM.step(state)
       assert output.exit_status == :panic
@@ -55,10 +55,8 @@ defmodule VMTest do
     test "steps all one-immediate instructions" do
       state = create_test_state(
         <<
-          # ecalli 42
-          78, 1, 42,
-          # jump +2
-          5, 2
+          op(:ecalli), 1, 42,
+          op(:jump), 2
         >>,
         <<1, 0, 0, 1, 0>>
       )
@@ -75,12 +73,9 @@ defmodule VMTest do
     test "steps reg_immediate instructions" do
       state = create_test_state(
         <<
-          # load_imm r1, 42
-          4, 1, 42,
-          # store_u8 r1, 10
-          71, 1, 10,
-          # load_u8 r2, 10
-          60, 2, 10
+          op(:load_imm), 1, 42,
+          op(:store_u8), 1, 10,
+          op(:load_u8), 2, 10
         >>,
         <<1, 0, 0, 1, 0, 0, 1, 0, 0>>
       )
@@ -106,12 +101,9 @@ defmodule VMTest do
     test "steps two_immediates instructions" do
       state = create_test_state(
         <<
-          # store_imm_u8 addr=10, value=42
-          0x3E, 0x01, 10, 42,
-          # store_imm_u16 addr=20, value=1234
-          0x4F, 0x01, 20, 0x34, 0x12,
-          # store_imm_u32 addr=30, value=12345678
-          0x26, 0x01, 30, 0x78, 0x56, 0x34, 0x12
+          op(:store_imm_u8), 0x01, 10, 42,
+          op(:store_imm_u16), 0x01, 20, 0x34, 0x12,
+          op(:store_imm_u32), 0x01, 30, 0x78, 0x56, 0x34, 0x12
         >>,
         <<1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0>>
       )
@@ -141,7 +133,7 @@ defmodule VMTest do
       # fallthrough (17)
       # fallthrough (17)
       # trap (0)
-      program = <<17, 17, 0>>
+      program = <<op(:fallthrough), op(:fallthrough), op(:trap)>>
       bitmask = <<1, 1, 1>>
 
       state = create_test_state(program, bitmask)
@@ -161,14 +153,14 @@ defmodule VMTest do
       # load_imm r2, 55       (4, 2, 55)       # offset 15 (jumped to)
       # fallthrough          (17)              # offset 18
       program = <<
-        4, 1, 10,             # load_imm r1, 10
-        19, 1, 0,             # jump_ind r1
-        62, 1, 10, 42,        # store_imm_u8 (skipped)
-        0,                    # trap (skipped)
-        62, 1, 20, 99,        # store_imm_u8 (skipped)
-        17,                   # fallthrough (target)
-        4, 2, 55,             # load_imm r2, 55
-        17                    # fallthrough
+        op(:load_imm), 1, 10,
+        op(:jump_ind), 1, 0,
+        op(:store_imm_u8), 1, 10, 42,
+        op(:trap),
+        op(:store_imm_u8), 1, 20, 99,
+        op(:fallthrough),
+        op(:load_imm), 2, 55,
+        op(:fallthrough)
       >>
 
       # Mark instruction starts
@@ -207,7 +199,12 @@ defmodule VMTest do
       # store_u8 r1, 20                 (71, 1, 20)
       # load_u8 r2, 20                  (60, 2, 20)
 
-      program = <<62, 1, 10, 42, 60, 1, 10, 71, 1, 20, 60, 2, 20>>
+      program = <<
+        op(:store_imm_u8), 1, 10, 42,
+        op(:load_u8), 1, 10,
+        op(:store_u8), 1, 20,
+        op(:load_u8), 2, 20
+      >>
       bitmask = <<1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0>>
 
       state = create_test_state(program, bitmask)
@@ -226,7 +223,9 @@ defmodule VMTest do
       # store_imm_u32 addr=10, value=0x12345678 (38, 1, 10, 78, 56, 34, 12)
       # load_u16 r1, 10                         (76, 1, 10)
       # load_u16 r2, 12                         (76, 2, 12)
-      program = <<38, 1, 10, 78, 56, 34, 12, 76, 1, 10, 76, 2, 12>>
+      program = <<op(:store_imm_u32), 1, 10, 78, 56, 34, 12,
+       op(:load_u16), 1, 10,
+       op(:load_u16), 2, 12>>
       bitmask = <<1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0>>
 
       state = create_test_state(program, bitmask)
@@ -247,7 +246,13 @@ defmodule VMTest do
       # store_u8 r2, 101              (71, 2, 101)
       # load_imm r3, 0xFFFF0000       (4, 3, 0, 0, 0xFF, 0xFF)  # Value that will cause halt
       # jump_ind r3                   (19, 3, 0)
-      program = <<4, 1, 42, 4, 2, 24, 71, 1, 100, 71, 2, 101, 4, 3, 0, 0, 0xFF, 0xFF, 19, 3, 0>>
+      program = <<
+        op(:load_imm), 1, 42,
+        op(:load_imm), 2, 24,
+        op(:store_u8), 1, 100,
+        op(:store_u8), 2, 101,
+        op(:load_imm), 3, 0, 0, 0xFF, 0xFF,
+        op(:jump_ind), 3, 0>>
       bitmask = <<1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0>>
 
       state = create_test_state(program, bitmask)
@@ -268,7 +273,7 @@ defmodule VMTest do
     test "handles memory write fault correctly" do
       # Program:
       # store_imm_u8 addr=4096, value=42  (62, 2,0x00 10, 42)
-      program = <<62, 2, 0x00, 0x10, 42>>
+      program = <<op(:store_imm_u8), 2, 0x00, 0x10, 42>>
       bitmask = <<1, 0, 0, 0, 0>>
 
       state = create_test_state(program, bitmask)
