@@ -199,4 +199,31 @@ defmodule Instructions do
       :branch_gt_s_imm
     ]
   end
+
+  # Add instruction category mapping
+  @instruction_categories %{
+    no_args: [:trap, :fallthrough],
+    one_immediate: [:ecalli, :jump],
+    two_immediates: [:store_imm_u8, :store_imm_u16, :store_imm_u32, :store_imm_u64],
+    reg_immediate: [
+      :jump_ind,
+      :load_imm,
+      :load_imm_64,
+      :load_u8,
+      :load_i8,
+      :load_u16,
+      :load_i16,
+      :load_u32,
+      :store_u8,
+      :store_u16,
+      :store_u32
+    ]
+  }
+
+  # Add helper function to get instruction category
+  def instruction_category(instruction) do
+    Enum.find_value(@instruction_categories, fn {category, instructions} ->
+      if instruction in instructions, do: category
+    end)
+  end
 end

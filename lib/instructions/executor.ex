@@ -2,35 +2,11 @@ defmodule Instructions.Executor do
   alias Instructions.{NoArgs, OneImmediate, TwoImmediates, RegImmediate}
 
   def execute_instruction(opcode, state, output) do
-    case opcode do
-      # No arguments
-      op when op in [:trap, :fallthrough] ->
-        NoArgs.execute(op, output)
-
-      # One immediate
-      op when op in [:ecalli, :jump] ->
-        OneImmediate.execute(op, state, output)
-
-      # Two immediates
-      op when op in [:store_imm_u8, :store_imm_u16, :store_imm_u32, :store_imm_u64] ->
-        TwoImmediates.execute(op, state, output)
-
-      # Register and immediate
-      op
-      when op in [
-             :jump_ind,
-             :load_imm,
-             :load_imm_64,
-             :load_u8,
-             :load_i8,
-             :load_u16,
-             :load_i16,
-             :load_u32,
-             :store_u8,
-             :store_u16,
-             :store_u32
-           ] ->
-        RegImmediate.execute(op, state, output)
+    case Instructions.instruction_category(opcode) do
+      :no_args -> NoArgs.execute(opcode, output)
+      :one_immediate -> OneImmediate.execute(opcode, state, output)
+      :two_immediates -> TwoImmediates.execute(opcode, state, output)
+      :reg_immediate -> RegImmediate.execute(opcode, state, output)
     end
   end
 
