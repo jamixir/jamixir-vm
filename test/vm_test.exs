@@ -258,7 +258,7 @@ defmodule VMTest do
       assert output.counter == 18
       assert Enum.at(output.registers, 1) == 42
       assert Enum.at(output.registers, 2) == 24
-      assert Enum.at(output.registers, 3) == 0xFFFF0000
+      assert Enum.at(output.registers, 3) == 0xFFFF_FFFF_FFFF_0000
       assert Memory.read(output.memory, 100, 1) == <<42>>
       assert Memory.read(output.memory, 101, 1) == <<24>>
     end

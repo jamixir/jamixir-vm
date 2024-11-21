@@ -1,6 +1,7 @@
 defmodule PVM.Utils do
   alias Instructions.Opcode
   use PVM.Decoder
+  import Bitwise
 
   # Formula (250) v0.4.5
   def skip(i, bitmask) when is_binary(bitmask) do
@@ -43,12 +44,10 @@ defmodule PVM.Utils do
     {x_value, y_value}
   end
 
-  # Formula (247) v0.4.5
-  def sign_extend(x, n) when n > 0 and n <= 4 do
-    x +
-      div(x, trunc(:math.pow(2, 8 * n - 1))) *
-        (trunc(:math.pow(2, 32)) - trunc(:math.pow(2, 8 * n)))
-  end
+  # Formula (A.11) v0.5
+  def sign_extend(x, n) when n > 0 and n <= 4, do:
+    x + div(x, 1 <<< (8 * n - 1)) * ((1 <<< 64) - (1 <<< (8 * n)))
+
 
   def sign_extend(x, 0), do: x
 
