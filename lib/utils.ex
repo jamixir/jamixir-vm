@@ -51,7 +51,7 @@ defmodule PVM.Utils do
   Decodes a little-endian number from a binary starting at start_index for count bytes.
   Returns the decoded number.
   """
-  def decode_bytes(program, start_index, count) when is_binary(program) and count > 0 do
+  def decode_bytes(program, start_index, count) when is_binary(program) do
     binary_part(program, start_index, count)
     |> de_le(count)
   end
@@ -61,10 +61,11 @@ defmodule PVM.Utils do
   and applies sign extension.
   Returns the decoded and sign-extended number.
   """
-  def decode_bytes_signed(program, start_index, count) when is_binary(program) and count > 0 do
+  def decode_bytes_signed(program, start_index, count) when is_binary(program) do
     decode_bytes(program, start_index, count)
     |> sign_extend(count)
   end
+
 
   @doc """
   Determines the next counter position based on execution output.
