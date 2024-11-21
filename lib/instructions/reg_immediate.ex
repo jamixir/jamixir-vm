@@ -116,6 +116,14 @@ defmodule Instructions.RegImmediate do
     Common.do_write(output, addr, state.memory, e_le(value, 4))
   end
 
+  def execute(:load_imm_u64, state, output) do
+    register_index =
+      min(12, rem(binary_part(state.program, state.counter + 1, 1) |> :binary.first(), 16))
+
+    value = de_le(binary_part(state.program, state.counter + 1, 8), 8)
+    Common.update_register(output, state.registers, register_index, value)
+  end
+
   # Helper functions
   defp get_params(state) do
     register_index =

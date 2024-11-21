@@ -34,7 +34,7 @@ defmodule Instructions.RegImmediateTest do
       state = create_test_state(<<0x22, 0x01, 10>>, <<1, 0, 0>>)
       state = %{state | memory: memory}
       output = RegImmediate.execute(:load_i8, state, %StepOutput{})
-      assert Enum.at(output.registers, 1) == (1 <<< 32) -1
+      assert Enum.at(output.registers, 1) == (1 <<< 32) - 1
     end
 
     test "load_u16 reads unsigned 16-bit" do
@@ -59,6 +59,22 @@ defmodule Instructions.RegImmediateTest do
       state = %{state | memory: memory}
       output = RegImmediate.execute(:load_u32, state, %StepOutput{})
       assert Enum.at(output.registers, 1) == 0x12345678
+    end
+
+    test "load_imm_u64 loads 64-bit immediate value into register" do
+      # Create program with load_imm_u64 instruction (0x26), register 1, and 64-bit value
+      program = <<20>> <> <<0x02, 0x56, 0x34, 0x12, 0xFC, 0xDE, 0xBA, 0x98>>
+      state = create_test_state(program, <<1>> <> <<0, 0, 0, 0, 0, 0, 0, 0>>)
+      output = RegImmediate.execute(:load_imm_u64, state, %StepOutput{})
+      assert Enum.at(output.registers, 2) == 0x98BADEFC12345602
+    end
+
+    test "load_imm_u64 handles register index greater than 12" do
+      # Test with register index 15 (should be capped to 12)
+      program = <<20>> <> <<0x0F, 0x56, 0x34, 0x12, 0xFC, 0xDE, 0xBA, 0x98>>
+      state = create_test_state(program, <<1, 0, 0, 0, 0, 0, 0, 0,0>>)
+      output = RegImmediate.execute(:load_imm_u64, state, %StepOutput{})
+      assert Enum.at(output.registers, 12) == 0x98BADEFC1234560F
     end
   end
 
@@ -94,36 +110,53 @@ defmodule Instructions.RegImmediateTest do
       # 4 = load_imm opcode (at offset 10)
       # 2 = register 2
       # 42 = immediate value 66
-      program = <<19, 1, 0>> <> # jump_ind instruction
-                :binary.copy(<<0>>, 7) <> # padding to reach offset 10
-                <<42, 2, 42>>     # load_imm instruction at offset 10
+      # jump_ind instruction
+      # padding to reach offset 10
+      # load_imm instruction at offset 10
+      program =
+        <<19, 1, 0>> <>
+          :binary.copy(<<0>>, 7) <>
+          <<42, 2, 42>>
 
       # Bitmask marking instruction starts at offset 0 and 10
-      bitmask = <<1>> <> # mark jump_ind instruction
-                :binary.copy(<<0>>, 9) <> # no instructions for 9 bytes
-                <<1>> <> # mark load_imm instruction at offset 10
-                <<0>>    # padding
+      # mark jump_ind instruction
+      # no instructions for 9 bytes
+      # mark load_imm instruction at offset 10
+      # padding
+      bitmask =
+        <<1>> <>
+          :binary.copy(<<0>>, 9) <>
+          <<1>> <>
+          <<0>>
 
       state = create_test_state(program, bitmask)
-      state = %{state |
-        registers: List.replace_at(state.registers, 1, 10),  # register value = 10
-        # jump_table needs enough entries for index 5 (10 div 2)
-        jump_table: [2, 4, 6, 8, 10],  # index 5 maps to 10
-        counter: 0
+
+      state = %{
+        state
+        | # register value = 10
+          registers: List.replace_at(state.registers, 1, 10),
+          # jump_table needs enough entries for index 5 (10 div 2)
+          # index 5 maps to 10
+          jump_table: [2, 4, 6, 8, 10],
+          counter: 0
       }
 
       # Utils.basic_block_starts will generate start_set containing [0, 10]
       output = RegImmediate.execute(:jump_ind, state, %StepOutput{})
       assert output.exit_status == :continue
-      assert output.counter == 10  # jumps to load_imm instruction
+      # jumps to load_imm instruction
+      assert output.counter == 10
     end
 
     test "halt on special address 0xFFFF0000" do
       state = create_test_state(<<0x19, 0x01, 0>>, <<1, 0, 0>>)
-      state = %{state |
-        registers: List.replace_at(state.registers, 1, 0xFFFF0000),
-        jump_table: [10]
+
+      state = %{
+        state
+        | registers: List.replace_at(state.registers, 1, 0xFFFF0000),
+          jump_table: [10]
       }
+
       output = RegImmediate.execute(:jump_ind, state, %StepOutput{})
       assert output.exit_status == :halt
       assert output.counter == 0
@@ -131,10 +164,14 @@ defmodule Instructions.RegImmediateTest do
 
     test "panic on unaligned address" do
       state = create_test_state(<<0x19, 0x01, 0>>, <<1, 0, 0>>)
-      state = %{state |
-        registers: List.replace_at(state.registers, 1, 3),  # odd number, not aligned
-        jump_table: [10]
+
+      state = %{
+        state
+        | # odd number, not aligned
+          registers: List.replace_at(state.registers, 1, 3),
+          jump_table: [10]
       }
+
       output = RegImmediate.execute(:jump_ind, state, %StepOutput{})
       assert output.exit_status == :panic
       assert output.counter == 0
@@ -142,11 +179,16 @@ defmodule Instructions.RegImmediateTest do
 
     test "panic on jump table index out of bounds" do
       state = create_test_state(<<0x19, 0x01, 0>>, <<1, 0, 0>>)
-      state = %{state |
-        registers: List.replace_at(state.registers, 1, 10),  # results in index 5
-        jump_table: [2],  # only has one entry
-        counter: 0
+
+      state = %{
+        state
+        | # results in index 5
+          registers: List.replace_at(state.registers, 1, 10),
+          # only has one entry
+          jump_table: [2],
+          counter: 0
       }
+
       output = RegImmediate.execute(:jump_ind, state, %StepOutput{})
       assert output.exit_status == :panic
       assert output.counter == 0
@@ -154,13 +196,17 @@ defmodule Instructions.RegImmediateTest do
 
     test "panic on jump to non-instruction start" do
       program = :binary.copy(<<0>>, 12)
-      bitmask = :binary.copy(<<0>>, 12)  # no instruction starts marked
+      # no instruction starts marked
+      bitmask = :binary.copy(<<0>>, 12)
 
       state = create_test_state(program, bitmask)
-      state = %{state |
-        registers: List.replace_at(state.registers, 1, 8),
-        jump_table: [10],  # points to offset 10, but it's not an instruction start
-        counter: 0
+
+      state = %{
+        state
+        | registers: List.replace_at(state.registers, 1, 8),
+          # points to offset 10, but it's not an instruction start
+          jump_table: [10],
+          counter: 0
       }
 
       output = RegImmediate.execute(:jump_ind, state, %StepOutput{})

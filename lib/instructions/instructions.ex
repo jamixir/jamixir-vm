@@ -16,6 +16,8 @@ defmodule Instructions do
             | :store_imm_u32
             # One offset argument
             | :jump
+            # One register and one (extended) immediate argument
+            | :load_imm_u64
             # One register and one immediate argument
             | :jump_ind
             | :load_imm
@@ -57,6 +59,7 @@ defmodule Instructions do
     def from_byte(79), do: :store_imm_u16
     def from_byte(38), do: :store_imm_u32
     def from_byte(5), do: :jump
+    def from_byte(20), do: :load_imm_u64
     def from_byte(19), do: :jump_ind
     def from_byte(6), do: :load_imm_jump
     def from_byte(42), do: :load_imm_jump_ind
