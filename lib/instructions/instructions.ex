@@ -37,9 +37,12 @@ defmodule Instructions do
           | :load_u16
           | :load_i16
           | :load_u32
+          | :load_i32
+          | :load_u64
           | :store_u8
           | :store_u16
           | :store_u32
+          | :store_u64
           # One register, one immediate and one offset argument
           | :load_imm_jump
           | :branch_eq_imm
@@ -214,9 +217,12 @@ defmodule Instructions do
       :load_u16,
       :load_i16,
       :load_u32,
+      :load_i32,
+      :load_u64,
       :store_u8,
       :store_u16,
-      :store_u32
+      :store_u32,
+      :store_u64
     ]
   }
 

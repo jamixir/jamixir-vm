@@ -2,7 +2,6 @@ defmodule Instructions.RegImmediateTest do
   use ExUnit.Case
   use Instructions
   alias Instructions.RegImmediate
-  import Bitwise
 
   def create_test_state(program, bitmask) do
     %PVM.State{
@@ -35,7 +34,7 @@ defmodule Instructions.RegImmediateTest do
       state = create_test_state(<<op(:load_i8), 0x01, 10>>, <<1, 0, 0>>)
       state = %{state | memory: memory}
       output = RegImmediate.execute(:load_i8, state, %StepOutput{})
-      assert Enum.at(output.registers, 1) == (1 <<< 32) - 1
+      assert Enum.at(output.registers, 1) == 0xFFFF_FFFF_FFFF_FFFF
     end
 
     test "load_u16 reads unsigned 16-bit" do
@@ -51,7 +50,7 @@ defmodule Instructions.RegImmediateTest do
       state = create_test_state(<<op(:load_i16), 0x01, 10>>, <<1, 0, 0>>)
       state = %{state | memory: memory}
       output = RegImmediate.execute(:load_i16, state, %StepOutput{})
-      assert Enum.at(output.registers, 1) == (1 <<< 32) - 1
+      assert Enum.at(output.registers, 1) == 0xFFFF_FFFF_FFFF_FFFF
     end
 
     test "load_u32 reads unsigned 32-bit" do
@@ -60,6 +59,22 @@ defmodule Instructions.RegImmediateTest do
       state = %{state | memory: memory}
       output = RegImmediate.execute(:load_u32, state, %StepOutput{})
       assert Enum.at(output.registers, 1) == 0x12345678
+    end
+
+    test "load_i32 reads signed 32-bit" do
+      memory = Memory.write(%Memory{}, 10, <<0xFF, 0xFF, 0xFF, 0xFF>>)
+      state = create_test_state(<<op(:load_i32), 0x01, 10>>, <<1, 0, 0>>)
+      state = %{state | memory: memory}
+      output = RegImmediate.execute(:load_i32, state, %StepOutput{})
+      assert Enum.at(output.registers, 1) == 0xFFFF_FFFF_FFFF_FFFF
+    end
+
+    test "load_u64 reads unsigned 64-bit" do
+      memory = Memory.write(%Memory{}, 10, <<0x78, 0x56, 0x34, 0x12, 0xFC, 0xDE, 0xBA, 0x98>>)
+      state = create_test_state(<<op(:load_u64), 0x01, 10>>, <<1, 0, 0>>)
+      state = %{state | memory: memory}
+      output = RegImmediate.execute(:load_u64, state, %StepOutput{})
+      assert Enum.at(output.registers, 1) == 0x98BADEFC12345678
     end
 
     test "load_imm_64 loads 64-bit immediate value into register" do
@@ -100,6 +115,15 @@ defmodule Instructions.RegImmediateTest do
       output = RegImmediate.execute(:store_u32, state, %StepOutput{})
       assert Memory.read(output.memory, 10, 4) == <<0x78, 0x56, 0x34, 0x12>>
     end
+
+    test "store_u64 writes 64-bit from register" do
+      state = create_test_state(<<op(:store_u64), 0x01, 10>>, <<1, 0, 0>>)
+      state = %{state | registers: List.replace_at(state.registers, 1, 0x123456789ABCDEF0)}
+      output = RegImmediate.execute(:store_u64, state, %StepOutput{})
+
+      assert Memory.read(output.memory, 10, 8) ==
+               <<0xF0, 0xDE, 0xBC, 0x9A, 0x78, 0x56, 0x34, 0x12>>
+    end
   end
 
   describe "jump_ind operation" do
@@ -115,9 +139,9 @@ defmodule Instructions.RegImmediateTest do
       # padding to reach offset 10
       # load_imm instruction at offset 10
       program =
-        <<19, 1, 0>> <>
+        <<op(:jump_ind), 1, 0>> <>
           :binary.copy(<<0>>, 7) <>
-          <<42, 2, 42>>
+          <<op(:load_imm), 2, 42>>
 
       # Bitmask marking instruction starts at offset 0 and 10
       # mark jump_ind instruction
