@@ -1,12 +1,14 @@
 defmodule MemoryTest do
   use ExUnit.Case
   import Bitwise
-  doctest Memory
 
-  describe "Memory" do
+  # Constants matching Memory module
+  @page_size 1 <<< 12      # 4KB pages
+  @memory_size 1 <<< 32    # 4GB total size
 
-
+  describe "basic operations" do
     test "writes and reads a single byte" do
+      memory = %Memory{}
       memory = %Memory{}
       memory = Memory.write(memory, 0, <<42>>)
       assert Memory.read(memory, 0, 1) == <<42>>
@@ -14,35 +16,36 @@ defmodule MemoryTest do
 
     test "writes and reads multiple bytes" do
       memory = %Memory{}
-      memory = Memory.write(memory, 0, <<1, 2, 3>>)
-      assert Memory.read(memory, 0, 3) == <<1, 2, 3>>
+      memory = Memory.write(memory, 10, <<1, 2, 3, 4>>)
+      assert Memory.read(memory, 10, 4) == <<1, 2, 3, 4>>
     end
 
-    test "writes to non-zero index" do
+    test "unwritten memory reads as zero" do
       memory = %Memory{}
-      memory = Memory.write(memory, 2, <<42>>)
-      assert Memory.read(memory, 0, 3) == <<0, 0, 42>>
+      assert Memory.read(memory, 0, 4) == <<0, 0, 0, 0>>
+    end
+  end
+
+  describe "cross-page operations" do
+    test "writes across page boundary" do
+      memory = %Memory{}
+      # Write 8 bytes starting at last 4 bytes of first page
+      start_addr = @page_size - 4
+      memory = Memory.write(memory, start_addr, <<1, 2, 3, 4, 5, 6, 7, 8>>)
+
+      # Check first page
+      assert Memory.read(memory, start_addr, 4) == <<1, 2, 3, 4>>
+      # Check second page
+      assert Memory.read(memory, @page_size, 4) == <<5, 6, 7, 8>>
+      # Check continuous read across pages
+      assert Memory.read(memory, start_addr, 8) == <<1, 2, 3, 4, 5, 6, 7, 8>>
     end
 
-    test "handles reads beyond written memory" do
+    test "reads across page boundary" do
       memory = %Memory{}
-      memory = Memory.write(memory, 0, <<1, 2>>)
-      assert Memory.read(memory, 2, 2) == <<0, 0>>
-    end
-
-    test "handles index wrapping (32-bit)" do
-      memory = %Memory{}
-      # Should wrap to index 5
-      big_index = 5 + (1 <<< 32)
-      memory = Memory.write(memory, big_index, <<42>>)
-      assert Memory.read(memory, 5, 1) == <<42>>
-    end
-
-    test "overwrites existing data" do
-      memory = %Memory{}
-      memory = Memory.write(memory, 0, <<1, 2, 3>>)
-      memory = Memory.write(memory, 1, <<99>>)
-      assert Memory.read(memory, 0, 3) == <<1, 99, 3>>
+      memory = Memory.write(memory, @page_size - 2, <<1, 2>>)
+      memory = Memory.write(memory, @page_size, <<3, 4>>)
+      assert Memory.read(memory, @page_size - 2, 4) == <<1, 2, 3, 4>>
     end
 
     test "handles multi-byte read wrapping at 32-bit boundary" do
@@ -86,34 +89,52 @@ defmodule MemoryTest do
     end
   end
 
-  describe "Memory access permissions" do
+  describe "memory wrapping" do
+    test "writes wrap at 4GB boundary" do
+      memory = %Memory{}
+      wrap_addr = @memory_size - 2  # Last two bytes of memory
+      memory = Memory.write(memory, wrap_addr, <<1, 2, 3, 4>>)
 
-
-    test "write fails on read-only memory" do
-      memory =
-        %Memory{}
-        |> Memory.set_access(1, 1, :read)
-
-      assert Memory.write(memory, 1, <<42>>) == {:error, {:fault, 1}}
-      assert Memory.write(memory, 0, <<42>>) != {:error, {:fault, 0}}
+      # Check end of memory
+      assert Memory.read(memory, wrap_addr, 2) == <<1, 2>>
+      # Check wrapped to start
+      assert Memory.read(memory, 0, 2) == <<3, 4>>
+      # Read across wrap boundary
+      assert Memory.read(memory, wrap_addr, 4) == <<1, 2, 3, 4>>
     end
 
-    test "read succeeds with read or write permission" do
-      memory =
-        %Memory{}
-        |> Memory.write(0, <<1, 2, 3>>)
-        |> Memory.set_access(1, 1, :read)
+    test "large addresses wrap correctly" do
+      memory = %Memory{}
+      addr = @memory_size + 10  # Should wrap to address 10
+      memory = Memory.write(memory, addr, <<42>>)
+      assert Memory.read(memory, 10, 1) == <<42>>
+    end
+  end
 
-      assert Memory.read(memory, 0, 3) == <<1, 2, 3>>
+  describe "permissions and faults" do
+    test "write fault returns page address" do
+      memory = %Memory{}
+      |> Memory.set_access(@page_size, @page_size, :read)  # Make second page read-only
+
+      result = Memory.write(memory, @page_size + 10, <<42>>)
+      assert result == {:error, {:fault, @page_size}}  # Should return page-aligned address
     end
 
-    test "read fails on nil permission" do
-      memory =
-        %Memory{}
-        |> Memory.write(0, <<1, 2, 3>>)
-        |> Memory.set_access(1, 1, nil)
+    test "read fault returns page address" do
+      memory = %Memory{}
+      |> Memory.set_access(@page_size, @page_size, nil)  # Make second page inaccessible
 
-      assert Memory.read(memory, 1, 1) == {:error, {:fault, 1}}
+      result = Memory.read(memory, @page_size + 10, 1)
+      assert result == {:error, {:fault, @page_size}}  # Should return page-aligned address
+    end
+
+    test "cross-page operation fails if any page lacks permission" do
+      memory = %Memory{}
+      |> Memory.set_access(@page_size, @page_size, nil)  # Make second page inaccessible
+
+      # Write spanning pages 0 and 1
+      result = Memory.write(memory, @page_size - 2, <<1, 2, 3, 4>>)
+      assert result == {:error, {:fault, @page_size}}
     end
   end
 end
