@@ -299,6 +299,131 @@ defmodule VMTest do
       # Second location should have full 64-bit value from register
       assert Memory.read(output.memory, 24, 8) == <<0x01,0x10, 0x32, 0x54, 0x76, 0x98, 0xBA, 0xDC>>
     end
+
+    test "executes conditional branch sequence" do
+      # Program:
+      # load_imm r1, 42                (4, 1, 42)
+      # branch_eq_imm r1, 42, target=9 (branch if r1 == 42)
+      # trap                          (will be skipped)
+      # store_imm_u8 20, 99          (target of branch)
+      # fallthrough
+      program = <<
+        op(:load_imm), 1, 42,
+        op(:branch_eq_imm), 0x11, 42, 5,
+        op(:trap),
+        op(:fallthrough),
+        op(:store_imm_u8), 1, 20, 99,
+        op(:fallthrough)
+      >>
+
+      bitmask = <<
+        1, 0, 0,           # load_imm
+        1, 0, 0, 0,        # branch_eq_imm
+        1,                 # trap
+        1,                 # fallthrough
+        1, 0, 0, 0,        # store_imm_u8
+        1                  # fallthrough
+      >>
+
+      state = create_test_state(program, bitmask)
+      output = VM.execute(state)
+
+      assert output.exit_status == :panic  # From final fallthrough
+      assert output.counter == 14
+      assert Enum.at(output.registers, 1) == 42
+      assert Memory.read(output.memory, 20, 1) == <<99>>  # Verify branch was taken
+    end
+    test "not equel - no jump" do
+
+      program = <<
+        op(:load_imm), 1, 7,
+        op(:branch_eq_imm), 0x11, 42, 5,
+        op(:trap),
+        op(:fallthrough),
+        op(:store_imm_u8), 1, 20, 99,
+        op(:fallthrough)
+      >>
+
+      bitmask = <<
+        1, 0, 0,           # load_imm
+        1, 0, 0, 0,        # branch_eq_imm
+        1,                 # trap
+        1,                 # fallthrough
+        1, 0, 0, 0,        # store_imm_u8
+        1                  # fallthrough
+      >>
+
+      state = create_test_state(program, bitmask)
+      output = VM.execute(state)
+
+      assert output.exit_status == :panic  # From final fallthrough
+      assert output.counter == 7
+      assert Enum.at(output.registers, 1) == 7
+      assert Memory.read(output.memory, 20, 1) == <<0>>  # Verify branch was taken
+    end
+
+    test "executes load_imm_jump sequence" do
+      # Program:
+      # load_imm_jump r1, 42, target=8  (loads 42 into r1 and jumps)
+      # trap                           (skipped)
+      # store_imm_u8 10, 99           (target of jump)
+      # fallthrough
+      program = <<
+        op(:load_imm_jump), 0x11, 42, 6,
+        op(:trap),
+        op(:fallthrough),
+        op(:store_imm_u8), 1, 10, 99,
+        op(:fallthrough)
+      >>
+
+      bitmask = <<
+        1, 0, 0, 0,        # load_imm_jump
+        1,                 # trap
+        1,                 # fallthrough
+        1, 0, 0, 0,        # store_imm_u8
+        1                  # fallthrough
+      >>
+
+      state = create_test_state(program, bitmask)
+      output = VM.execute(state)
+
+      assert output.exit_status == :panic  # From final fallthrough
+      assert output.counter == 11
+      assert Enum.at(output.registers, 1) == 42
+      assert Memory.read(output.memory, 10, 1) == <<99>>  # Verify jump was taken
+    end
+
+    test "executes signed comparison branch sequence" do
+      # Program:
+      # load_imm r1, 0xFF              (load -1 in two's complement)
+      # branch_lt_s_imm r1, 0, target=9 (branch if r1 < 0 signed)
+      # trap                           (will be skipped)
+      # store_imm_u8 30, 77           (target of branch)
+      # fallthrough
+      program = <<
+        op(:load_imm), 1, 0xFF,
+        op(:branch_lt_s_imm), 0x11, 0, 9,
+        op(:trap),
+        op(:store_imm_u8), 1, 30, 77,
+        op(:fallthrough)
+      >>
+
+      bitmask = <<
+        1, 0, 0,           # load_imm
+        1, 0, 0, 0,        # branch_lt_s_imm
+        1,                 # trap
+        1, 0, 0, 0,        # store_imm_u8
+        1                  # fallthrough
+      >>
+
+      state = create_test_state(program, bitmask)
+      output = VM.execute(state)
+
+      assert output.exit_status == :panic  # From final fallthrough
+      assert output.counter == 13
+      assert Enum.at(output.registers, 1) == 0xFF
+      assert Memory.read(output.memory, 30, 1) == <<77>>  # Verify branch was taken
+    end
   end
 
   describe "VM.execute memory faults" do
