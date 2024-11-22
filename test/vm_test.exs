@@ -455,4 +455,36 @@ defmodule VMTest do
       assert Memory.read(output.memory, 4096, 1) == <<0>>
     end
   end
+
+  describe "VM.step two registers instructions" do
+    test "move_reg copies value between registers" do
+      # Program:
+      # load_imm r1, 42    # First load a value into r1
+      # move_reg r2, r1    # Then move it to r2 (encoded as 0x21 - r2 in low bits, r1 in high)
+      program = <<
+        op(:load_imm), 2, 42,
+        op(:move_reg), 0x21
+      >>
+
+      bitmask = <<1, 0, 0, 1, 0>>
+
+      state = create_test_state(program, bitmask)
+
+      # First execute load_imm
+      output = VM.step(state)
+      assert Enum.at(output.registers, 2) == 42
+
+      # Then execute move_reg
+      state = State.new(state.program, state.bitmask, state.jump_table, output)
+      output = VM.step(state)
+
+      # rd = 1, ra = 2
+      #w_d <- w_a
+
+      assert output.exit_status == :continue
+      assert Enum.at(output.registers, 1) == 42  # r1 should now have r2's value
+      assert Enum.at(output.registers, 2) == 42  # r2 should be unchanged
+      assert output.counter == 5  # Should advance past the move_reg instruction
+    end
+  end
 end

@@ -1,5 +1,12 @@
 defmodule Instructions.Executor do
-  alias Instructions.{NoArgs, OneImmediate, TwoImmediates, RegImmediate, RegImmediateOffset}
+  alias Instructions.{
+    NoArgs,
+    OneImmediate,
+    TwoImmediates,
+    TwoRegisters,
+    RegImmediate,
+    RegImmediateOffset
+  }
 
   def execute_instruction(opcode, state, output) do
     case Instructions.instruction_category(opcode) do
@@ -8,6 +15,7 @@ defmodule Instructions.Executor do
       :two_immediates -> TwoImmediates.execute(opcode, state, output)
       :reg_immediate -> RegImmediate.execute(opcode, state, output)
       :register_immediate_offset -> RegImmediateOffset.execute(opcode, state, output)
+      :two_registers -> TwoRegisters.execute(opcode, state, output)
     end
   end
 

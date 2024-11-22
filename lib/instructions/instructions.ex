@@ -61,7 +61,11 @@ defmodule Instructions do
           | :branch_ge_s_imm
           | :branch_gt_s_imm
 
-          # Two registers and one immediate argument
+          # Two registers
+          | :move_reg
+          | :sbrk
+
+          # Two registers and one offset argument
           | :branch_eq
           | :branch_ne
           | :branch_lt_u
@@ -111,6 +115,8 @@ defmodule Instructions do
     branch_le_s_imm: 88,
     branch_ge_s_imm: 89,
     branch_gt_s_imm: 90,
+    move_reg: 100,
+    sbrk: 101,
     branch_eq: 150,
     branch_ne: 151,
     branch_lt_u: 152,
@@ -163,7 +169,9 @@ defmodule Instructions do
     branch_ge_u_imm: 0,
     branch_ge_s_imm: 0,
     branch_gt_u_imm: 0,
-    branch_gt_s_imm: 0
+    branch_gt_s_imm: 0,
+    move_reg: 0,
+    sbrk: 0
   }
 
   @instruction_categories %{
@@ -205,6 +213,7 @@ defmodule Instructions do
       :branch_ge_s_imm,
       :branch_gt_s_imm
     ],
+    two_registers: [:move_reg, :sbrk],
     two_registers_one_immediate: [
       :branch_eq,
       :branch_ne,
