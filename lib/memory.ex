@@ -145,17 +145,15 @@ defmodule Memory do
     end
   end
 
-  def valid_indices(%__MODULE__{} = memory) do
+  def readable_indices(%__MODULE__{} = memory) do
     Map.keys(memory.access)
     |> Enum.filter(fn page -> Map.get(memory.access, page) != nil end)
-    |> Enum.sort()
-    |> Enum.map(fn page -> page * @page_size end)
+    |> MapSet.new()
   end
 
-  def write_only_indices(%__MODULE__{} = memory) do
+  def writeable_indices(%__MODULE__{} = memory) do
     Map.keys(memory.access)
     |> Enum.filter(fn page -> Map.get(memory.access, page) == :write end)
-    |> Enum.sort()
-    |> Enum.map(fn page -> page * @page_size end)
+    |> MapSet.new()
   end
 end

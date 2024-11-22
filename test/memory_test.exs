@@ -136,4 +136,48 @@ defmodule MemoryTest do
       assert result == {:error, {:fault, 1}}
     end
   end
+
+  describe "memory indices" do
+    test "readable_indices returns correct pages" do
+      memory = %Memory{}
+      |> Memory.set_access(0, @page_size, :read)
+      |> Memory.set_access(@page_size * 2, @page_size, :write)
+      |> Memory.set_access(@page_size * 3, @page_size, :read)
+
+      readable = Memory.readable_indices(memory)
+      assert MapSet.size(readable) == 3
+      assert MapSet.member?(readable, 0)
+      assert MapSet.member?(readable, 2)
+      assert MapSet.member?(readable, 3)
+    end
+
+    test "writeable_indices returns only writable pages" do
+      memory = %Memory{}
+      |> Memory.set_access(0, @page_size, :read)
+      |> Memory.set_access(@page_size * 2, @page_size, :write)
+      |> Memory.set_access(@page_size * 3, @page_size, :write)
+
+      writeable = Memory.writeable_indices(memory)
+      assert MapSet.size(writeable) == 2
+      assert MapSet.member?(writeable, 2)
+      assert MapSet.member?(writeable, 3)
+      refute MapSet.member?(writeable, 0)
+    end
+
+    test "indices handle nil permissions correctly" do
+      memory = %Memory{}
+      |> Memory.set_access(0, @page_size, nil)
+      |> Memory.set_access(@page_size, @page_size, :write)
+
+      readable = Memory.readable_indices(memory)
+      writeable = Memory.writeable_indices(memory)
+
+      assert MapSet.size(readable) == 1
+      assert MapSet.size(writeable) == 1
+      assert MapSet.member?(writeable, 1)
+      assert MapSet.member?(readable, 1)
+      refute MapSet.member?(readable, 0)
+      refute MapSet.member?(writeable, 0)
+    end
+  end
 end
