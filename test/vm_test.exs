@@ -402,8 +402,9 @@ defmodule VMTest do
       # fallthrough
       program = <<
         op(:load_imm), 1, 0xFF,
-        op(:branch_lt_s_imm), 0x11, 0, 9,
+        op(:branch_lt_s_imm), 0x11, 0, 6,
         op(:trap),
+        op(:fallthrough),
         op(:store_imm_u8), 1, 30, 77,
         op(:fallthrough)
       >>
@@ -412,6 +413,7 @@ defmodule VMTest do
         1, 0, 0,           # load_imm
         1, 0, 0, 0,        # branch_lt_s_imm
         1,                 # trap
+        1,                 # fallthrough
         1, 0, 0, 0,        # store_imm_u8
         1                  # fallthrough
       >>
@@ -420,8 +422,8 @@ defmodule VMTest do
       output = VM.execute(state)
 
       assert output.exit_status == :panic  # From final fallthrough
-      assert output.counter == 13
-      assert Enum.at(output.registers, 1) == 0xFF
+      assert output.counter == 14
+      assert Enum.at(output.registers, 1) == 0xFFFF_FFFF_FFFF_FFFF
       assert Memory.read(output.memory, 30, 1) == <<77>>  # Verify branch was taken
     end
   end
