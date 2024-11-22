@@ -1,6 +1,7 @@
 defmodule Instructions.RegImmediateOffset do
   alias PVM.Utils
   alias Instructions.{Common, Executor}
+  use Transitions
 
   @type comparison_op :: :eq | :ne | :lt_u | :le_u | :ge_u | :gt_u | :lt_s | :le_s | :ge_s | :gt_s
 
@@ -41,8 +42,8 @@ defmodule Instructions.RegImmediateOffset do
         w_a > v_x
 
       op when op in [:lt_s, :le_s, :ge_s, :gt_s] ->
-        w_a_signed = Transitions.z_n(w_a, 8)
-        v_x_signed = Transitions.z_n(v_x, 8)
+        w_a_signed = u2i(w_a, 8)
+        v_x_signed = u2i(v_x, 8)
 
         case op do
           :lt_s -> w_a_signed < v_x_signed
@@ -93,7 +94,7 @@ defmodule Instructions.RegImmediateOffset do
     v_y =
       state.counter +
         (Utils.decode_bytes(state.program, state.counter + 2 + l_x, l_y)
-         |> Transitions.z_n(l_y))
+         |> u2i(l_y))
 
     start_set = Utils.basic_block_starts(state.program, state.bitmask)
 

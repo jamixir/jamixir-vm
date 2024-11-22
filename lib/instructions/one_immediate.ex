@@ -1,4 +1,5 @@
 defmodule Instructions.OneImmediate do
+  use Transitions
   alias PVM.Utils
   alias Instructions.Executor
 
@@ -14,7 +15,7 @@ defmodule Instructions.OneImmediate do
     l_x = min(4, Utils.skip(state.counter, state.bitmask))
 
     shift_signed =
-      Utils.decode_bytes(state.program, state.counter + 1, l_x) |> Transitions.z_n(l_x)
+      Utils.decode_bytes(state.program, state.counter + 1, l_x) |> u2i(l_x)
 
     v_x = state.counter + shift_signed
 
