@@ -19,10 +19,10 @@ defmodule PVM.Utils do
   end
 
   # Formula (A.11) v0.5
-  def sign_extend(x, n) when n > 0 and n <= 4,
+  def extend_to_64bit(x, n) when n > 0 and n <= 4,
     do: x + div(x, 1 <<< (8 * n - 1)) * ((1 <<< 64) - (1 <<< (8 * n)))
 
-  def sign_extend(x, 0), do: x
+  def extend_to_64bit(x, 0), do: x
 
   # Formula (A.4) v0.5
   def basic_block_starts(<<>>, <<>>), do: [0]
@@ -63,9 +63,8 @@ defmodule PVM.Utils do
   """
   def decode_bytes_signed(program, start_index, count) when is_binary(program) do
     decode_bytes(program, start_index, count)
-    |> sign_extend(count)
+    |> extend_to_64bit(count)
   end
-
 
   @doc """
   Determines the next counter position based on execution output.
@@ -84,6 +83,17 @@ defmodule PVM.Utils do
       counter
     else
       state.counter + 1 + skip(state.counter, state.bitmask)
+    end
+  end
+
+  defmacro __using__(_) do
+    quote do
+      def to_64bit(value, num_bytes), do: PVM.Utils.extend_to_64bit(value, num_bytes)
+      def decode_bytes(program, start_index, count), do: PVM.Utils.decode_bytes(program, start_index, count)
+      def decode_bytes_signed(program, start_index, count), do: PVM.Utils.decode_bytes_signed(program, start_index, count)
+      def skip(counter, bitmask), do: PVM.Utils.skip(counter, bitmask)
+      def next_counter(output, state), do: PVM.Utils.next_counter(output, state)
+      def basic_block_starts(program, bitmask), do: PVM.Utils.basic_block_starts(program, bitmask)
     end
   end
 end

@@ -1,5 +1,5 @@
 defmodule Instructions.TwoImmediates do
-  alias PVM.Utils
+  use PVM.Utils
   import Bitwise
   use PVM.Encoder
   alias Instructions.Common
@@ -32,11 +32,11 @@ defmodule Instructions.TwoImmediates do
       |> rem(8)
       |> min(4)
 
-    l = Utils.skip(state.counter, state.bitmask)
+    l = skip(state.counter, state.bitmask)
     l_y = min(4, max(0, l - l_x - 1))
 
-    v_x = Utils.decode_bytes_signed(state.program, state.counter + 2, l_x)
-    v_y = Utils.decode_bytes_signed(state.program, state.counter + 2 + l_x, l_y)
+    v_x = decode_bytes_signed(state.program, state.counter + 2, l_x)
+    v_y = decode_bytes_signed(state.program, state.counter + 2 + l_x, l_y)
 
     {v_x, v_y}
   end

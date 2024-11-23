@@ -1,5 +1,5 @@
 defmodule Instructions.RegImmediateOffset do
-  alias PVM.Utils
+  use PVM.Utils
   alias Instructions.{Common, Executor}
   use Transitions
 
@@ -85,18 +85,18 @@ defmodule Instructions.RegImmediateOffset do
       |> min(4)
 
     l_y =
-      (Utils.skip(state.counter, state.bitmask) - l_x - 1)
+      (skip(state.counter, state.bitmask) - l_x - 1)
       |> max(0)
       |> min(4)
 
-    v_x = Utils.decode_bytes_signed(state.program, state.counter + 2, l_x)
+    v_x = decode_bytes_signed(state.program, state.counter + 2, l_x)
 
     v_y =
       state.counter +
-        (Utils.decode_bytes(state.program, state.counter + 2 + l_x, l_y)
+        (decode_bytes(state.program, state.counter + 2 + l_x, l_y)
          |> u2i(l_y))
 
-    start_set = Utils.basic_block_starts(state.program, state.bitmask)
+    start_set = basic_block_starts(state.program, state.bitmask)
 
     {r_a, v_x, v_y, start_set}
   end

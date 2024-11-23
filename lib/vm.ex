@@ -1,7 +1,7 @@
 defmodule VM do
   alias Instructions.Executor
   use PVM.Encoder
-  alias PVM.Utils
+  use PVM.Utils
   alias PVM.State
   use Instructions
 
@@ -41,7 +41,7 @@ defmodule VM do
         %{output | exit_status: :out_of_gas}
       else
         output_ = Executor.execute_instruction(opcode, state, output)
-        output_ = %{output_ | counter: Utils.next_counter(output_, state)}
+        output_ = %{output_ | counter: next_counter(output_, state)}
 
         # Execute instruction first, before any state transition
         case output_.exit_status do

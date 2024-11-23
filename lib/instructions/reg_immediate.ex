@@ -1,5 +1,5 @@
 defmodule Instructions.RegImmediate do
-  alias PVM.Utils
+  use PVM.Utils
   import Bitwise
   use PVM.{Decoder, Encoder}
   alias Instructions.{Common, Executor}
@@ -8,7 +8,7 @@ defmodule Instructions.RegImmediate do
   def execute(:jump_ind, state, output) do
     {register_index, addr} = get_params(state)
     register_value = Enum.at(state.registers, register_index)
-    start_set = Utils.basic_block_starts(state.program, state.bitmask)
+    start_set = basic_block_starts(state.program, state.bitmask)
 
     {exit_status, counter} =
       Executor.djump(
@@ -49,7 +49,7 @@ defmodule Instructions.RegImmediate do
         signed_value =
           value
           |> :binary.first()
-          |> Utils.sign_extend(1)
+          |> to_64bit(1)
 
         Common.update_register(output, state.registers, register_index, signed_value)
     end
@@ -78,7 +78,7 @@ defmodule Instructions.RegImmediate do
         signed_value =
           value
           |> de_le(2)
-          |> Utils.sign_extend(2)
+          |> to_64bit(2)
 
         Common.update_register(output, state.registers, register_index, signed_value)
     end
@@ -106,7 +106,7 @@ defmodule Instructions.RegImmediate do
         signed_value =
           value
           |> de_le(4)
-          |> Utils.sign_extend(4)
+          |> to_64bit(4)
 
         Common.update_register(output, state.registers, register_index, signed_value)
     end
@@ -160,8 +160,8 @@ defmodule Instructions.RegImmediate do
     register_index =
       min(12, rem(binary_part(state.program, state.counter + 1, 1) |> :binary.first(), 16))
 
-    l_x = min(4, Utils.skip(state.counter, state.bitmask) - 1)
-    addr = Utils.decode_bytes_signed(state.program, state.counter + 2, l_x)
+    l_x = min(4, skip(state.counter, state.bitmask) - 1)
+    addr = decode_bytes_signed(state.program, state.counter + 2, l_x)
 
     {register_index, addr}
   end

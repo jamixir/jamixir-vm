@@ -50,32 +50,32 @@ defmodule UtilsTest do
     end
   end
 
-  describe "sign_extend/2" do
+  describe "extend_to_64bit/2" do
     test "1-byte values (n=1)" do
       # Positive numbers (MSB = 0)
-      assert sign_extend(0x40, 1) == 0x40        # 0b0100_0000
-      assert sign_extend(0x7F, 1) == 0x7F        # 0b0111_1111 (largest positive)
+      assert extend_to_64bit(0x40, 1) == 0x40        # 0b0100_0000
+      assert extend_to_64bit(0x7F, 1) == 0x7F        # 0b0111_1111 (largest positive)
 
       # Negative numbers (MSB = 1)
-      assert sign_extend(0x80, 1) == 0xFFFF_FFFF_FFFF_FF80  # 0b1000_0000 (smallest negative)
-      assert sign_extend(0xC0, 1) == 0xFFFF_FFFF_FFFF_FFC0  # 0b1100_0000
+      assert extend_to_64bit(0x80, 1) == 0xFFFF_FFFF_FFFF_FF80  # 0b1000_0000 (smallest negative)
+      assert extend_to_64bit(0xC0, 1) == 0xFFFF_FFFF_FFFF_FFC0  # 0b1100_0000
     end
 
     test "2-byte values (n=2)" do
       # Positive numbers (MSB = 0)
-      assert sign_extend(0x4000, 2) == 0x4000        # 0b0100_0000_0000_0000
-      assert sign_extend(0x7FFF, 2) == 0x7FFF        # 0b0111_1111_1111_1111 (largest positive)
+      assert extend_to_64bit(0x4000, 2) == 0x4000        # 0b0100_0000_0000_0000
+      assert extend_to_64bit(0x7FFF, 2) == 0x7FFF        # 0b0111_1111_1111_1111 (largest positive)
 
       # Negative numbers (MSB = 1)
-      assert sign_extend(0x8000, 2) == 0xFFFF_FFFF_FFFF_8000  # 0b1000_0000_0000_0000 (smallest negative)
-      assert sign_extend(0xC000, 2) == 0xFFFF_FFFF_FFFF_C000  # 0b1100_0000_0000_0000
+      assert extend_to_64bit(0x8000, 2) == 0xFFFF_FFFF_FFFF_8000  # 0b1000_0000_0000_0000 (smallest negative)
+      assert extend_to_64bit(0xC000, 2) == 0xFFFF_FFFF_FFFF_C000  # 0b1100_0000_0000_0000
     end
 
     test "edge cases" do
-      assert sign_extend(0x2A, 0) == 0x2A     # n=0 case
-      assert sign_extend(0x00, 1) == 0x00     # zero
-      assert sign_extend(0x00, 2) == 0x00     # zero
-      assert sign_extend(0xFF, 1) == 0xFFFF_FFFF_FFFF_FFFF  # all bits set
+      assert extend_to_64bit(0x2A, 0) == 0x2A     # n=0 case
+      assert extend_to_64bit(0x00, 1) == 0x00     # zero
+      assert extend_to_64bit(0x00, 2) == 0x00     # zero
+      assert extend_to_64bit(0xFF, 1) == 0xFFFF_FFFF_FFFF_FFFF  # all bits set
     end
   end
 

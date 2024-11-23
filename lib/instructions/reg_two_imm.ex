@@ -1,5 +1,5 @@
 defmodule Instructions.RegTwoImm do
-  alias PVM.Utils
+  use PVM.Utils
   import Bitwise
   use PVM.{Decoder, Encoder}
   alias Instructions.Common
@@ -42,11 +42,11 @@ defmodule Instructions.RegTwoImm do
       |> rem(8)
       |> min(4)
 
-    l_y = (Utils.skip(state.counter, state.bitmask) - l_x - 1) |> max(0) |> min(4)
+    l_y = (skip(state.counter, state.bitmask) - l_x - 1) |> max(0) |> min(4)
 
-    v_x = Utils.decode_bytes_signed(state.program, state.counter + 2, l_x)
+    v_x = decode_bytes_signed(state.program, state.counter + 2, l_x)
 
-    v_y = Utils.decode_bytes_signed(state.program, state.counter + 2 + l_x, l_y)
+    v_y = decode_bytes_signed(state.program, state.counter + 2 + l_x, l_y)
 
     {r_a, v_x, v_y}
   end
