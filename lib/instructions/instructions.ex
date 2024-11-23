@@ -65,6 +65,43 @@ defmodule Instructions do
           | :move_reg
           | :sbrk
 
+          # Two registers and one immediate argument
+          | :store_ind_u8
+          | :store_ind_u16
+          | :store_ind_u32
+          | :store_ind_u64
+          | :load_ind_u8
+          | :load_ind_i8
+          | :load_ind_u16
+          | :load_ind_i16
+          | :load_ind_u32
+          | :load_ind_i32
+          | :load_ind_u64
+          | :load_ind_i64
+          | :add_imm_32
+          | :mul_imm_32
+          | :neg_add_imm_32
+          | :set_lt_u_imm
+          | :set_lt_s_imm
+          | :set_gt_u_imm
+          | :set_gt_s_imm
+          | :shlo_l_imm_32
+          | :shlo_r_imm_32
+          | :shar_r_imm_32
+          | :shlo_l_imm_alt_32
+          | :shlo_r_imm_alt_32
+          | :shar_r_imm_alt_32
+          | :cmov_nz_imm
+          | :cmov_iz_imm
+          | :add_imm_64
+          | :mul_imm_64
+          | :neg_add_imm_64
+          | :shlo_l_imm_64
+          | :shlo_r_imm_64
+          | :shar_r_imm_64
+          | :shlo_l_imm_alt_64
+          | :shlo_r_imm_alt_64
+          | :shar_r_imm_alt_64
           # Two registers and one offset argument
           | :branch_eq
           | :branch_ne
@@ -117,6 +154,44 @@ defmodule Instructions do
     branch_gt_s_imm: 90,
     move_reg: 100,
     sbrk: 101,
+    store_ind_u8: 110,
+    store_ind_u16: 111,
+    store_ind_u32: 112,
+    store_ind_u64: 113,
+    load_ind_u8: 114,
+    load_ind_i8: 115,
+    load_ind_u16: 116,
+    load_ind_i16: 117,
+    load_ind_u32: 118,
+    load_ind_i32: 119,
+    load_ind_u64: 120,
+    add_imm_32: 121,
+    and_imm: 122,
+    xor_imm: 123,
+    or_imm: 124,
+    mul_imm_32: 125,
+    set_lt_u_imm: 126,
+    set_lt_s_imm: 127,
+    shlo_l_imm_32: 128,
+    shlo_r_imm_32: 129,
+    shar_r_imm_32: 130,
+    neg_add_imm_32: 131,
+    set_gt_u_imm: 132,
+    set_gt_s_imm: 133,
+    shlo_l_imm_alt_32: 134,
+    shlo_r_imm_alt_32: 135,
+    shar_r_imm_alt_32: 136,
+    cmov_iz_imm: 137,
+    cmov_nz_imm: 138,
+    add_imm_64: 139,
+    mul_imm_64: 140,
+    shlo_l_imm_64: 141,
+    shlo_r_imm_64: 142,
+    shar_r_imm_64: 143,
+    neg_add_imm_64: 144,
+    shlo_l_imm_alt_64: 145,
+    shlo_r_imm_alt_64: 146,
+    shar_r_imm_alt_64: 147,
     branch_eq: 150,
     branch_ne: 151,
     branch_lt_u: 152,
@@ -154,6 +229,44 @@ defmodule Instructions do
     store_imm_ind_u64: 0,
     load_imm_jump: 0,
     load_imm_jump_ind: 0,
+    store_ind_u8: 0,
+    store_ind_u16: 0,
+    store_ind_u32: 0,
+    store_ind_u64: 0,
+    load_ind_u8: 0,
+    load_ind_i8: 0,
+    load_ind_u16: 0,
+    load_ind_i16: 0,
+    load_ind_u32: 0,
+    load_ind_i32: 0,
+    load_ind_u64: 0,
+    add_imm_32: 0,
+    and_imm: 0,
+    xor_imm: 0,
+    or_imm: 0,
+    mul_imm_32: 0,
+    set_lt_u_imm: 0,
+    set_lt_s_imm: 0,
+    shlo_l_imm_32: 0,
+    shlo_r_imm_32: 0,
+    shar_r_imm_32: 0,
+    neg_add_imm_32: 0,
+    set_gt_u_imm: 0,
+    set_gt_s_imm: 0,
+    shlo_l_imm_alt_32: 0,
+    shlo_r_imm_alt_32: 0,
+    shar_r_imm_alt_32: 0,
+    cmov_iz_imm: 0,
+    cmov_nz_imm: 0,
+    add_imm_64: 0,
+    mul_imm_64: 0,
+    shlo_l_imm_64: 0,
+    shlo_r_imm_64: 0,
+    shar_r_imm_64: 0,
+    neg_add_imm_64: 0,
+    shlo_l_imm_alt_64: 0,
+    shlo_r_imm_alt_64: 0,
+    shar_r_imm_alt_64: 0,
     branch_eq: 0,
     branch_ne: 0,
     branch_ge_u: 0,
@@ -215,6 +328,46 @@ defmodule Instructions do
     ],
     two_registers: [:move_reg, :sbrk],
     two_registers_one_immediate: [
+      :store_ind_u8,
+      :store_ind_u16,
+      :store_ind_u32,
+      :store_ind_u64,
+      :load_ind_u8,
+      :load_ind_i8,
+      :load_ind_u16,
+      :load_ind_i16,
+      :load_ind_u32,
+      :load_ind_i32,
+      :load_ind_u64,
+      :add_imm_32,
+      :and_imm,
+      :xor_imm,
+      :or_imm,
+      :mul_imm_32,
+      :set_lt_u_imm,
+      :set_lt_s_imm,
+      :shlo_l_imm_32,
+      :shlo_r_imm_32,
+      :shar_r_imm_32,
+      :neg_add_imm_32,
+      :set_gt_u_imm,
+      :set_gt_s_imm,
+      :shlo_l_imm_alt_32,
+      :shlo_r_imm_alt_32,
+      :shar_r_imm_alt_32,
+      :cmov_iz_imm,
+      :cmov_nz_imm,
+      :add_imm_64,
+      :mul_imm_64,
+      :shlo_l_imm_64,
+      :shlo_r_imm_64,
+      :shar_r_imm_64,
+      :neg_add_imm_64,
+      :shlo_l_imm_alt_64,
+      :shlo_r_imm_alt_64,
+      :shar_r_imm_alt_64
+    ],
+    two_registers_one_offset: [
       :branch_eq,
       :branch_ne,
       :branch_lt_u,
