@@ -19,7 +19,7 @@ defmodule Instructions.Executor do
       :one_immediate -> OneImmediate.execute(opcode, state, output)
       :two_immediates -> TwoImmediates.execute(opcode, state, output)
       :reg_immediate -> RegImmediate.execute(opcode, state, output)
-      :reg_two_imm -> RegTwoImm.execute(opcode, state, output)
+      :register_two_immediate -> RegTwoImm.execute(opcode, state, output)
       :register_immediate_offset -> RegImmediateOffset.execute(opcode, state, output)
       :two_registers -> TwoRegisters.execute(opcode, state, output)
       :two_registers_one_immediate -> TwoRegistersOneImmediate.execute(opcode, state, output)

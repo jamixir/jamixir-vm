@@ -469,7 +469,7 @@ defmodule Instructions do
       :branch_ge_u,
       :branch_ge_s
     ],
-    two_registers_two_immediate: [
+    two_registers_two_immediates: [
       :load_imm_jump_ind
     ],
     three_registers: [

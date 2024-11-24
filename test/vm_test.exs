@@ -556,4 +556,72 @@ defmodule VMTest do
       assert output.counter == 5  # Should advance past the move_reg instruction
     end
   end
+
+  describe "VM.execute instruction type coverage" do
+    test "executes store_imm_ind instructions" do
+      # Program:
+      # load_imm r1, 100              # Base address in r1
+      # store_imm_ind_u8 r1, 5, 42    # Store 42 at address r1+5
+      # store_imm_ind_u16 r1, 10, 0x1234  # Store 0x1234 at address r1+10
+      program = <<
+        op(:load_imm), 1, 100,
+        op(:store_imm_ind_u8), 0x11, 5, 42,
+        op(:store_imm_ind_u16), 0x11, 10, 0x34, 0x12
+      >>
+      bitmask = <<1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0>>
+
+      state = create_test_state(program, bitmask)
+      output = VM.execute(state)
+
+      assert output.exit_status == :panic
+      assert Memory.read(output.memory, 105, 1) == <<42>>  # 100 + 5
+      assert Memory.read(output.memory, 110, 2) == <<0x34, 0x12>>  # 100 + 10
+    end
+
+    test "executes two_registers_one_offset branch instructions" do
+      # Program:
+      # load_imm r1, 42
+      # load_imm r2, 42
+      # branch_eq r1, r2, target=11  # Should branch because equal
+      # trap                         # Should be skipped
+      # fallthrough                  # Target of branch
+      program = <<
+        op(:load_imm), 1, 42,
+        op(:load_imm), 2, 42,
+        op(:branch_eq), 0x21, 11,    # r2 in high bits, r1 in low bits
+        op(:trap),
+        op(:fallthrough)
+      >>
+      bitmask = <<1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1>>
+
+      state = create_test_state(program, bitmask)
+      output = VM.execute(state)
+
+      assert output.exit_status == :panic  # From fallthrough
+      assert output.counter == 11  # Reached end of program
+    end
+
+    test "executes load_imm_jump_ind instruction" do
+      # Program:
+      # load_imm r1, 10          # Target address holder
+      # load_imm_jump_ind r2, 42, r1, 2  # Load 42 into r2 and jump to r1+2
+      # trap                     # Should be skipped
+      # fallthrough             # Target of jump (offset 10)
+      program = <<
+        op(:load_imm), 2, 5,
+        op(:load_imm_jump_ind), 0x21, 1, 42, 1,  # r2 in high bits, r1 in low bits
+        op(:trap),
+        op(:fallthrough)
+      >>
+      bitmask = <<1, 0, 0, 1, 0, 0, 0,0, 1, 1>>
+
+      state = create_test_state(program, bitmask)
+      state = %{state | jump_table: [2, 4, 10]}
+      output = VM.execute(state)
+
+      assert output.exit_status == :panic  # From fallthrough
+      assert output.counter == 10  # Reached fallthrough instruction
+      assert Enum.at(output.registers, 1) == 42  # Verify immediate was loaded
+    end
+  end
 end
