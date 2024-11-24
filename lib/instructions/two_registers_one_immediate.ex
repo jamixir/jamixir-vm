@@ -5,7 +5,7 @@ defmodule Instructions.TwoRegistersOneImmediate do
   use Transitions
 
   # Store instructions
-  def execute(instruction, program, bitmask, _jump_table, state)
+  def execute(instruction, program, bitmask, state)
       when instruction in [:store_ind_u8, :store_ind_u16, :store_ind_u32, :store_ind_u64] do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
     w_a = Enum.at(state.registers, r_a)
@@ -24,7 +24,7 @@ defmodule Instructions.TwoRegistersOneImmediate do
   end
 
   # Unsigned load instructions
-  def execute(instruction, program, bitmask, _jump_table, state)
+  def execute(instruction, program, bitmask, state)
       when instruction in [:load_ind_u8, :load_ind_u16, :load_ind_u32, :load_ind_u64] do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
     w_b = Enum.at(state.registers, r_b)
@@ -48,7 +48,7 @@ defmodule Instructions.TwoRegistersOneImmediate do
   end
 
   # Signed load instructions
-  def execute(instruction, program, bitmask, _jump_table, state)
+  def execute(instruction, program, bitmask, state)
       when instruction in [:load_ind_i8, :load_ind_i16, :load_ind_i32] do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
     w_b = Enum.at(state.registers, r_b)
@@ -77,7 +77,7 @@ defmodule Instructions.TwoRegistersOneImmediate do
   end
 
   # Arithmetic operations
-  def execute(instruction, program, bitmask, _jump_table, state)
+  def execute(instruction, program, bitmask, state)
       when instruction in [:add_imm_32, :mul_imm_32, :neg_add_imm_32] do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
     w_b = Enum.at(state.registers, r_b)
@@ -95,7 +95,7 @@ defmodule Instructions.TwoRegistersOneImmediate do
   end
 
   # Bitwise operations
-  def execute(instruction, program, bitmask, _jump_table, state)
+  def execute(instruction, program, bitmask, state)
       when instruction in [:and_imm, :xor_imm, :or_imm] do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
     w_b = Enum.at(state.registers, r_b)
@@ -113,7 +113,7 @@ defmodule Instructions.TwoRegistersOneImmediate do
   end
 
   # Comparison operations
-  def execute(instruction, program, bitmask, _jump_table, state)
+  def execute(instruction, program, bitmask, state)
       when instruction in [:set_lt_u_imm, :set_lt_s_imm, :set_gt_u_imm, :set_gt_s_imm] do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
     w_b = Enum.at(state.registers, r_b)
@@ -131,7 +131,7 @@ defmodule Instructions.TwoRegistersOneImmediate do
   end
 
   # Shift operations
-  def execute(instruction, program, bitmask, _jump_table, state)
+  def execute(instruction, program, bitmask, state)
       when instruction in [
              :shlo_l_imm_32,
              :shlo_r_imm_32,
@@ -175,7 +175,7 @@ defmodule Instructions.TwoRegistersOneImmediate do
   end
 
   # Conditional move operations
-  def execute(instruction, program, bitmask, _jump_table, state)
+  def execute(instruction, program, bitmask, state)
       when instruction in [:cmov_iz_imm, :cmov_nz_imm] do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
     w_b = Enum.at(state.registers, r_b)
@@ -192,7 +192,7 @@ defmodule Instructions.TwoRegistersOneImmediate do
   end
 
   # 64-bit arithmetic operations
-  def execute(instruction, program, bitmask, _jump_table, state)
+  def execute(instruction, program, bitmask, state)
       when instruction in [:add_imm_64, :mul_imm_64, :neg_add_imm_64] do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
     w_b = Enum.at(state.registers, r_b)
@@ -209,7 +209,7 @@ defmodule Instructions.TwoRegistersOneImmediate do
   end
 
   # 64-bit shift operations
-  def execute(instruction, program, bitmask, _jump_table, state)
+  def execute(instruction, program, bitmask, state)
       when instruction in [
              :shlo_l_imm_64,
              :shlo_r_imm_64,
