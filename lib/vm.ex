@@ -1,58 +1,33 @@
 defmodule VM do
-  alias Instructions.Executor
   use PVM.Encoder
   use PVM.Utils
   alias PVM.State
   use Instructions
 
-  def execute(%State{} = state) do
-    output = step(state)
+  @initial_gas 100_000
 
-    case output.exit_status do
-      :continue ->
-        # If Continue, recursively call with updated state
-        execute(
-          State.new(
-            state.program,
-            state.bitmask,
-            state.jump_table,
-            output
-          )
-        )
+  # Main execution function with previous output state
+  @spec execute(nonempty_binary(), State.t()) :: {SingleStep.exit_reason(), State.t()}
+  def execute(p, state) do
+    # Decode the program blob into components
+    {program, bitmask, jump_table} = PVM.Decoder.decode_program(p)
 
-      # Otherwise return the final state
-      _ ->
-        output
-    end
-  end
+    # Execute according to Ψ function rules
+    {exit_reason, state_} = SingleStep.run(program, bitmask, jump_table, state)
 
-  def step(%State{} = state) do
-    output = StepOutput.from_state(state)
-
-    if state.counter >= byte_size(state.program) do
-      %{output | exit_status: :panic}
+    if state_.gas < 0 do
+      {:out_of_gas, state_}
     else
-      opcode =
-        state.program |> binary_part(state.counter, 1) |> :binary.first() |> op()
+      case exit_reason do
+        :continue ->
+          # Recursive case: carry forward all state changes
+          execute(p, state_)
 
-      gas_cost = Instructions.gas_cost(opcode)
+        reason when reason in [:panic, :halt] ->
+          {reason, %{state_ | counter: 0}}
 
-      if state.gas < gas_cost do
-        %{output | exit_status: :out_of_gas}
-      else
-        output_ = Executor.execute_instruction(opcode, state, output)
-        output_ = %{output_ | counter: next_counter(output_, state)}
-
-        # Execute instruction first, before any state transition
-        case output_.exit_status do
-          # On fault, return without state transition
-          {:fault, page} ->
-            %{output | exit_status: {:fault, page}}
-
-          # For all other cases (continue, panic, out_of_gas, ecall), apply state transition
-          _ ->
-            %{output_ | gas: output.gas - gas_cost}
-        end
+        _ ->
+          {exit_reason, state_}
       end
     end
   end
