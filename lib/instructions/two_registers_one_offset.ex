@@ -3,7 +3,7 @@ defmodule Instructions.TwoRegistersOneOffset do
   alias Instructions.Executor
   use Transitions
 
-  def execute(instruction, program, bitmask, _jump_table, state) do
+  def execute(instruction, program, bitmask, state) do
     {w_a, w_b, v_x, start_set} = get_params(program, bitmask, state)
 
     comparison_result = instruction_to_op(instruction, w_a, w_b)
