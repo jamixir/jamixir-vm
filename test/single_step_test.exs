@@ -5,151 +5,121 @@ defmodule SingleStepTest do
   use PVM.Utils
   use Instructions
 
-  def create_test_state(program, bitmask) do
-    %State{
-      program: program,
-      bitmask: bitmask,
-      jump_table: [],
-      counter: 0,
-      gas: 100,
-      registers: List.duplicate(0, 13),
-      memory: %Memory{}
-    }
-  end
+
 
   describe "SingleStep.run basic functionality" do
     test "step trap instruction" do
-      state = create_test_state(<<op(:trap)>>, <<1>>)
-      output = SingleStep.run(state)
-      assert output.exit_status == :panic
-      assert output.counter == 0
+      program = <<op(:trap)>>
+      bitmask = <<1>>
+      jump_table = []
+      state = %State{}
+      {exit_reason,state_} = SingleStep.run(program, bitmask, jump_table, state)
+      assert exit_reason == :panic
+      assert state_.counter == 0
     end
 
     test "step out of bounds panics" do
-      state = create_test_state(<<op(:trap)>>, <<1>>)
-      state = %{state | counter: 4}
-      output = SingleStep.run(state)
-      assert output.exit_status == :panic
-      assert output.counter == 4
+      program = <<op(:trap)>>
+      bitmask = <<1>>
+      jump_table = []
+      state = %State{counter: 4}
+      {exit_reason, state_} = SingleStep.run(program, bitmask, jump_table, state)
+      assert exit_reason == :panic
+      assert state_.counter == 4
     end
 
     test "step fallthrough" do
-      state = create_test_state(<<op(:fallthrough)>>, <<1>>)
-      output = SingleStep.run(state)
-      assert output.exit_status == :continue
-      assert output.counter == 1
+      program = <<op(:fallthrough)>>
+      bitmask = <<1>>
+      jump_table = []
+      state = %State{}
+      {exit_reason, state_} = SingleStep.run(program, bitmask, jump_table, state)
+      assert exit_reason == :continue
+      assert state_.counter == 1
     end
   end
 
   describe "SingleStep.run instruction coverage" do
     test "steps all no-arg instructions" do
       # Test each no-arg instruction in sequence
-      state = create_test_state(<<op(:trap), op(:fallthrough)>>, <<1, 1>>)
+      program = <<op(:trap), op(:fallthrough)>>
+      bitmask = <<1, 1>>
+      jump_table = []
 
-      output = SingleStep.run(state)
-      assert output.exit_status == :panic
 
-      state = %{state | counter: 1}
-      output = SingleStep.run(state)
-      assert output.exit_status == :continue
+      {exit_reason, state_} = SingleStep.run(program, bitmask, jump_table, %State{})
+      assert exit_reason == :panic
+
+      state_ = %{state_ | counter: 1}
+      {exit_reason, state_} = SingleStep.run(program, bitmask, jump_table, state_)
+      assert exit_reason == :continue
     end
 
     test "steps all one-immediate instructions" do
-      state =
-        create_test_state(
-          <<
-            op(:ecalli),
-            42,
-            op(:jump),
-            2
-          >>,
-          <<1, 0, 1, 0>>
-        )
+      program = <<op(:ecalli),42, op(:jump), 2>>
+      bitmask = <<1, 0, 1, 0>>
+      jump_table = []
 
-      output = SingleStep.run(state)
-      assert output.exit_status == {:ecall, 42}
+      {exit_reason, state_} = SingleStep.run(program, bitmask, jump_table, %State{})
+      assert exit_reason == {:ecall, 42}
 
-      state = %{state | counter: 2}
-      output = SingleStep.run(state)
-      assert output.exit_status == :continue
-      assert output.counter == 4
+      state_ = %{state_ | counter: 2}
+      {exit_reason, state_} = SingleStep.run(program, bitmask, jump_table, state_)
+      assert exit_reason == :continue
+      assert state_.counter == 4
     end
 
     test "steps reg_immediate instructions" do
-      state =
-        create_test_state(
-          <<
-            op(:load_imm),
-            1,
-            42,
-            op(:store_u8),
-            1,
-            10,
-            op(:load_u8),
-            2,
-            10
-          >>,
-          <<1, 0, 0, 1, 0, 0, 1, 0, 0>>
-        )
+
+      program = <<op(:load_imm), 1, 42, op(:store_u8), 1, 10, op(:load_u8), 2, 10>>
+      bitmask = <<1, 0, 0, 1, 0, 0, 1, 0, 0>>
+      jump_table = []
+      state = %State{}
 
       # First instruction: load_imm
-      output = SingleStep.run(state)
-      assert output.exit_status == :continue
-      assert Enum.at(output.registers, 1) == 42
+      {exit_reason, state_} = SingleStep.run(program, bitmask, jump_table, state)
+      assert exit_reason == :continue
+      assert Enum.at(state_.registers, 1) == 42
 
       # Second instruction: store_u8
-      state = %{state | counter: 3, registers: output.registers}
-      output = SingleStep.run(state)
-      assert output.exit_status == :continue
-      assert Memory.read(output.memory, 10, 1) == <<42>>
+      state_ = %{state_ | counter: 3, registers: state_.registers}
+      {exit_reason, state_} = SingleStep.run(program, bitmask, jump_table, state_)
+      assert exit_reason == :continue
+      assert Memory.read(state_.memory, 10, 1) == {:ok,<<42>>}
 
       # Third instruction: load_u8
-      state = %{state | counter: 6, memory: output.memory}
-      output = SingleStep.run(state)
-      assert output.exit_status == :continue
-      assert Enum.at(output.registers, 2) == 42
+      state_ = %{state_ | counter: 6, memory: state_.memory}
+      {exit_reason, state_} = SingleStep.run(program, bitmask, jump_table, state_)
+      assert exit_reason == :continue
+      assert Enum.at(state_.registers, 2) == 42
     end
 
     test "steps two_immediates instructions" do
-      state =
-        create_test_state(
-          <<
-            op(:store_imm_u8),
-            0x01,
-            10,
-            42,
-            op(:store_imm_u16),
-            0x01,
-            20,
-            0x34,
-            0x12,
-            op(:store_imm_u32),
-            0x01,
-            30,
-            0x78,
-            0x56,
-            0x34,
-            0x12
-          >>,
-          <<1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0>>
-        )
+      state = %State{}
+      program = <<
+        op(:store_imm_u8),0x01,10,42,
+        op(:store_imm_u16),0x01,20,0x34,0x12,
+        op(:store_imm_u32),0x01,30,0x78,0x56,0x34,0x12
+       >>
+      bitmask = <<1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0>>
+      jump_table = []
 
       # First instruction: store_imm_u8
-      output = SingleStep.run(state)
-      assert output.exit_status == :continue
-      assert Memory.read(output.memory, 10, 1) == <<42>>
+      {exit_reason, state_} = SingleStep.run(program, bitmask, jump_table, state)
+      assert exit_reason == :continue
+      assert Memory.read(state_.memory, 10, 1) == {:ok,<<42>>}
 
       # Second instruction: store_imm_u16
-      state = %{state | counter: 4, memory: output.memory}
-      output = SingleStep.run(state)
-      assert output.exit_status == :continue
-      assert Memory.read(output.memory, 20, 2) == <<0x34, 0x12>>
+      state_ = %{state_ | counter: 4, memory: state_.memory}
+      {exit_reason, state_} = SingleStep.run(program, bitmask, jump_table, state_)
+      assert exit_reason == :continue
+      assert Memory.read(state_.memory, 20, 2) == {:ok,<<0x34, 0x12>>}
 
       # Third instruction: store_imm_u32
-      state = %{state | counter: 9, memory: output.memory}
-      output = SingleStep.run(state)
-      assert output.exit_status == :continue
-      assert Memory.read(output.memory, 30, 4) == <<0x78, 0x56, 0x34, 0x12>>
+      state_ = %{state_ | counter: 9, memory: state_.memory}
+      {exit_reason, state_} = SingleStep.run(program, bitmask, jump_table, state_)
+      assert exit_reason == :continue
+      assert Memory.read(state_.memory, 30, 4) == {:ok,<<0x78, 0x56, 0x34, 0x12>>}
     end
   end
 
@@ -167,27 +137,27 @@ defmodule SingleStepTest do
       >>
 
       bitmask = <<1, 0, 0, 1, 0>>
+      jump_table = []
 
-      state = create_test_state(program, bitmask)
+      state = %State{}
 
       # First execute load_imm
-      output = SingleStep.run(state)
-      assert Enum.at(output.registers, 2) == 42
+      {exit_reason, state_} = SingleStep.run(program, bitmask, jump_table, state)
+      assert exit_reason == :continue
+      assert Enum.at(state_.registers, 2) == 42
 
-      # Then execute move_reg
-      state = State.new(state.program, state.bitmask, state.jump_table, output)
-      output = SingleStep.run(state)
+      {exit_reason, state_} = SingleStep.run(program, bitmask, jump_table, state_)
 
       # rd = 1, ra = 2
       # w_d <- w_a
 
-      assert output.exit_status == :continue
+      assert exit_reason == :continue
       # r1 should now have r2's value
-      assert Enum.at(output.registers, 1) == 42
+      assert Enum.at(state_.registers, 1) == 42
       # r2 should be unchanged
-      assert Enum.at(output.registers, 2) == 42
+      assert Enum.at(state_.registers, 2) == 42
       # Should advance past the move_reg instruction
-      assert output.counter == 5
+      assert state_.counter == 5
     end
   end
 end

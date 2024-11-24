@@ -18,7 +18,7 @@ defmodule SingleStep do
         Executor.execute_instruction(opcode, program, bitmask, jump_table, state)
 
       next_counter =
-        next_counter(%{exit_status: exit_reason, counter: state_.counter}, state.counter, bitmask)
+        next_counter(%{exit_reason: exit_reason, counter: state_.counter}, state.counter, bitmask)
 
       state_ = %{
         state_
