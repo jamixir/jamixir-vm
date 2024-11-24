@@ -9,19 +9,19 @@ defmodule MemoryTest do
   describe "basic operations" do
     test "writes and reads a single byte" do
       memory = %Memory{}
-      memory = Memory.write(memory, 0, <<42>>)
-      assert Memory.read(memory, 0, 1) == <<42>>
+      {:ok, memory} = Memory.write(memory, 0, <<42>>)
+      assert Memory.read(memory, 0, 1) == {:ok,<<42>>}
     end
 
     test "writes and reads multiple bytes" do
       memory = %Memory{}
-      memory = Memory.write(memory, 10, <<1, 2, 3, 4>>)
-      assert Memory.read(memory, 10, 4) == <<1, 2, 3, 4>>
+      {:ok, memory} = Memory.write(memory, 10, <<1, 2, 3, 4>>)
+      assert Memory.read(memory, 10, 4) == {:ok,<<1, 2, 3, 4>>}
     end
 
     test "unwritten memory reads as zero" do
       memory = %Memory{}
-      assert Memory.read(memory, 0, 4) == <<0, 0, 0, 0>>
+      assert Memory.read(memory, 0, 4) == {:ok,<<0, 0, 0, 0>>}
     end
   end
 
@@ -30,61 +30,61 @@ defmodule MemoryTest do
       memory = %Memory{}
       # Write 8 bytes starting at last 4 bytes of first page
       start_addr = @page_size - 4
-      memory = Memory.write(memory, start_addr, <<1, 2, 3, 4, 5, 6, 7, 8>>)
+      {:ok, memory} = Memory.write(memory, start_addr, <<1, 2, 3, 4, 5, 6, 7, 8>>)
 
       # Check first page
-      assert Memory.read(memory, start_addr, 4) == <<1, 2, 3, 4>>
+      assert Memory.read(memory, start_addr, 4) == {:ok,<<1, 2, 3, 4>>}
       # Check second page
-      assert Memory.read(memory, @page_size, 4) == <<5, 6, 7, 8>>
+      assert Memory.read(memory, @page_size, 4) == {:ok,<<5, 6, 7, 8>>}
       # Check continuous read across pages
-      assert Memory.read(memory, start_addr, 8) == <<1, 2, 3, 4, 5, 6, 7, 8>>
+      assert Memory.read(memory, start_addr, 8) == {:ok,<<1, 2, 3, 4, 5, 6, 7, 8>>}
     end
 
     test "reads across page boundary" do
       memory = %Memory{}
-      memory = Memory.write(memory, @page_size - 2, <<1, 2>>)
-      memory = Memory.write(memory, @page_size, <<3, 4>>)
-      assert Memory.read(memory, @page_size - 2, 4) == <<1, 2, 3, 4>>
+      {:ok, memory} = Memory.write(memory, @page_size - 2, <<1, 2>>)
+      {:ok, memory} = Memory.write(memory, @page_size, <<3, 4>>)
+      assert Memory.read(memory, @page_size - 2, 4) == {:ok,<<1, 2, 3, 4>>}
     end
 
     test "handles multi-byte read wrapping at 32-bit boundary" do
       memory = %Memory{}
-      memory = Memory.write(memory, 0, <<1, 2, 3, 4>>)
+      {:ok, memory} = Memory.write(memory, 0, <<1, 2, 3, 4>>)
 
-      assert Memory.read(memory, 0, 4) == <<1, 2, 3, 4>>
+      assert Memory.read(memory, 0, 4) == {:ok,<<1, 2, 3, 4>>}
 
       # Read starting at (2^32 - 2), should wrap back to start
       start_idx = (1 <<< 32) - 2
-      assert Memory.read(memory, start_idx, 4) == <<0, 0, 1, 2>>
+      assert Memory.read(memory, start_idx, 4) == {:ok,<<0, 0, 1, 2>>}
     end
 
     test "handles large reads across 32-bit boundary" do
       memory = %Memory{}
-      memory = Memory.write(memory, 0, <<1, 2, 3, 4>>)
+      {:ok, memory} = Memory.write(memory, 0, <<1, 2, 3, 4>>)
 
       # Start at last byte before wrap, read 4 bytes
       start_idx = (1 <<< 32) - 2
-      assert Memory.read(memory, start_idx, 4) == <<0, 0, 1, 2>>
+      assert Memory.read(memory, start_idx, 4) == {:ok,<<0, 0, 1, 2>>}
     end
 
     test "handles reads starting beyond memory size" do
       memory = %Memory{}
-      memory = Memory.write(memory, 0, <<1, 2>>)
+      {:ok, memory} = Memory.write(memory, 0, <<1, 2>>)
 
       # Read from index 3 (beyond memory size) should return zeros
-      assert Memory.read(memory, 3, 2) == <<0, 0>>
+      assert Memory.read(memory, 3, 2) == {:ok,<<0, 0>>}
     end
 
     test "handles sparse memory writes" do
       memory = %Memory{}
-      memory = Memory.write(memory, 0, <<1, 2>>)
+      {:ok, memory} = Memory.write(memory, 0, <<1, 2>>)
       far_index = 100 * 1024 * 1024  # 100MB offset
-      memory = Memory.write(memory, far_index, <<3, 4, 5>>)
+      {:ok, memory} = Memory.write(memory, far_index, <<3, 4, 5>>)
 
-      assert Memory.read(memory, 0, 2) == <<1, 2>>
-      assert Memory.read(memory, far_index, 3) == <<3, 4, 5>>
+      assert Memory.read(memory, 0, 2) == {:ok,<<1, 2>>}
+      assert Memory.read(memory, far_index, 3) == {:ok,<<3, 4, 5>>}
       # Verify space between is zero-filled
-      assert Memory.read(memory, 1000, 2) == <<0, 0>>
+      assert Memory.read(memory, 1000, 2) == {:ok,<<0, 0>>}
     end
   end
 
@@ -92,21 +92,21 @@ defmodule MemoryTest do
     test "writes wrap at 4GB boundary" do
       memory = %Memory{}
       wrap_addr = @memory_size - 2  # Last two bytes of memory
-      memory = Memory.write(memory, wrap_addr, <<1, 2, 3, 4>>)
+      {:ok, memory} = Memory.write(memory, wrap_addr, <<1, 2, 3, 4>>)
 
       # Check end of memory
-      assert Memory.read(memory, wrap_addr, 2) == <<1, 2>>
+      assert Memory.read(memory, wrap_addr, 2) == {:ok,<<1, 2>>}
       # Check wrapped to start
-      assert Memory.read(memory, 0, 2) == <<3, 4>>
+      assert Memory.read(memory, 0, 2) == {:ok,<<3, 4>>}
       # Read across wrap boundary
-      assert Memory.read(memory, wrap_addr, 4) == <<1, 2, 3, 4>>
+      assert Memory.read(memory, wrap_addr, 4) == {:ok,<<1, 2, 3, 4>>}
     end
 
     test "large addresses wrap correctly" do
       memory = %Memory{}
       addr = @memory_size + 10  # Should wrap to address 10
-      memory = Memory.write(memory, addr, <<42>>)
-      assert Memory.read(memory, 10, 1) == <<42>>
+      {:ok, memory} = Memory.write(memory, addr, <<42>>)
+      assert Memory.read(memory, 10, 1) == {:ok,<<42>>}
     end
   end
 
