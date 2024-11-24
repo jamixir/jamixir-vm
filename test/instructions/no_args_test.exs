@@ -4,23 +4,22 @@ defmodule Instructions.NoArgsTest do
 
   describe "trap" do
     test "sets panic exit status" do
-      output = NoArgs.execute(:trap, %StepOutput{})
-      assert output.exit_status == :panic
+      {exit_reason, _} = NoArgs.execute(:trap, %PVM.State{})
+      assert exit_reason == :panic
     end
   end
 
   describe "fallthrough" do
     test "keeps existing output unchanged" do
-      initial_output = %StepOutput{
-        exit_status: :continue,
+      initial_state = %PVM.State{
         counter: 1,
         gas: 100,
         registers: [0, 1, 2],
-        memory: %Memory{}
       }
 
-      output = NoArgs.execute(:fallthrough, initial_output)
-      assert output == initial_output
+      {exit_reason, state_} = NoArgs.execute(:fallthrough, initial_state)
+      assert exit_reason == :continue
+      assert state_ == initial_state
     end
   end
 end
