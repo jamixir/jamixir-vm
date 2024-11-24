@@ -4,8 +4,6 @@ defmodule VM do
   alias PVM.State
   use Instructions
 
-  @initial_gas 100_000
-
   # Main execution function with previous output state
   @spec execute(nonempty_binary(), State.t()) :: {SingleStep.exit_reason(), State.t()}
   def execute(p, state) do
