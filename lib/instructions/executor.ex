@@ -8,6 +8,7 @@ defmodule Instructions.Executor do
     RegImmediateOffset,
     TwoRegistersOneImmediate,
     TwoRegistersOneOffset,
+    TwoRegistersTwoImmediates,
     ThreeRegisters
   }
 
@@ -21,6 +22,7 @@ defmodule Instructions.Executor do
       :two_registers -> TwoRegisters.execute(opcode, state, output)
       :two_registers_one_immediate -> TwoRegistersOneImmediate.execute(opcode, state, output)
       :two_registers_one_offset -> TwoRegistersOneOffset.execute(opcode, state, output)
+      :two_registers_two_immediates -> TwoRegistersTwoImmediates.execute(opcode, state, output)
       :three_registers -> ThreeRegisters.execute(opcode, state, output)
     end
   end
