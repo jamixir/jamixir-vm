@@ -16,7 +16,7 @@ defmodule Instructions.Executor do
   def execute_instruction(opcode, program, bitmask, jump_table, state) do
     case Instructions.instruction_category(opcode) do
       :no_args -> NoArgs.execute(opcode, state)
-      :one_immediate -> OneImmediate.execute(opcode, program, bitmask, jump_table, state)
+      :one_immediate -> OneImmediate.execute(opcode, program, bitmask, state)
       :two_immediates -> TwoImmediates.execute(opcode, program, bitmask, jump_table, state)
       :reg_immediate -> RegImmediate.execute(opcode, program, bitmask, jump_table, state)
       :register_two_immediate -> RegTwoImm.execute(opcode, program, bitmask, jump_table, state)

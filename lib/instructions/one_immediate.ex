@@ -4,14 +4,14 @@ defmodule Instructions.OneImmediate do
   alias Instructions.Executor
 
   # Section (A.5.2) v0.4.5
-  def execute(:ecalli, program, bitmask, _jump_table, state) do
+  def execute(:ecalli, program, bitmask, state) do
     l_x = min(4, skip(state.counter, bitmask))
     value = decode_bytes_signed(program, state.counter + 1, l_x)
     {{:ecall, value}, state}
   end
 
   # Section (A.5.4) v0.4.5
-  def execute(:jump, program, bitmask, _jump_table, state) do
+  def execute(:jump, program, bitmask, state) do
     l_x = min(4, skip(state.counter, bitmask))
 
     shift_signed =
