@@ -51,7 +51,7 @@ defmodule SingleStepTest do
       assert exit_reason == :panic
 
       state_ = %{state_ | counter: 1}
-      {exit_reason, state_} = SingleStep.run(program, bitmask, jump_table, state_)
+      {exit_reason, _} = SingleStep.run(program, bitmask, jump_table, state_)
       assert exit_reason == :continue
     end
 

@@ -11,7 +11,7 @@ defmodule Instructions.ThreeRegistersTest do
       state = %State{registers: List.replace_at(%State{}.registers, 1, 42)}
       state = %{state | registers: List.replace_at(state.registers, 2, 58)}
 
-      {exit_status, state} = ThreeRegisters.execute(:add_32, program, state)
+      {_, state} = ThreeRegisters.execute(:add_32, program, state)
       # 42 + 58 = 100
       assert Enum.at(state.registers, 3) == 100
     end
@@ -21,7 +21,7 @@ defmodule Instructions.ThreeRegistersTest do
       state = %State{registers: List.replace_at(%State{}.registers, 1, 100)}
       state = %{state | registers: List.replace_at(state.registers, 2, 58)}
 
-      {exit_status, state} = ThreeRegisters.execute(:sub_32, program, state)
+      {_, state} = ThreeRegisters.execute(:sub_32, program, state)
       # 100 - 58 = 42
       assert Enum.at(state.registers, 3) == 42
     end
@@ -31,7 +31,7 @@ defmodule Instructions.ThreeRegistersTest do
       state = %State{registers: List.replace_at(%State{}.registers, 1, 6)}
       state = %State{registers: List.replace_at(state.registers, 2, 7)}
 
-      {exit_status, state} = ThreeRegisters.execute(:mul_32, program, state)
+      {_, state} = ThreeRegisters.execute(:mul_32, program, state)
       # 6 * 7 = 42
       assert Enum.at(state.registers, 3) == 42
     end
@@ -43,7 +43,7 @@ defmodule Instructions.ThreeRegistersTest do
       state = %State{registers: List.replace_at(%State{}.registers, 1, 100)}
       state = %{state | registers: List.replace_at(state.registers, 2, 20)}
 
-      {exit_status, state} = ThreeRegisters.execute(:div_u_32, program, state)
+      {_, state} = ThreeRegisters.execute(:div_u_32, program, state)
       # 100 / 20 = 5
       assert Enum.at(state.registers, 3) == 5
     end
@@ -53,7 +53,7 @@ defmodule Instructions.ThreeRegistersTest do
       state = %State{registers: List.replace_at(%State{}.registers, 1, 100)}
       state = %{state | registers: List.replace_at(state.registers, 2, 1 <<< 32)}
 
-      {exit_status, state} = ThreeRegisters.execute(:div_u_32, program, state)
+      {_, state} = ThreeRegisters.execute(:div_u_32, program, state)
       # 100 / 2^64 = 0
       assert Enum.at(state.registers, 3) == 0xFFFFFFFFFFFFFFFF
     end
@@ -63,7 +63,7 @@ defmodule Instructions.ThreeRegistersTest do
       state = %State{registers: List.replace_at(%State{}.registers, 1, 42)}
       state = %{state | registers: List.replace_at(state.registers, 2, 10)}
 
-      {exit_status, state} = ThreeRegisters.execute(:rem_u_32, program, state)
+      {_, state} = ThreeRegisters.execute(:rem_u_32, program, state)
       # 42 % 10 = 2
       assert Enum.at(state.registers, 3) == 2
     end
@@ -73,7 +73,7 @@ defmodule Instructions.ThreeRegistersTest do
       state = %State{registers: List.replace_at(%State{}.registers, 1, 42)}
       state = %{state | registers: List.replace_at(state.registers, 2, 1 <<< 32)}
 
-      {exit_status, state} = ThreeRegisters.execute(:rem_u_32, program, state)
+      {_, state} = ThreeRegisters.execute(:rem_u_32, program, state)
       # 42 % 2^32 = 42
       assert Enum.at(state.registers, 3) == 0x0000_0000_0000_002A
     end
@@ -83,7 +83,7 @@ defmodule Instructions.ThreeRegistersTest do
       state = %State{registers: List.replace_at(%State{}.registers, 1, 0xFFFF_FF9C)}
       state = %{state | registers: List.replace_at(state.registers, 2, 20)}
 
-      {exit_status, state} = ThreeRegisters.execute(:div_s_32, program, state)
+      {_, state} = ThreeRegisters.execute(:div_s_32, program, state)
       # -5 as unsigned 64-bit
       assert Enum.at(state.registers, 3) == 0xFFFF_FFFF_FFFF_FFFB
     end
@@ -93,7 +93,7 @@ defmodule Instructions.ThreeRegistersTest do
       state = %State{registers: List.replace_at(%State{}.registers, 1, 0xFFFFFFFFD6)}
       state = %{state | registers: List.replace_at(state.registers, 2, 10)}
 
-      {exit_status, state} = ThreeRegisters.execute(:rem_s_32, program, state)
+      {_, state} = ThreeRegisters.execute(:rem_s_32, program, state)
       # -2 as unsigned 64-bit
       assert Enum.at(state.registers, 3) == 0xFFFFFFFFFFFFFFFE
     end
@@ -105,7 +105,7 @@ defmodule Instructions.ThreeRegistersTest do
       state = %State{registers: List.replace_at(%State{}.registers, 1, 0b1100)}
       state = %{state | registers: List.replace_at(state.registers, 2, 0b1010)}
 
-      {exit_status, state} = ThreeRegisters.execute(:and, program, state)
+      {_, state} = ThreeRegisters.execute(:and, program, state)
       assert Enum.at(state.registers, 3) == 0b1000
     end
 
@@ -114,7 +114,7 @@ defmodule Instructions.ThreeRegistersTest do
       state = %State{registers: List.replace_at(%State{}.registers, 1, 0b1100)}
       state = %{state | registers: List.replace_at(state.registers, 2, 0b1010)}
 
-      {exit_status, state} = ThreeRegisters.execute(:or, program, state)
+      {_, state} = ThreeRegisters.execute(:or, program, state)
       assert Enum.at(state.registers, 3) == 0b1110
     end
 
@@ -123,7 +123,7 @@ defmodule Instructions.ThreeRegistersTest do
       state = %State{registers: List.replace_at(%State{}.registers, 1, 0b1100)}
       state = %{state | registers: List.replace_at(state.registers, 2, 0b1010)}
 
-      {exit_status, state} = ThreeRegisters.execute(:xor, program, state)
+      {_, state} = ThreeRegisters.execute(:xor, program, state)
       assert Enum.at(state.registers, 3) == 0b0110
     end
   end
@@ -134,7 +134,7 @@ defmodule Instructions.ThreeRegistersTest do
       state = %State{registers: List.replace_at(%State{}.registers, 1, 5)}
       state = %{state | registers: List.replace_at(state.registers, 2, 10)}
 
-      {exit_status, state} = ThreeRegisters.execute(:set_lt_u, program, state)
+      {_, state} = ThreeRegisters.execute(:set_lt_u, program, state)
       # 5 < 10 -> true (1)
       assert Enum.at(state.registers, 3) == 1
     end
@@ -144,7 +144,7 @@ defmodule Instructions.ThreeRegistersTest do
       state = %State{registers: List.replace_at(%State{}.registers, 1, -5)}
       state = %{state | registers: List.replace_at(state.registers, 2, 10)}
 
-      {exit_status, state} = ThreeRegisters.execute(:set_lt_s, program, state)
+      {_, state} = ThreeRegisters.execute(:set_lt_s, program, state)
       # -5 < 10 -> true (1)
       assert Enum.at(state.registers, 3) == 1
     end
@@ -157,7 +157,7 @@ defmodule Instructions.ThreeRegistersTest do
       state = %{state | registers: List.replace_at(state.registers, 2, 0)}
       state = %{state | registers: List.replace_at(state.registers, 3, 100)}
 
-      {exit_status, state} = ThreeRegisters.execute(:cmov_iz, program, state)
+      {_, state} = ThreeRegisters.execute(:cmov_iz, program, state)
       # Should move 42 since condition is zero
       assert Enum.at(state.registers, 3) == 42
     end
@@ -168,7 +168,7 @@ defmodule Instructions.ThreeRegistersTest do
       state = %{state | registers: List.replace_at(state.registers, 2, 1)}
       state = %{state | registers: List.replace_at(state.registers, 3, 100)}
 
-      {exit_status, state} = ThreeRegisters.execute(:cmov_nz, program, state)
+      {_, state} = ThreeRegisters.execute(:cmov_nz, program, state)
       # Should move 42 since condition is not zero
       assert Enum.at(state.registers, 3) == 42
     end
@@ -180,7 +180,7 @@ defmodule Instructions.ThreeRegistersTest do
       state = %State{registers: List.replace_at(%State{}.registers, 1, 0xFFFFFFFF00000000)}
       state = %{state | registers: List.replace_at(state.registers, 2, 0x00000000FFFFFFFF)}
 
-      {exit_status, state} = ThreeRegisters.execute(:add_64, program, state)
+      {_, state} = ThreeRegisters.execute(:add_64, program, state)
       assert Enum.at(state.registers, 3) == 0xFFFFFFFFFFFFFFFF
     end
 
@@ -189,7 +189,7 @@ defmodule Instructions.ThreeRegistersTest do
       state = %State{registers: List.replace_at(%State{}.registers, 1, 0xFFFFFFFFFFFFFFFF)}
       state = %{state | registers: List.replace_at(state.registers, 2, 0x0000000000000001)}
 
-      {exit_status, state} = ThreeRegisters.execute(:sub_64, program, state)
+      {_, state} = ThreeRegisters.execute(:sub_64, program, state)
       assert Enum.at(state.registers, 3) == 0xFFFFFFFFFFFFFFFE
     end
 
@@ -198,7 +198,7 @@ defmodule Instructions.ThreeRegistersTest do
       state = %State{registers: List.replace_at(%State{}.registers, 1, 0x100000000)}
       state = %{state | registers: List.replace_at(state.registers, 2, 0x100000000)}
 
-      {exit_status, state} = ThreeRegisters.execute(:mul_64, program, state)
+      {_, state} = ThreeRegisters.execute(:mul_64, program, state)
       # Overflow in 64-bit
       assert Enum.at(state.registers, 3) == 0x0000000000000000
     end
@@ -210,7 +210,7 @@ defmodule Instructions.ThreeRegistersTest do
       state = %State{registers: List.replace_at(%State{}.registers, 1, 0xFFFFFFFFFFFFFFFF)}
       state = %{state | registers: List.replace_at(state.registers, 2, 2)}
 
-      {exit_status, state} = ThreeRegisters.execute(:div_u_64, program, state)
+      {_, state} = ThreeRegisters.execute(:div_u_64, program, state)
       assert Enum.at(state.registers, 3) == 0x7FFFFFFFFFFFFFFF
     end
 
@@ -219,7 +219,7 @@ defmodule Instructions.ThreeRegistersTest do
       state = %State{registers: List.replace_at(%State{}.registers, 1, 0xFFFFFFFFFFFFFFFF)}
       state = %{state | registers: List.replace_at(state.registers, 2, 1 <<< 64)}
 
-      {exit_status, state} = ThreeRegisters.execute(:div_u_64, program, state)
+      {_, state} = ThreeRegisters.execute(:div_u_64, program, state)
       assert Enum.at(state.registers, 3) == 0xFFFFFFFFFFFFFFFF
     end
 
@@ -228,7 +228,7 @@ defmodule Instructions.ThreeRegistersTest do
       state = %State{registers: List.replace_at(%State{}.registers, 1, -0x8000000000000000)}
       state = %{state | registers: List.replace_at(state.registers, 2, 2)}
 
-      {exit_status, state} = ThreeRegisters.execute(:div_s_64, program, state)
+      {_, state} = ThreeRegisters.execute(:div_s_64, program, state)
       assert Enum.at(state.registers, 3) == 0xC000000000000000
     end
 
@@ -237,7 +237,7 @@ defmodule Instructions.ThreeRegistersTest do
       state = %State{registers: List.replace_at(%State{}.registers, 1, 0xFFFFFFFFFFFFFFFF)}
       state = %{state | registers: List.replace_at(state.registers, 2, 3)}
 
-      {exit_status, state} = ThreeRegisters.execute(:rem_u_64, program, state)
+      {_, state} = ThreeRegisters.execute(:rem_u_64, program, state)
       assert Enum.at(state.registers, 3) == 0
     end
 
@@ -246,7 +246,7 @@ defmodule Instructions.ThreeRegistersTest do
       state = %State{registers: List.replace_at(%State{}.registers, 1, -0x8000000000000000)}
       state = %{state | registers: List.replace_at(state.registers, 2, 3)}
 
-      {exit_status, state} = ThreeRegisters.execute(:rem_s_64, program, state)
+      {_, state} = ThreeRegisters.execute(:rem_s_64, program, state)
       assert Enum.at(state.registers, 3) == 0xFFFFFFFFFFFFFFFE  # -2 as unsigned
     end
   end
@@ -257,7 +257,7 @@ defmodule Instructions.ThreeRegistersTest do
       state = %State{registers: List.replace_at(%State{}.registers, 1, 0x1234_5678)}
       state = %{state | registers: List.replace_at(state.registers, 2, 4)}
 
-      {exit_status, state} = ThreeRegisters.execute(:shlo_l_32, program, state)
+      {_, state} = ThreeRegisters.execute(:shlo_l_32, program, state)
       assert Enum.at(state.registers, 3) == 0x2345_6780
     end
 
@@ -266,7 +266,7 @@ defmodule Instructions.ThreeRegistersTest do
       state = %State{registers: List.replace_at(%State{}.registers, 1, 0x1234_5678)}
       state = %{state | registers: List.replace_at(state.registers, 2, 4)}
 
-      {exit_status, state} = ThreeRegisters.execute(:shlo_r_32, program, state)
+      {_, state} = ThreeRegisters.execute(:shlo_r_32, program, state)
       assert Enum.at(state.registers, 3) == 0x0123_4567
     end
 
@@ -275,7 +275,7 @@ defmodule Instructions.ThreeRegistersTest do
       state = %State{registers: List.replace_at(%State{}.registers, 1, 0xF234_5678)}
       state = %{state | registers: List.replace_at(state.registers, 2, 4)}
 
-      {exit_status, state} = ThreeRegisters.execute(:shar_r_32, program, state)
+      {_, state} = ThreeRegisters.execute(:shar_r_32, program, state)
       assert Enum.at(state.registers, 3) == 0xFFFF_FFFF_F234_567
     end
 
@@ -284,7 +284,7 @@ defmodule Instructions.ThreeRegistersTest do
       state = %State{registers: List.replace_at(%State{}.registers, 1, 1)}
       state = %{state | registers: List.replace_at(state.registers, 2, 63)}
 
-      {exit_status, state} = ThreeRegisters.execute(:shlo_l_64, program, state)
+      {_, state} = ThreeRegisters.execute(:shlo_l_64, program, state)
       assert Enum.at(state.registers, 3) == 0x8000000000000000
     end
 
@@ -293,7 +293,7 @@ defmodule Instructions.ThreeRegistersTest do
       state = %State{registers: List.replace_at(%State{}.registers, 1, 0x8000000000000000)}
       state = %{state | registers: List.replace_at(state.registers, 2, 63)}
 
-      {exit_status, state} = ThreeRegisters.execute(:shlo_r_64, program, state)
+      {_, state} = ThreeRegisters.execute(:shlo_r_64, program, state)
       assert Enum.at(state.registers, 3) == 1
     end
     test "shar_r_64 performs arithmetic right shift" do
@@ -301,7 +301,7 @@ defmodule Instructions.ThreeRegistersTest do
       state = %State{registers: List.replace_at(%State{}.registers, 1, 0xF234567890ABCDEF)}
       state = %{state | registers: List.replace_at(state.registers, 2, 4)}
 
-      {exit_status, state} = ThreeRegisters.execute(:shar_r_64, program, state)
+      {_, state} = ThreeRegisters.execute(:shar_r_64, program, state)
       assert Enum.at(state.registers, 3) == 0xFF234567890ABCDF
     end
   end
@@ -312,7 +312,7 @@ defmodule Instructions.ThreeRegistersTest do
       state = %State{registers: List.replace_at(%State{}.registers, 1, 0x8000000000000000)}
       state = %{state | registers: List.replace_at(state.registers, 2, 0x8000000000000000)}
 
-      {exit_status, state} = ThreeRegisters.execute(:mul_upper_s_s, program, state)
+      {_, state} = ThreeRegisters.execute(:mul_upper_s_s, program, state)
       assert Enum.at(state.registers, 3) == 0x4000000000000000
     end
 
@@ -321,7 +321,7 @@ defmodule Instructions.ThreeRegistersTest do
       state = %State{registers: List.replace_at(%State{}.registers, 1, 0xFFFFFFFFFFFFFFFF)}
       state = %State{registers: List.replace_at(state.registers, 2, 0xFFFFFFFFFFFFFFFF)}
 
-      {exit_status, state} = ThreeRegisters.execute(:mul_upper_u_u, program, state)
+      {_, state} = ThreeRegisters.execute(:mul_upper_u_u, program, state)
       assert Enum.at(state.registers, 3) == 0xFFFFFFFFFFFFFFFE
     end
 
@@ -330,7 +330,7 @@ defmodule Instructions.ThreeRegistersTest do
       state = %State{registers: List.replace_at(%State{}.registers, 1, 0x8000000000000000)}
       state = %State{registers: List.replace_at(state.registers, 2, 0xFFFFFFFFFFFFFFFF)}
 
-      {exit_status, state} = ThreeRegisters.execute(:mul_upper_s_u, program, state)
+      {_, state} = ThreeRegisters.execute(:mul_upper_s_u, program, state)
       assert Enum.at(state.registers, 3) == 0x8000000000000001
     end
   end

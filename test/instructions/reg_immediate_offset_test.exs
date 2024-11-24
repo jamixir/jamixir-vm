@@ -22,7 +22,7 @@ defmodule Instructions.RegImmediateOffsetTest do
       program = <<op(:load_imm_jump), 0x11, 42, 10>>
       bitmask = <<1, 0, 0>>
 
-      {exit_reason, state_} =
+      {exit_reason, _} =
         RegImmediateOffset.execute(:load_imm_jump, program, bitmask, %State{})
 
       assert exit_reason == :panic

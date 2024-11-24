@@ -11,14 +11,14 @@ defmodule Instructions.OneImmediateTest do
     test "sets ecall exit status with immediate value" do
       program = <<op(:ecalli), 42>>
       bitmask = <<1, 0>>
-      {exit_reason, state_} = OneImmediate.execute(:ecalli, program, bitmask, %State{})
+      {exit_reason, _} = OneImmediate.execute(:ecalli, program, bitmask, %State{})
       assert exit_reason == {:ecall, 42}
     end
 
     test "handles multi-byte immediate" do
       program = <<op(:ecalli), 0x78, 0x56, 0x34, 0x12>>
       bitmask = <<1, 0, 0, 0, 0>>
-      {exit_reason, state_} = OneImmediate.execute(:ecalli, program, bitmask, %State{})
+      {exit_reason, _} = OneImmediate.execute(:ecalli, program, bitmask, %State{})
       assert exit_reason == {:ecall, 0x12345678}
     end
   end
@@ -43,7 +43,7 @@ defmodule Instructions.OneImmediateTest do
     test "panics on invalid target" do
       program = <<op(:jump), 1, op(:fallthrough)>>
       bitmask = <<1, 0, 1>>
-      {exit_reason, state_} = OneImmediate.execute(:jump, program, bitmask, %State{})
+      {exit_reason, _} = OneImmediate.execute(:jump, program, bitmask, %State{})
       assert exit_reason == :panic
     end
   end

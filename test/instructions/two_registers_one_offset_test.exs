@@ -14,7 +14,7 @@ defmodule Instructions.TwoRegistersOneOffsetTest do
       state = %{state | registers: List.replace_at(state.registers, 1, 42)}
       state = %{state | registers: List.replace_at(state.registers, 2, 42)}
 
-      {exit_status, state} = TwoRegistersOneOffset.execute(:branch_eq, program, bitmask, state)
+      {exit_status, _} = TwoRegistersOneOffset.execute(:branch_eq, program, bitmask, state)
       assert exit_status == :continue
     end
 
@@ -27,7 +27,7 @@ defmodule Instructions.TwoRegistersOneOffsetTest do
       state = %{state | registers: List.replace_at(state.registers, 1, 42)}
       state = %{state | registers: List.replace_at(state.registers, 2, 43)}
 
-      {exit_status, state} = TwoRegistersOneOffset.execute(:branch_ne, program, bitmask, state)
+      {exit_status, _} = TwoRegistersOneOffset.execute(:branch_ne, program, bitmask, state)
       assert exit_status == :continue
     end
 
@@ -40,7 +40,7 @@ defmodule Instructions.TwoRegistersOneOffsetTest do
       state = %{state | registers: List.replace_at(state.registers, 1, 0x7F)}
       state = %{state | registers: List.replace_at(state.registers, 2, 0xFF)}
 
-      {exit_status, state} = TwoRegistersOneOffset.execute(:branch_lt_u, program, bitmask, state)
+      {exit_status, _} = TwoRegistersOneOffset.execute(:branch_lt_u, program, bitmask, state)
       assert exit_status == :continue
     end
 
@@ -53,7 +53,7 @@ defmodule Instructions.TwoRegistersOneOffsetTest do
       state = %{state | registers: List.replace_at(state.registers, 1, 0xFFFF_0000_0000_0001)}
       state = %{state | registers: List.replace_at(state.registers, 2, 0xFF00_0000_0000_00002)}
 
-      {exit_status, state} = TwoRegistersOneOffset.execute(:branch_lt_s, program, bitmask, state)
+      {exit_status, _} = TwoRegistersOneOffset.execute(:branch_lt_s, program, bitmask, state)
       assert exit_status == :continue
     end
 
@@ -66,7 +66,7 @@ defmodule Instructions.TwoRegistersOneOffsetTest do
       state = %{state | registers: List.replace_at(state.registers, 1, 0xFF)}
       state = %{state | registers: List.replace_at(state.registers, 2, 0x7F)}
 
-      {exit_status, state} = TwoRegistersOneOffset.execute(:branch_ge_u, program, bitmask, state)
+      {exit_status, _} = TwoRegistersOneOffset.execute(:branch_ge_u, program, bitmask, state)
       assert exit_status == :continue
     end
 
@@ -79,7 +79,7 @@ defmodule Instructions.TwoRegistersOneOffsetTest do
       state = %{state | registers: List.replace_at(state.registers, 1, 0xFF00_0000_0000_00002)}
       state = %{state | registers: List.replace_at(state.registers, 2, 0xFFFF_0000_0000_0001)}
 
-      {exit_status, state} = TwoRegistersOneOffset.execute(:branch_ge_s, program, bitmask, state)
+      {exit_status, _} = TwoRegistersOneOffset.execute(:branch_ge_s, program, bitmask, state)
       assert exit_status == :continue
     end
   end
@@ -95,7 +95,7 @@ defmodule Instructions.TwoRegistersOneOffsetTest do
       state = %{state | registers: List.replace_at(state.registers, 12, 42)}
       state = %{state | registers: List.replace_at(state.registers, 12, 42)}
 
-      {exit_status, state} = TwoRegistersOneOffset.execute(:branch_eq, program, bitmask, state)
+      {exit_status, _} = TwoRegistersOneOffset.execute(:branch_eq, program, bitmask, state)
       assert exit_status == :continue
     end
 
@@ -108,7 +108,7 @@ defmodule Instructions.TwoRegistersOneOffsetTest do
       state = %{state | registers: List.replace_at(state.registers, 1, 42)}
       state = %{state | registers: List.replace_at(state.registers, 2, 42)}
 
-      {exit_status, state} = TwoRegistersOneOffset.execute(:branch_eq, program, bitmask, state)
+      {exit_status, _} = TwoRegistersOneOffset.execute(:branch_eq, program, bitmask, state)
       assert exit_status == :continue
     end
 
@@ -121,7 +121,7 @@ defmodule Instructions.TwoRegistersOneOffsetTest do
       state = %{state | registers: List.replace_at(state.registers, 1, 42)}
       state = %{state | registers: List.replace_at(state.registers, 2, 42)}
 
-      {exit_status, state} = TwoRegistersOneOffset.execute(:branch_eq, program, bitmask, state)
+      {exit_status, _} = TwoRegistersOneOffset.execute(:branch_eq, program, bitmask, state)
       assert exit_status == :panic
     end
   end

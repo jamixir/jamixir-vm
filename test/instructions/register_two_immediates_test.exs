@@ -11,7 +11,7 @@ defmodule Instructions.RegTwoImmTest do
       bitmask = <<1, 0, 0, 0>>
       state = %State{registers: List.replace_at(%State{}.registers, 1, 10)}
 
-      {exit_status, state} = RegTwoImm.execute(:store_imm_ind_u8, program, bitmask, state)
+      {_, state} = RegTwoImm.execute(:store_imm_ind_u8, program, bitmask, state)
       # Should write at address register[1] + 2 = 12
       assert Memory.read(state.memory, 12, 1) == {:ok, <<42>>}
     end
@@ -21,7 +21,7 @@ defmodule Instructions.RegTwoImmTest do
       bitmask = <<1, 0, 0, 0, 0, 0>>
       state = %State{registers: List.replace_at(%State{}.registers, 1, 10)}
 
-      {exit_status, state} = RegTwoImm.execute(:store_imm_ind_u16, program, bitmask, state)
+      {_, state} = RegTwoImm.execute(:store_imm_ind_u16, program, bitmask, state)
       # Should write at address register[1] + 2 = 12
       assert Memory.read(state.memory, 12, 2) == {:ok, <<34, 12>>}
     end
@@ -31,7 +31,7 @@ defmodule Instructions.RegTwoImmTest do
       bitmask = <<1, 0, 0, 0, 0, 0, 0, 0>>
       state = %State{registers: List.replace_at(%State{}.registers, 1, 10)}
 
-      {exit_status, state} = RegTwoImm.execute(:store_imm_ind_u32, program, bitmask, state)
+      {_, state} = RegTwoImm.execute(:store_imm_ind_u32, program, bitmask, state)
       # Should write at address register[1] + 2 = 12
       assert Memory.read(state.memory, 12, 4) == {:ok, <<78, 56, 34, 12>>}
     end
@@ -41,7 +41,7 @@ defmodule Instructions.RegTwoImmTest do
       bitmask = <<1, 0, 0, 0, 0, 0, 0, 0>>
       state = %State{registers: List.replace_at(%State{}.registers, 1, 10)}
 
-      {exit_status, state} = RegTwoImm.execute(:store_imm_ind_u64, program, bitmask, state)
+      {_, state} = RegTwoImm.execute(:store_imm_ind_u64, program, bitmask, state)
       # Should write at address register[1] + 2 = 12
       assert Memory.read(state.memory, 12, 8) == {:ok, <<78, 56, 34, 12, 0, 0, 0, 0>>}
     end
@@ -51,7 +51,7 @@ defmodule Instructions.RegTwoImmTest do
       bitmask = <<1, 0, 0, 0>>
       state = %State{registers: List.replace_at(%State{}.registers, 1, 10)}
 
-      {exit_status, state} = RegTwoImm.execute(:store_imm_ind_u8, program, bitmask, state)
+      {_, state} = RegTwoImm.execute(:store_imm_ind_u8, program, bitmask, state)
       # Should write at address register[1] + 2 = 12
       assert Memory.read(state.memory, 12, 1) == {:ok, <<44>>}
     end
@@ -61,7 +61,7 @@ defmodule Instructions.RegTwoImmTest do
       bitmask = <<1, 0, 0, 0, 0>>
       state = %State{registers: List.replace_at(%State{}.registers, 1, 10)}
 
-      {exit_status, state} = RegTwoImm.execute(:store_imm_ind_u16, program, bitmask, state)
+      {_, state} = RegTwoImm.execute(:store_imm_ind_u16, program, bitmask, state)
       # Should write full 16-bit value
       assert Memory.read(state.memory, 12, 2) == {:ok, <<0xFF, 0xFF>>}
     end
@@ -72,7 +72,7 @@ defmodule Instructions.RegTwoImmTest do
       bitmask = <<1, 0, 0, 0>>
       state = %State{registers: List.replace_at(%State{}.registers, 12, 10)}
 
-      {exit_status, state} = RegTwoImm.execute(:store_imm_ind_u8, program, bitmask, state)
+      {_, state} = RegTwoImm.execute(:store_imm_ind_u8, program, bitmask, state)
       # Should write at address register[1] + 2 = 12
       assert Memory.read(state.memory, 12, 1) == {:ok, <<42>>}
     end
