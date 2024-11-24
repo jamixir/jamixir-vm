@@ -4,7 +4,7 @@ defmodule Instructions.ThreeRegisters do
   import Bitwise
 
   # 32-bit arithmetic operations
-  def execute(instruction, program, _bitmask, _jump_table, state)
+  def execute(instruction, program, state)
       when instruction in [:add_32, :sub_32, :mul_32] do
     {w_a, w_b, r_d} = get_params(program, state)
 
@@ -22,7 +22,7 @@ defmodule Instructions.ThreeRegisters do
   end
 
   # 32-bit division operations
-  def execute(instruction, program, _bitmask, _jump_table, state)
+  def execute(instruction, program, state)
       when instruction in [:div_u_32, :div_s_32, :rem_u_32, :rem_s_32] do
     {w_a, w_b, r_d} = get_params(program, state)
 
@@ -60,7 +60,7 @@ defmodule Instructions.ThreeRegisters do
   end
 
   # 32-bit shift operations
-  def execute(instruction, program, _bitmask, _jump_table, state)
+  def execute(instruction, program, state)
       when instruction in [:shlo_l_32, :shlo_r_32, :shar_r_32] do
     {w_a, w_b, r_d} = get_params(program, state)
     shift = rem(w_b, 32)
@@ -77,7 +77,7 @@ defmodule Instructions.ThreeRegisters do
   end
 
   # 64-bit arithmetic operations
-  def execute(instruction, program, _bitmask, _jump_table, state)
+  def execute(instruction, program, state)
       when instruction in [:add_64, :sub_64, :mul_64] do
     {w_a, w_b, r_d} = get_params(program, state)
 
@@ -94,7 +94,7 @@ defmodule Instructions.ThreeRegisters do
   end
 
   # 64-bit division operations
-  def execute(instruction, program, _bitmask, _jump_table, state)
+  def execute(instruction, program, state)
       when instruction in [:div_u_64, :div_s_64, :rem_u_64, :rem_s_64] do
     {w_a, w_b, r_d} = get_params(program, state)
 
@@ -125,7 +125,7 @@ defmodule Instructions.ThreeRegisters do
   end
 
   # 64-bit shift operations
-  def execute(instruction, program, _bitmask, _jump_table, state)
+  def execute(instruction, program, state)
       when instruction in [:shlo_l_64, :shlo_r_64, :shar_r_64] do
     {w_a, w_b, r_d} = get_params(program, state)
     shift = rem(w_b, 64)
@@ -142,7 +142,7 @@ defmodule Instructions.ThreeRegisters do
   end
 
   # Bitwise operations
-  def execute(instruction, program, _bitmask, _jump_table, state)
+  def execute(instruction, program, state)
       when instruction in [:and, :xor, :or] do
     {w_a, w_b, r_d} = get_params(program, state)
 
@@ -160,7 +160,7 @@ defmodule Instructions.ThreeRegisters do
   end
 
   # Upper multiplication operations
-  def execute(instruction, program, _bitmask, _jump_table, state)
+  def execute(instruction, program, state)
       when instruction in [:mul_upper_s_s, :mul_upper_u_u, :mul_upper_s_u] do
     {w_a, w_b, r_d} = get_params(program, state)
 
@@ -181,7 +181,7 @@ defmodule Instructions.ThreeRegisters do
   end
 
   # Comparison operations
-  def execute(instruction, program, _bitmask, _jump_table, state)
+  def execute(instruction, program, state)
       when instruction in [:set_lt_u, :set_lt_s] do
     {w_a, w_b, r_d} = get_params(program, state)
 
@@ -196,7 +196,7 @@ defmodule Instructions.ThreeRegisters do
   end
 
   # Conditional move operations
-  def execute(instruction, program, _bitmask, _jump_table, state)
+  def execute(instruction, program, state)
       when instruction in [:cmov_iz, :cmov_nz] do
     {w_a, w_b, r_d} = get_params(program, state)
     w_d = Enum.at(state.registers, r_d)
