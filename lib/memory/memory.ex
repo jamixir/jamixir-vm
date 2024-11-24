@@ -44,24 +44,27 @@ defmodule Memory do
 
     case check_permissions(memory, page_range(start_page, end_page), :read) do
       :ok ->
-        0..(length - 1)
-        |> Enum.map(fn offset ->
-          abs_addr = wrap_address(wrapped_address + offset)
-          page_num = wrap_page(div(abs_addr, @page_size))
-          page_offset = rem(abs_addr, @page_size)
+        data =
+          0..(length - 1)
+          |> Enum.map(fn offset ->
+            abs_addr = wrap_address(wrapped_address + offset)
+            page_num = wrap_page(div(abs_addr, @page_size))
+            page_offset = rem(abs_addr, @page_size)
 
-          case Map.get(memory.data, page_num) do
-            nil ->
-              0
+            case Map.get(memory.data, page_num) do
+              nil ->
+                0
 
-            page_data ->
-              case page_data do
-                <<_::binary-size(page_offset), byte::8, _::binary>> -> byte
-                _ -> 0
-              end
-          end
-        end)
-        |> :binary.list_to_bin()
+              page_data ->
+                case page_data do
+                  <<_::binary-size(page_offset), byte::8, _::binary>> -> byte
+                  _ -> 0
+                end
+            end
+          end)
+          |> :binary.list_to_bin()
+
+        {:ok, data}
 
       {:error, page} ->
         {:error, {:fault, page * @page_size}}
@@ -107,7 +110,7 @@ defmodule Memory do
           # Get just the map, discard bytes_written
           |> elem(0)
 
-        %__MODULE__{memory | data: new_data}
+        {:ok, %__MODULE__{memory | data: new_data}}
 
       {:error, page} ->
         {:error, {:fault, page}}
@@ -156,4 +159,5 @@ defmodule Memory do
     |> Enum.filter(fn page -> Map.get(memory.access, page) == :write end)
     |> MapSet.new()
   end
+
 end
