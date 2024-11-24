@@ -73,26 +73,34 @@ defmodule PVM.Utils do
     - Otherwise advances by 1 + skip
   For halt/panic, keeps the original counter.
   """
-  def next_counter(%{exit_status: status, counter: _counter}, state)
-      when status in [:halt, :panic] do
-    state.counter
+  def next_counter(%{exit_reason: reason, counter: _counter}, prev_counter, _bitmask)
+      when reason in [:halt, :panic] do
+    prev_counter
   end
 
-  def next_counter(%{counter: counter}, state) do
-    if counter != state.counter do
+  def next_counter(%{counter: counter}, prev_counter, bitmask) do
+    if counter != prev_counter do
       counter
     else
-      state.counter + 1 + skip(state.counter, state.bitmask)
+      prev_counter + 1 + skip(prev_counter, bitmask)
     end
   end
 
   defmacro __using__(_) do
     quote do
       def to_64bit(value, num_bytes), do: PVM.Utils.extend_to_64bit(value, num_bytes)
-      def decode_bytes(program, start_index, count), do: PVM.Utils.decode_bytes(program, start_index, count)
-      def decode_bytes_signed(program, start_index, count), do: PVM.Utils.decode_bytes_signed(program, start_index, count)
+
+      def decode_bytes(program, start_index, count),
+        do: PVM.Utils.decode_bytes(program, start_index, count)
+
+      def decode_bytes_signed(program, start_index, count),
+        do: PVM.Utils.decode_bytes_signed(program, start_index, count)
+
       def skip(counter, bitmask), do: PVM.Utils.skip(counter, bitmask)
-      def next_counter(output, state), do: PVM.Utils.next_counter(output, state)
+
+      def next_counter(output, prev_counter, bitmask),
+        do: PVM.Utils.next_counter(output, prev_counter, bitmask)
+
       def basic_block_starts(program, bitmask), do: PVM.Utils.basic_block_starts(program, bitmask)
     end
   end
