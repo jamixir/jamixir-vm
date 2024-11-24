@@ -5,7 +5,7 @@ defmodule Instructions.RegImmediateOffset do
 
   @type comparison_op :: :eq | :ne | :lt_u | :le_u | :ge_u | :gt_u | :lt_s | :le_s | :ge_s | :gt_s
 
-  def execute(:load_imm_jump, program, bitmask, _jump_table, state) do
+  def execute(:load_imm_jump, program, bitmask,  state) do
     {r_a, v_x, v_y, start_set} = get_params(program, bitmask, state.counter)
     {exit_reason, counter} = Executor.branch(v_y, true, state.counter, start_set)
 
@@ -13,7 +13,7 @@ defmodule Instructions.RegImmediateOffset do
      %{state | counter: counter, registers: List.replace_at(state.registers, r_a, v_x)}}
   end
 
-  def execute(instruction, program, bitmask, _jump_table, state) do
+  def execute(instruction, program, bitmask, state) do
     {r_a, v_x, v_y, start_set} = get_params(program, bitmask, state.counter)
     w_a = Enum.at(state.registers, r_a)
 

@@ -20,7 +20,7 @@ defmodule Instructions.Executor do
       :two_immediates -> TwoImmediates.execute(opcode, program, bitmask, jump_table, state)
       :reg_immediate -> RegImmediate.execute(opcode, program, bitmask, jump_table, state)
       :register_two_immediate -> RegTwoImm.execute(opcode, program, bitmask, jump_table, state)
-      :register_immediate_offset -> RegImmediateOffset.execute(opcode, program, bitmask, jump_table, state)
+      :register_immediate_offset -> RegImmediateOffset.execute(opcode, program, bitmask, state)
       :two_registers -> TwoRegisters.execute(opcode, program, bitmask, jump_table, state)
       :two_registers_one_immediate -> TwoRegistersOneImmediate.execute(opcode, program, bitmask, jump_table, state)
       :two_registers_one_offset -> TwoRegistersOneOffset.execute(opcode, program, bitmask, jump_table, state)
