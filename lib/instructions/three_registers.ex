@@ -28,12 +28,32 @@ defmodule Instructions.ThreeRegisters do
 
     result =
       case instruction do
-        :div_u_32 -> div(rem(w_a, 1 <<< 32), rem(w_b, 1 <<< 32))
-        :div_s_32 -> div(u2i(w_a, 4), u2i(w_b, 4))
-        :rem_u_32 -> rem(rem(w_a, 1 <<< 32), rem(w_b, 1 <<< 32))
-        :rem_s_32 -> rem(u2i(w_a, 4), u2i(w_b, 4))
+        :div_u_32 ->
+          if rem(w_b, 1 <<< 32) == 0,
+            do: (1 <<< 64) - 1,
+            else: div(rem(w_a, 1 <<< 32), rem(w_b, 1 <<< 32))
+
+        :div_s_32 ->
+          a = u2i(rem(w_a, 1 <<< 32), 4)
+          b = u2i(rem(w_b, 1 <<< 32), 4)
+
+          if b == 0, do: (1 <<< 64) - 1
+          if b == -1 and a == -1 * (1 <<< 31), do: a
+          i2u(div(a, b), 8)
+
+        :rem_u_32 ->
+          if rem(w_b, 1 <<< 32) == 0,
+            do: to_64bit(w_a, 4),
+            else: rem(rem(w_a, 1 <<< 32), rem(w_b, 1 <<< 32)) |> to_64bit(4)
+
+        :rem_s_32 ->
+          a = u2i(rem(w_a, 1 <<< 32), 4)
+          b = u2i(rem(w_b, 1 <<< 32), 4)
+
+          if b == 0, do: i2u(a, 8)
+          if b == -1 and a == -1 * (1 <<< 31), do: 0
+          i2u(rem(a, b), 8)
       end
-      |> to_64bit(4)
 
     Common.update_register(output, state.registers, r_d, result)
   end
@@ -46,11 +66,10 @@ defmodule Instructions.ThreeRegisters do
 
     result =
       case instruction do
-        :shlo_l_32 -> rem(w_a * (1 <<< shift), 1 <<< 32)
-        :shlo_r_32 -> div(rem(w_a, 1 <<< 32), 1 <<< shift)
-        :shar_r_32 -> div(u2i(w_a, 4), 1 <<< shift)
+        :shlo_l_32 -> rem(w_a * (1 <<< shift), 1 <<< 32) |> to_64bit(4)
+        :shlo_r_32 -> div(rem(w_a, 1 <<< 32), 1 <<< shift) |> to_64bit(4)
+        :shar_r_32 -> w_a |> rem(1 <<< 32) |> to_64bit(4) |> div(1 <<< shift) |> i2u(8)
       end
-      |> to_64bit(4)
 
     Common.update_register(output, state.registers, r_d, result)
   end
@@ -78,12 +97,25 @@ defmodule Instructions.ThreeRegisters do
 
     result =
       case instruction do
-        :div_u_64 -> div(w_a, w_b)
-        :div_s_64 -> div(u2i(w_a, 8), u2i(w_b, 8))
-        :rem_u_64 -> rem(w_a, w_b)
-        :rem_s_64 -> rem(u2i(w_a, 8), u2i(w_b, 8))
+        :div_u_64 ->
+          if rem(w_b, 1 <<< 64) == 0,
+            do: (1 <<< 64) - 1,
+            else: div(w_a, w_b)
+
+        :div_s_64 ->
+          if w_b == 0, do: (1 <<< 64) - 1
+          if u2i(w_b, 8) == -1 and u2i(w_a, 8) == -1 * (1 <<< 63), do: w_a
+          i2u(div(u2i(w_a, 8), u2i(w_b, 8)), 8)
+
+        :rem_u_64 ->
+          if w_b == 0, do: w_a
+          rem(w_a, w_b)
+
+        :rem_s_64 ->
+          if w_b == 0, do: w_a
+          if u2i(w_b, 8) == -1 and u2i(w_a, 8) == -1 * (1 <<< 63), do: 0
+          i2u(rem(u2i(w_a, 8), u2i(w_b, 8)), 8)
       end
-      |> i2u(8)
 
     Common.update_register(output, state.registers, r_d, result)
   end
@@ -109,12 +141,14 @@ defmodule Instructions.ThreeRegisters do
       when instruction in [:and, :xor, :or] do
     {w_a, w_b, r_d} = get_params(state)
 
-    result =
+    operation =
       case instruction do
-        :and -> band(w_a, w_b)
-        :xor -> bxor(w_a, w_b)
-        :or -> bor(w_a, w_b)
+        :and -> &(&1 &&& &2)
+        :xor -> &bxor(&1, &2)
+        :or -> &bor(&1, &2)
       end
+
+    result = b2u(Enum.zip_with(u2b(w_a, 8), u2b(w_b, 8), operation))
 
     Common.update_register(output, state.registers, r_d, result)
   end
@@ -127,13 +161,13 @@ defmodule Instructions.ThreeRegisters do
     result =
       case instruction do
         :mul_upper_s_s ->
-          div(u2i(w_a, 8) * u2i(w_b, 8), 1 <<< 64) |> i2u(8)
+          (u2i(w_a, 8) * u2i(w_b, 8)) |> div(1 <<< 64) |> i2u(8)
 
         :mul_upper_u_u ->
           div(w_a * w_b, 1 <<< 64)
 
         :mul_upper_s_u ->
-          div(u2i(w_a, 8) * w_b, 1 <<< 64) |> i2u(8)
+          (u2i(w_a, 8) * w_b) |> div(1 <<< 64) |> i2u(8)
       end
 
     Common.update_register(output, state.registers, r_d, result)
