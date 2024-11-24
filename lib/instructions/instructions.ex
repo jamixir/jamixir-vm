@@ -111,6 +111,37 @@ defmodule Instructions do
           | :branch_ge_s
           # Two registers and two immediate argument
           | :load_imm_jump_ind
+          # Three registers
+          | :add_32
+          | :sub_32
+          | :mul_32
+          | :div_u_32
+          | :div_s_32
+          | :rem_u_32
+          | :rem_s_32
+          | :shlo_l_32
+          | :shlo_r_32
+          | :shar_r_32
+          | :add_64
+          | :sub_64
+          | :mul_64
+          | :div_u_64
+          | :div_s_64
+          | :rem_u_64
+          | :rem_s_64
+          | :shlo_l_64
+          | :shlo_r_64
+          | :shar_r_64
+          | :and
+          | :xor
+          | :or
+          | :mul_upper_s_s
+          | :mul_upper_u_u
+          | :mul_upper_s_u
+          | :set_lt_u
+          | :set_lt_s
+          | :cmov_iz
+          | :cmov_nz
 
   # Define a map for the two-way mapping
   @opcode_map %{
@@ -141,7 +172,7 @@ defmodule Instructions do
     store_imm_ind_u32: 72,
     store_imm_ind_u64: 73,
     load_imm_jump: 80,
-    load_imm_jump_ind: 61,
+
     branch_eq_imm: 81,
     branch_ne_imm: 82,
     branch_lt_u_imm: 83,
@@ -197,7 +228,40 @@ defmodule Instructions do
     branch_lt_u: 152,
     branch_lt_s: 153,
     branch_ge_u: 154,
-    branch_ge_s: 155
+    branch_ge_s: 155,
+
+    load_imm_jump_ind: 160,
+
+    add_32: 170,
+    sub_32: 171,
+    mul_32: 172,
+    div_u_32: 173,
+    div_s_32: 174,
+    rem_u_32: 175,
+    rem_s_32: 176,
+    shlo_l_32: 177,
+    shlo_r_32: 178,
+    shar_r_32: 179,
+    add_64: 180,
+    sub_64: 181,
+    mul_64: 182,
+    div_u_64: 183,
+    div_s_64: 184,
+    rem_u_64: 185,
+    rem_s_64: 186,
+    shlo_l_64: 187,
+    shlo_r_64: 188,
+    shar_r_64: 189,
+    and: 190,
+    xor: 191,
+    or: 192,
+    mul_upper_s_s: 193,
+    mul_upper_u_u: 194,
+    mul_upper_s_u: 195,
+    set_lt_u: 196,
+    set_lt_s: 197,
+    cmov_iz: 198,
+    cmov_nz: 199
   }
 
   @gas_cost_map %{
@@ -284,7 +348,37 @@ defmodule Instructions do
     branch_gt_u_imm: 0,
     branch_gt_s_imm: 0,
     move_reg: 0,
-    sbrk: 0
+    sbrk: 0,
+    add_32: 0,
+    sub_32: 0,
+    mul_32: 0,
+    div_u_32: 0,
+    div_s_32: 0,
+    rem_u_32: 0,
+    rem_s_32: 0,
+    shlo_l_32: 0,
+    shlo_r_32: 0,
+    shar_r_32: 0,
+    add_64: 0,
+    sub_64: 0,
+    mul_64: 0,
+    div_u_64: 0,
+    div_s_64: 0,
+    rem_u_64: 0,
+    rem_s_64: 0,
+    shlo_l_64: 0,
+    shlo_r_64: 0,
+    shar_r_64: 0,
+    and: 0,
+    xor: 0,
+    or: 0,
+    mul_upper_s_s: 0,
+    mul_upper_u_u: 0,
+    mul_upper_s_u: 0,
+    set_lt_u: 0,
+    set_lt_s: 0,
+    cmov_iz: 0,
+    cmov_nz: 0
   }
 
   @instruction_categories %{
@@ -377,6 +471,38 @@ defmodule Instructions do
     ],
     two_registers_two_immediate: [
       :load_imm_jump_ind
+    ],
+    three_registers: [
+      :add_32,
+      :sub_32,
+      :mul_32,
+      :div_u_32,
+      :div_s_32,
+      :rem_u_32,
+      :rem_s_32,
+      :shlo_l_32,
+      :shlo_r_32,
+      :shar_r_32,
+      :add_64,
+      :sub_64,
+      :mul_64,
+      :div_u_64,
+      :div_s_64,
+      :rem_u_64,
+      :rem_s_64,
+      :shlo_l_64,
+      :shlo_r_64,
+      :shar_r_64,
+      :and,
+      :xor,
+      :or,
+      :mul_upper_s_s,
+      :mul_upper_u_u,
+      :mul_upper_s_u,
+      :set_lt_u,
+      :set_lt_s,
+      :cmov_iz,
+      :cmov_nz
     ]
   }
 

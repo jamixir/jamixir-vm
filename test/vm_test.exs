@@ -427,6 +427,74 @@ defmodule VMTest do
       assert Enum.at(output.registers, 1) == 0xFFFF_FFFF_FFFF_FFFF
       assert Memory.read(output.memory, 30, 1) == <<77>>  # Verify branch was taken
     end
+
+    test "calculates sum of even numbers from 1 to 10" do
+      # Program:
+      # sum = 0
+      # i = 1
+      # while i <= 10:
+      #     if (i % 2) == 0:
+      #         sum += i
+      #     i += 1
+      # store sum in memory at address 3
+
+
+      # r1 = sum (initialized to 0)
+      # r2 = i (counter, initialized to 1)
+      # r3 = 10 (loop end condition)
+      # r4 = temporary register for calculations
+      # Memory address 100 = final result
+      program = <<
+        # Initialize registers (offset 0)
+        op(:load_imm), 1, 0,     # sum = 0
+        op(:load_imm), 2, 1,     # i = 1
+        op(:load_imm), 3, 10,    # end condition = 10
+        op(:load_imm), 5, 2,     # divisor = 2 (keep this constant)
+        # Check if i <= 10
+        op(:fallthrough),
+        # Loop start (offset 13):
+        op(:branch_gt_u_imm), 0x12, 10, 20,   # if i > 10, jump to end (offset 33) (13 + 20)
+        op(:rem_u_32), 0x52, 4,           # r4 = i % 2  (r_a=2, r_b=4, r_d=4)
+        #(offset 20)
+        op(:branch_ne_imm), 0x14, 0, 8,     # if remainder != 0, skip to load_imm 1 (offset 29)
+        op(:add_32), 0x12, 1,              # sum += i
+        op(:fallthrough),
+        #(offset 28)
+        op(:add_imm_32), 0x22, 1,
+        #(offset 31)
+        op(:jump), 238,                    # Jump back to loop start (offset 13) => 31 -18  => 31 + (255 - 17) = 31 + 238
+        # Store result and exit (offset 38):
+        op(:store_u32), 1, 3            # Store sum at memory address 100
+      >>
+
+      bitmask = <<
+        1, 0, 0,           # load_imm sum (0)
+        1, 0, 0,           # load_imm i (3)
+        1, 0, 0,           # load_imm end (6)
+        1, 0, 0,           # load_imm divisor (9)
+        1,                 # fallthrough (12)
+        1, 0, 0, 0,        # branch_gt_u_imm (13*)
+        1, 0, 0,           # rem_u_32 (17*)
+        1, 0, 0, 0,        # branch_ne_imm (20)
+        1, 0, 0,          # add_32 (24*)
+        1,                 # fallthrough (27)
+        1, 0, 0,           # add_imm_32 (28*)
+        1, 0,              # jump (31)
+        1, 0, 0            # store_u32 (33*)
+      >>
+
+      state = create_test_state(program, bitmask)
+      output = VM.execute(state)
+
+      assert output.exit_status == :panic  # Normal termination after last instruction
+      # Read the result from memory - should be 2 + 4 + 6 + 8 + 10 = 30
+      assert Memory.read(output.memory, 3, 4) == <<30, 0, 0, 0>>
+      # Verify final register values
+      assert Enum.at(output.registers, 1) == 30  # sum
+      assert Enum.at(output.registers, 2) == 11  # final i value
+      assert Enum.at(output.registers, 3) == 10  # loop end condition
+    end
+
   end
 
   describe "VM.execute memory faults" do
