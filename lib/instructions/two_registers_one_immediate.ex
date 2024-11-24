@@ -2,13 +2,12 @@ defmodule Instructions.TwoRegistersOneImmediate do
   use PVM.Utils
   import Bitwise
   use PVM.{Decoder, Encoder}
-  alias Instructions.Common
   use Transitions
 
   # Store instructions
-  def execute(instruction, state, output)
+  def execute(instruction, program, bitmask, _jump_table, state)
       when instruction in [:store_ind_u8, :store_ind_u16, :store_ind_u32, :store_ind_u64] do
-    {r_a, r_b, v_x} = get_params(state)
+    {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
     w_a = Enum.at(state.registers, r_a)
     w_b = Enum.at(state.registers, r_b)
 
@@ -21,13 +20,13 @@ defmodule Instructions.TwoRegistersOneImmediate do
       end
 
     value = if instruction == :store_ind_u64, do: w_a, else: rem(w_a, 1 <<< bits)
-    Common.do_write(output, w_b + v_x, state.memory, e_le(value, size))
+    Memory.Util.write(state, w_b + v_x, e_le(value, size))
   end
 
   # Unsigned load instructions
-  def execute(instruction, state, output)
+  def execute(instruction, program, bitmask, _jump_table, state)
       when instruction in [:load_ind_u8, :load_ind_u16, :load_ind_u32, :load_ind_u64] do
-    {r_a, r_b, v_x} = get_params(state)
+    {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
     w_b = Enum.at(state.registers, r_b)
 
     size =
@@ -40,17 +39,18 @@ defmodule Instructions.TwoRegistersOneImmediate do
 
     case Memory.read(state.memory, w_b + v_x, size) do
       {:error, {:fault, fault_addr}} ->
-        %StepOutput{output | exit_status: {:fault, fault_addr}}
+        {{:fault, fault_addr}, state}
 
-      value ->
-        Common.update_register(output, state.registers, r_a, de_le(value, size))
+      {:ok,value} ->
+        state = %{state | registers: List.replace_at(state.registers, r_a, de_le(value, size))}
+        {:continue, state}
     end
   end
 
   # Signed load instructions
-  def execute(instruction, state, output)
+  def execute(instruction, program, bitmask, _jump_table, state)
       when instruction in [:load_ind_i8, :load_ind_i16, :load_ind_i32] do
-    {r_a, r_b, v_x} = get_params(state)
+    {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
     w_b = Enum.at(state.registers, r_b)
 
     size =
@@ -62,23 +62,24 @@ defmodule Instructions.TwoRegistersOneImmediate do
 
     case Memory.read(state.memory, w_b + v_x, size) do
       {:error, {:fault, fault_addr}} ->
-        %StepOutput{output | exit_status: {:fault, fault_addr}}
+        {{:fault, fault_addr}, state}
 
-      value ->
+      {:ok, value} ->
         unsigned_8bit =
           value
           |> de_le(size)
           |> u2i(size)
           |> i2u(8)
 
-        Common.update_register(output, state.registers, r_a, unsigned_8bit)
+        state = %{state | registers: List.replace_at(state.registers, r_a, unsigned_8bit)}
+        {:continue, state}
     end
   end
 
   # Arithmetic operations
-  def execute(instruction, state, output)
+  def execute(instruction, program, bitmask, _jump_table, state)
       when instruction in [:add_imm_32, :mul_imm_32, :neg_add_imm_32] do
-    {r_a, r_b, v_x} = get_params(state)
+    {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
     w_b = Enum.at(state.registers, r_b)
 
     result =
@@ -89,13 +90,14 @@ defmodule Instructions.TwoRegistersOneImmediate do
       end
       |> to_64bit(4)
 
-    Common.update_register(output, state.registers, r_a, result)
+    state = %{state | registers: List.replace_at(state.registers, r_a, result)}
+    {:continue, state}
   end
 
   # Bitwise operations
-  def execute(instruction, state, output)
+  def execute(instruction, program, bitmask, _jump_table, state)
       when instruction in [:and_imm, :xor_imm, :or_imm] do
-    {r_a, r_b, v_x} = get_params(state)
+    {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
     w_b = Enum.at(state.registers, r_b)
 
     operation =
@@ -106,13 +108,14 @@ defmodule Instructions.TwoRegistersOneImmediate do
       end
 
     result = b2u(Enum.zip_with(u2b(w_b, 8), u2b(v_x, 8), operation))
-    Common.update_register(output, state.registers, r_a, result)
+    state = %{state | registers: List.replace_at(state.registers, r_a, result)}
+    {:continue, state}
   end
 
   # Comparison operations
-  def execute(instruction, state, output)
+  def execute(instruction, program, bitmask, _jump_table, state)
       when instruction in [:set_lt_u_imm, :set_lt_s_imm, :set_gt_u_imm, :set_gt_s_imm] do
-    {r_a, r_b, v_x} = get_params(state)
+    {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
     w_b = Enum.at(state.registers, r_b)
 
     result =
@@ -123,11 +126,12 @@ defmodule Instructions.TwoRegistersOneImmediate do
         :set_gt_s_imm -> if u2i(w_b, 8) > u2i(v_x, 8), do: 1, else: 0
       end
 
-    Common.update_register(output, state.registers, r_a, result)
+    state = %{state | registers: List.replace_at(state.registers, r_a, result)}
+    {:continue, state}
   end
 
   # Shift operations
-  def execute(instruction, state, output)
+  def execute(instruction, program, bitmask, _jump_table, state)
       when instruction in [
              :shlo_l_imm_32,
              :shlo_r_imm_32,
@@ -136,7 +140,7 @@ defmodule Instructions.TwoRegistersOneImmediate do
              :shlo_r_imm_alt_32,
              :shar_r_imm_alt_32
            ] do
-    {r_a, r_b, v_x} = get_params(state)
+    {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
     w_b = Enum.at(state.registers, r_b)
 
     result =
@@ -166,13 +170,14 @@ defmodule Instructions.TwoRegistersOneImmediate do
           div(u2i(v_x, 4), 1 <<< shift) |> i2u(8)
       end
 
-    Common.update_register(output, state.registers, r_a, result)
+    state = %{state | registers: List.replace_at(state.registers, r_a, result)}
+    {:continue, state}
   end
 
   # Conditional move operations
-  def execute(instruction, state, output)
+  def execute(instruction, program, bitmask, _jump_table, state)
       when instruction in [:cmov_iz_imm, :cmov_nz_imm] do
-    {r_a, r_b, v_x} = get_params(state)
+    {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
     w_b = Enum.at(state.registers, r_b)
     w_a = Enum.at(state.registers, r_a)
 
@@ -182,13 +187,14 @@ defmodule Instructions.TwoRegistersOneImmediate do
         :cmov_nz_imm -> if w_b != 0, do: v_x, else: w_a
       end
 
-    Common.update_register(output, state.registers, r_a, result)
+    state = %{state | registers: List.replace_at(state.registers, r_a, result)}
+    {:continue, state}
   end
 
   # 64-bit arithmetic operations
-  def execute(instruction, state, output)
+  def execute(instruction, program, bitmask, _jump_table, state)
       when instruction in [:add_imm_64, :mul_imm_64, :neg_add_imm_64] do
-    {r_a, r_b, v_x} = get_params(state)
+    {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
     w_b = Enum.at(state.registers, r_b)
 
     result =
@@ -198,11 +204,12 @@ defmodule Instructions.TwoRegistersOneImmediate do
         :neg_add_imm_64 -> rem(v_x + (1 <<< 64) - w_b, 1 <<< 64)
       end
 
-    Common.update_register(output, state.registers, r_a, result)
+    state = %{state | registers: List.replace_at(state.registers, r_a, result)}
+    {:continue, state}
   end
 
   # 64-bit shift operations
-  def execute(instruction, state, output)
+  def execute(instruction, program, bitmask, _jump_table, state)
       when instruction in [
              :shlo_l_imm_64,
              :shlo_r_imm_64,
@@ -211,7 +218,7 @@ defmodule Instructions.TwoRegistersOneImmediate do
              :shlo_r_imm_alt_64,
              :shar_r_imm_alt_64
            ] do
-    {r_a, r_b, v_x} = get_params(state)
+    {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
     w_b = Enum.at(state.registers, r_b)
 
     result =
@@ -241,25 +248,26 @@ defmodule Instructions.TwoRegistersOneImmediate do
           div(u2i(v_x, 8), 1 <<< shift) |> i2u(8)
       end
 
-    Common.update_register(output, state.registers, r_a, result)
+    state = %{state | registers: List.replace_at(state.registers, r_a, result)}
+    {:continue, state}
   end
 
   # Formula (A.23)
-  defp get_params(state) do
+  defp get_params(program, bitmask, counter) do
     r_a =
-      binary_part(state.program, state.counter + 1, 1)
+      binary_part(program, counter + 1, 1)
       |> :binary.first()
       |> rem(16)
       |> min(12)
 
     r_b =
-      binary_part(state.program, state.counter + 1, 1)
+      binary_part(program, counter + 1, 1)
       |> :binary.first()
       |> div(16)
       |> min(12)
 
-    l_x = min(4, max(0, skip(state.counter, state.bitmask) - 1))
-    v_x = decode_bytes_signed(state.program, state.counter + 2, l_x)
+    l_x = min(4, max(0, skip(counter, bitmask) - 1))
+    v_x = decode_bytes_signed(program, counter + 2, l_x)
 
     {r_a, r_b, v_x}
   end

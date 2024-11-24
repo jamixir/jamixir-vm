@@ -2,12 +2,11 @@ defmodule Instructions.ThreeRegisters do
   use PVM.Utils
   use Transitions
   import Bitwise
-  alias Instructions.Common
 
   # 32-bit arithmetic operations
-  def execute(instruction, state, output)
+  def execute(instruction, program, _bitmask, _jump_table, state)
       when instruction in [:add_32, :sub_32, :mul_32] do
-    {w_a, w_b, r_d} = get_params(state)
+    {w_a, w_b, r_d} = get_params(program, state)
 
     result =
       case instruction do
@@ -18,13 +17,14 @@ defmodule Instructions.ThreeRegisters do
       |> rem(1 <<< 32)
       |> to_64bit(4)
 
-    Common.update_register(output, state.registers, r_d, result)
+    state = %{state | registers: List.replace_at(state.registers, r_d, result)}
+    {:continue, state}
   end
 
   # 32-bit division operations
-  def execute(instruction, state, output)
+  def execute(instruction, program, _bitmask, _jump_table, state)
       when instruction in [:div_u_32, :div_s_32, :rem_u_32, :rem_s_32] do
-    {w_a, w_b, r_d} = get_params(state)
+    {w_a, w_b, r_d} = get_params(program, state)
 
     result =
       case instruction do
@@ -55,13 +55,14 @@ defmodule Instructions.ThreeRegisters do
           i2u(rem(a, b), 8)
       end
 
-    Common.update_register(output, state.registers, r_d, result)
+    state = %{state | registers: List.replace_at(state.registers, r_d, result)}
+    {:continue, state}
   end
 
   # 32-bit shift operations
-  def execute(instruction, state, output)
+  def execute(instruction, program, _bitmask, _jump_table, state)
       when instruction in [:shlo_l_32, :shlo_r_32, :shar_r_32] do
-    {w_a, w_b, r_d} = get_params(state)
+    {w_a, w_b, r_d} = get_params(program, state)
     shift = rem(w_b, 32)
 
     result =
@@ -71,13 +72,14 @@ defmodule Instructions.ThreeRegisters do
         :shar_r_32 -> w_a |> rem(1 <<< 32) |> to_64bit(4) |> div(1 <<< shift) |> i2u(8)
       end
 
-    Common.update_register(output, state.registers, r_d, result)
+    state = %{state | registers: List.replace_at(state.registers, r_d, result)}
+    {:continue, state}
   end
 
   # 64-bit arithmetic operations
-  def execute(instruction, state, output)
+  def execute(instruction, program, _bitmask, _jump_table, state)
       when instruction in [:add_64, :sub_64, :mul_64] do
-    {w_a, w_b, r_d} = get_params(state)
+    {w_a, w_b, r_d} = get_params(program, state)
 
     result =
       case instruction do
@@ -87,13 +89,14 @@ defmodule Instructions.ThreeRegisters do
       end
       |> rem(1 <<< 64)
 
-    Common.update_register(output, state.registers, r_d, result)
+    state = %{state | registers: List.replace_at(state.registers, r_d, result)}
+    {:continue, state}
   end
 
   # 64-bit division operations
-  def execute(instruction, state, output)
+  def execute(instruction, program, _bitmask, _jump_table, state)
       when instruction in [:div_u_64, :div_s_64, :rem_u_64, :rem_s_64] do
-    {w_a, w_b, r_d} = get_params(state)
+    {w_a, w_b, r_d} = get_params(program, state)
 
     result =
       case instruction do
@@ -117,13 +120,14 @@ defmodule Instructions.ThreeRegisters do
           i2u(rem(u2i(w_a, 8), u2i(w_b, 8)), 8)
       end
 
-    Common.update_register(output, state.registers, r_d, result)
+    state = %{state | registers: List.replace_at(state.registers, r_d, result)}
+    {:continue, state}
   end
 
   # 64-bit shift operations
-  def execute(instruction, state, output)
+  def execute(instruction, program, _bitmask, _jump_table, state)
       when instruction in [:shlo_l_64, :shlo_r_64, :shar_r_64] do
-    {w_a, w_b, r_d} = get_params(state)
+    {w_a, w_b, r_d} = get_params(program, state)
     shift = rem(w_b, 64)
 
     result =
@@ -133,13 +137,14 @@ defmodule Instructions.ThreeRegisters do
         :shar_r_64 -> div(u2i(w_a, 8), 1 <<< shift) |> i2u(8)
       end
 
-    Common.update_register(output, state.registers, r_d, result)
+    state = %{state | registers: List.replace_at(state.registers, r_d, result)}
+    {:continue, state}
   end
 
   # Bitwise operations
-  def execute(instruction, state, output)
+  def execute(instruction, program, _bitmask, _jump_table, state)
       when instruction in [:and, :xor, :or] do
-    {w_a, w_b, r_d} = get_params(state)
+    {w_a, w_b, r_d} = get_params(program, state)
 
     operation =
       case instruction do
@@ -150,13 +155,14 @@ defmodule Instructions.ThreeRegisters do
 
     result = b2u(Enum.zip_with(u2b(w_a, 8), u2b(w_b, 8), operation))
 
-    Common.update_register(output, state.registers, r_d, result)
+    state = %{state | registers: List.replace_at(state.registers, r_d, result)}
+    {:continue, state}
   end
 
   # Upper multiplication operations
-  def execute(instruction, state, output)
+  def execute(instruction, program, _bitmask, _jump_table, state)
       when instruction in [:mul_upper_s_s, :mul_upper_u_u, :mul_upper_s_u] do
-    {w_a, w_b, r_d} = get_params(state)
+    {w_a, w_b, r_d} = get_params(program, state)
 
     result =
       case instruction do
@@ -170,13 +176,14 @@ defmodule Instructions.ThreeRegisters do
           (u2i(w_a, 8) * w_b) |> div(1 <<< 64) |> i2u(8)
       end
 
-    Common.update_register(output, state.registers, r_d, result)
+    state = %{state | registers: List.replace_at(state.registers, r_d, result)}
+    {:continue, state}
   end
 
   # Comparison operations
-  def execute(instruction, state, output)
+  def execute(instruction, program, _bitmask, _jump_table, state)
       when instruction in [:set_lt_u, :set_lt_s] do
-    {w_a, w_b, r_d} = get_params(state)
+    {w_a, w_b, r_d} = get_params(program, state)
 
     result =
       case instruction do
@@ -184,13 +191,14 @@ defmodule Instructions.ThreeRegisters do
         :set_lt_s -> if(u2i(w_a, 8) < u2i(w_b, 8), do: 1, else: 0)
       end
 
-    Common.update_register(output, state.registers, r_d, result)
+    state = %{state | registers: List.replace_at(state.registers, r_d, result)}
+    {:continue, state}
   end
 
   # Conditional move operations
-  def execute(instruction, state, output)
+  def execute(instruction, program, _bitmask, _jump_table, state)
       when instruction in [:cmov_iz, :cmov_nz] do
-    {w_a, w_b, r_d} = get_params(state)
+    {w_a, w_b, r_d} = get_params(program, state)
     w_d = Enum.at(state.registers, r_d)
 
     result =
@@ -199,13 +207,14 @@ defmodule Instructions.ThreeRegisters do
         :cmov_nz -> if(w_b != 0, do: w_a, else: w_d)
       end
 
-    Common.update_register(output, state.registers, r_d, result)
+    state = %{state | registers: List.replace_at(state.registers, r_d, result)}
+    {:continue, state}
   end
 
   # Formula (A.26)
-  defp get_params(state) do
-    byte1 = binary_part(state.program, state.counter + 1, 1) |> :binary.first()
-    byte2 = binary_part(state.program, state.counter + 2, 1) |> :binary.first()
+  defp get_params(program, state) do
+    byte1 = binary_part(program, state.counter + 1, 1) |> :binary.first()
+    byte2 = binary_part(program, state.counter + 2, 1) |> :binary.first()
 
     r_a = min(12, rem(byte1, 16))
     w_a = Enum.at(state.registers, r_a)

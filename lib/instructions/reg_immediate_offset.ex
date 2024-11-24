@@ -1,24 +1,25 @@
 defmodule Instructions.RegImmediateOffset do
   use PVM.Utils
-  alias Instructions.{Common, Executor}
+  alias Instructions.Executor
   use Transitions
 
   @type comparison_op :: :eq | :ne | :lt_u | :le_u | :ge_u | :gt_u | :lt_s | :le_s | :ge_s | :gt_s
 
-  def execute(:load_imm_jump, state, output) do
-    {r_a, v_x, v_y, start_set} = get_params(state)
-    output = Common.update_register(output, state.registers, r_a, v_x)
-    {exit_status, counter} = Executor.branch(v_y, true, state.counter, start_set)
-    %StepOutput{output | exit_status: exit_status, counter: counter}
+  def execute(:load_imm_jump, program, bitmask, _jump_table, state) do
+    {r_a, v_x, v_y, start_set} = get_params(program, bitmask, state.counter)
+    {exit_reason, counter} = Executor.branch(v_y, true, state.counter, start_set)
+
+    {exit_reason,
+     %{state | counter: counter, registers: List.replace_at(state.registers, r_a, v_x)}}
   end
 
-  def execute(instruction, state, output) do
-    {r_a, v_x, v_y, start_set} = get_params(state)
+  def execute(instruction, program, bitmask, _jump_table, state) do
+    {r_a, v_x, v_y, start_set} = get_params(program, bitmask, state.counter)
     w_a = Enum.at(state.registers, r_a)
 
     comparison_result = compare(instruction_to_op(instruction), w_a, v_x)
     {exit_status, counter} = Executor.branch(v_y, comparison_result, state.counter, start_set)
-    %StepOutput{output | exit_status: exit_status, counter: counter}
+    {exit_status, %{state | counter: counter}}
   end
 
   defp compare(op, w_a, v_x) do
@@ -70,33 +71,33 @@ defmodule Instructions.RegImmediateOffset do
   end
 
   # Formula (A.21) v0.5
-  defp get_params(state) do
+  defp get_params(program, bitmask, counter) do
     r_a =
-      binary_part(state.program, state.counter + 1, 1)
+      binary_part(program, counter + 1, 1)
       |> :binary.first()
       |> rem(16)
       |> min(12)
 
     l_x =
-      binary_part(state.program, state.counter + 1, 1)
+      binary_part(program, counter + 1, 1)
       |> :binary.first()
       |> div(16)
       |> rem(8)
       |> min(4)
 
     l_y =
-      (skip(state.counter, state.bitmask) - l_x - 1)
+      (skip(counter, bitmask) - l_x - 1)
       |> max(0)
       |> min(4)
 
-    v_x = decode_bytes_signed(state.program, state.counter + 2, l_x)
+    v_x = decode_bytes_signed(program, counter + 2, l_x)
 
     v_y =
-      state.counter +
-        (decode_bytes(state.program, state.counter + 2 + l_x, l_y)
+      counter +
+        (decode_bytes(program, counter + 2 + l_x, l_y)
          |> u2i(l_y))
 
-    start_set = basic_block_starts(state.program, state.bitmask)
+    start_set = basic_block_starts(program, bitmask)
 
     {r_a, v_x, v_y, start_set}
   end

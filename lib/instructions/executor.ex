@@ -13,19 +13,19 @@ defmodule Instructions.Executor do
     ThreeRegisters
   }
 
-  def execute_instruction(opcode, state, output) do
+  def execute_instruction(opcode, program, bitmask, jump_table, state) do
     case Instructions.instruction_category(opcode) do
-      :no_args -> NoArgs.execute(opcode, output)
-      :one_immediate -> OneImmediate.execute(opcode, state, output)
-      :two_immediates -> TwoImmediates.execute(opcode, state, output)
-      :reg_immediate -> RegImmediate.execute(opcode, state, output)
-      :register_two_immediate -> RegTwoImm.execute(opcode, state, output)
-      :register_immediate_offset -> RegImmediateOffset.execute(opcode, state, output)
-      :two_registers -> TwoRegisters.execute(opcode, state, output)
-      :two_registers_one_immediate -> TwoRegistersOneImmediate.execute(opcode, state, output)
-      :two_registers_one_offset -> TwoRegistersOneOffset.execute(opcode, state, output)
-      :two_registers_two_immediates -> TwoRegistersTwoImmediates.execute(opcode, state, output)
-      :three_registers -> ThreeRegisters.execute(opcode, state, output)
+      :no_args -> NoArgs.execute(opcode, program, bitmask, jump_table, state)
+      :one_immediate -> OneImmediate.execute(opcode, program, bitmask, jump_table, state)
+      :two_immediates -> TwoImmediates.execute(opcode, program, bitmask, jump_table, state)
+      :reg_immediate -> RegImmediate.execute(opcode, program, bitmask, jump_table, state)
+      :register_two_immediate -> RegTwoImm.execute(opcode, program, bitmask, jump_table, state)
+      :register_immediate_offset -> RegImmediateOffset.execute(opcode, program, bitmask, jump_table, state)
+      :two_registers -> TwoRegisters.execute(opcode, program, bitmask, jump_table, state)
+      :two_registers_one_immediate -> TwoRegistersOneImmediate.execute(opcode, program, bitmask, jump_table, state)
+      :two_registers_one_offset -> TwoRegistersOneOffset.execute(opcode, program, bitmask, jump_table, state)
+      :two_registers_two_immediates -> TwoRegistersTwoImmediates.execute(opcode, program, bitmask, jump_table, state)
+      :three_registers -> ThreeRegisters.execute(opcode, program, bitmask, jump_table, state)
     end
   end
 

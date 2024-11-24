@@ -2,166 +2,203 @@ defmodule Instructions.RegImmediate do
   use PVM.Utils
   import Bitwise
   use PVM.{Decoder, Encoder}
-  alias Instructions.{Common, Executor}
+  alias Instructions.Executor
 
   # Section (A.19) v0.5
-  def execute(:jump_ind, state, output) do
-    {register_index, addr} = get_params(state)
+  def execute(:jump_ind, program, bitmask, jump_table, state) do
+    {register_index, addr} = get_params(program, bitmask, state.counter)
     register_value = Enum.at(state.registers, register_index)
-    start_set = basic_block_starts(state.program, state.bitmask)
+    start_set = basic_block_starts(program, bitmask)
 
     {exit_status, counter} =
       Executor.djump(
         rem(register_value + addr, 1 <<< 32),
         state.counter,
-        state.jump_table,
+        jump_table,
         start_set
       )
 
-    %StepOutput{output | exit_status: exit_status, counter: counter}
+    {exit_status, %{state | counter: counter}}
   end
 
-  def execute(:load_imm, state, output) do
-    {register_index, value} = get_params(state)
-    Common.update_register(output, state.registers, register_index, value)
+  def execute(:load_imm, program, bitmask, _jump_table, state) do
+    {register_index, value} = get_params(program, bitmask, state.counter)
+    state = %{state | registers: List.replace_at(state.registers, register_index, value)}
+    {:continue, state}
   end
 
-  def execute(:load_u8, state, output) do
-    {register_index, addr} = get_params(state)
+  def execute(:load_u8, program, bitmask, _jump_table, state) do
+    {register_index, addr} = get_params(program, bitmask, state.counter)
 
     case Memory.read(state.memory, addr, 1) do
       {:error, {:fault, fault_addr}} ->
-        %StepOutput{output | exit_status: {:fault, fault_addr}}
+        {{:fault, fault_addr}, state}
 
-      value ->
-        Common.update_register(output, state.registers, register_index, :binary.first(value))
+      {:ok, value} ->
+        state = %{
+          state
+          | registers: List.replace_at(state.registers, register_index, :binary.first(value))
+        }
+
+        {:continue, state}
     end
   end
 
-  def execute(:load_i8, state, output) do
-    {register_index, addr} = get_params(state)
+  def execute(:load_i8, program, bitmask, _jump_table, state) do
+    {register_index, addr} = get_params(program, bitmask, state.counter)
 
     case Memory.read(state.memory, addr, 1) do
       {:error, {:fault, fault_addr}} ->
-        %StepOutput{output | exit_status: {:fault, fault_addr}}
+        {{:fault, fault_addr}, state}
 
-      value ->
+      {:ok, value} ->
         signed_value =
-          value
-          |> :binary.first()
+          :binary.first(value)
           |> to_64bit(1)
 
-        Common.update_register(output, state.registers, register_index, signed_value)
+        state = %{
+          state
+          | registers: List.replace_at(state.registers, register_index, signed_value)
+        }
+
+        {:continue, state}
     end
   end
 
-  def execute(:load_u16, state, output) do
-    {register_index, addr} = get_params(state)
+  def execute(:load_u16, program, bitmask, _jump_table, state) do
+    {register_index, addr} = get_params(program, bitmask, state.counter)
 
     case Memory.read(state.memory, addr, 2) do
       {:error, {:fault, fault_addr}} ->
-        %StepOutput{output | exit_status: {:fault, fault_addr}}
+        {{:fault, fault_addr}, state}
 
-      value ->
-        Common.update_register(output, state.registers, register_index, de_le(value, 2))
+      {:ok, value} ->
+        state = %{
+          state
+          | registers: List.replace_at(state.registers, register_index, de_le(value, 2))
+        }
+
+        {:continue, state}
     end
   end
 
-  def execute(:load_i16, state, output) do
-    {register_index, addr} = get_params(state)
+  def execute(:load_i16, program, bitmask, _jump_table, state) do
+    {register_index, addr} = get_params(program, bitmask, state.counter)
 
     case Memory.read(state.memory, addr, 2) do
       {:error, {:fault, fault_addr}} ->
-        %StepOutput{output | exit_status: {:fault, fault_addr}}
+        {{:fault, fault_addr}, state}
 
-      value ->
+      {:ok, value} ->
         signed_value =
           value
           |> de_le(2)
           |> to_64bit(2)
 
-        Common.update_register(output, state.registers, register_index, signed_value)
+        state = %{
+          state
+          | registers: List.replace_at(state.registers, register_index, signed_value)
+        }
+
+        {:continue, state}
     end
   end
 
-  def execute(:load_u32, state, output) do
-    {register_index, addr} = get_params(state)
+  def execute(:load_u32, program, bitmask, _jump_table, state) do
+    {register_index, addr} = get_params(program, bitmask, state.counter)
 
     case Memory.read(state.memory, addr, 4) do
       {:error, {:fault, fault_addr}} ->
-        %StepOutput{output | exit_status: {:fault, fault_addr}}
+        {{:fault, fault_addr}, state}
 
-      value ->
-        Common.update_register(output, state.registers, register_index, de_le(value, 4))
+      {:ok, value} ->
+        state = %{
+          state
+          | registers: List.replace_at(state.registers, register_index, de_le(value, 4))
+        }
+
+        {:continue, state}
     end
   end
-  def execute(:load_i32, state, output) do
-    {register_index, addr} = get_params(state)
+
+  def execute(:load_i32, program, bitmask, _jump_table, state) do
+    {register_index, addr} = get_params(program, bitmask, state.counter)
 
     case Memory.read(state.memory, addr, 4) do
       {:error, {:fault, fault_addr}} ->
-        %StepOutput{output | exit_status: {:fault, fault_addr}}
+        {{:fault, fault_addr}, state}
 
-      value ->
+      {:ok, value} ->
         signed_value =
           value
           |> de_le(4)
           |> to_64bit(4)
 
-        Common.update_register(output, state.registers, register_index, signed_value)
+        state = %{
+          state
+          | registers: List.replace_at(state.registers, register_index, signed_value)
+        }
+
+        {:continue, state}
     end
   end
 
-  def execute(:load_u64, state, output) do
-    {register_index, addr} = get_params(state)
+  def execute(:load_u64, program, bitmask, _jump_table, state) do
+    {register_index, addr} = get_params(program, bitmask, state.counter)
 
     case Memory.read(state.memory, addr, 8) do
       {:error, {:fault, fault_addr}} ->
-        %StepOutput{output | exit_status: {:fault, fault_addr}}
+        {{:fault, fault_addr}, state}
 
-      value ->
-        Common.update_register(output, state.registers, register_index, de_le(value, 8))
+      {:ok, value} ->
+        state = %{
+          state
+          | registers: List.replace_at(state.registers, register_index, de_le(value, 8))
+        }
+
+        {:continue, state}
     end
   end
 
-  def execute(:store_u8, state, output) do
-    {register_index, addr} = get_params(state)
+  def execute(:store_u8, program, bitmask, _jump_table, state) do
+    {register_index, addr} = get_params(program, bitmask, state.counter)
     value = Enum.at(state.registers, register_index)
-    Common.do_write(output, addr, state.memory, <<rem(value, 1 <<< 8)>>)
+    Memory.Util.write(state, addr, <<rem(value, 1 <<< 8)>>)
   end
 
-  def execute(:store_u16, state, output) do
-    {register_index, addr} = get_params(state)
+  def execute(:store_u16, program, bitmask, _jump_table, state) do
+    {register_index, addr} = get_params(program, bitmask, state.counter)
     value = Enum.at(state.registers, register_index)
-    Common.do_write(output, addr, state.memory, e_le(rem(value, 1 <<< 16), 2))
+    Memory.Util.write(state, addr, e_le(rem(value, 1 <<< 16), 2))
   end
 
-  def execute(:store_u32, state, output) do
-    {register_index, addr} = get_params(state)
+  def execute(:store_u32, program, bitmask, _jump_table, state) do
+    {register_index, addr} = get_params(program, bitmask, state.counter)
     value = Enum.at(state.registers, register_index)
-    Common.do_write(output, addr, state.memory, e_le(rem(value, 1 <<< 32), 4))
+    Memory.Util.write(state, addr, e_le(rem(value, 1 <<< 32), 4))
   end
 
-  def execute(:store_u64, state, output) do
-    {register_index, addr} = get_params(state)
+  def execute(:store_u64, program, bitmask, _jump_table, state) do
+    {register_index, addr} = get_params(program, bitmask, state.counter)
     value = Enum.at(state.registers, register_index)
-    Common.do_write(output, addr, state.memory, e_le(value, 8))
+    Memory.Util.write(state, addr, e_le(value, 8))
   end
 
-  def execute(:load_imm_64, state, output) do
+  def execute(:load_imm_64, program, _bitmask, _jump_table, state) do
     register_index =
-      min(12, rem(binary_part(state.program, state.counter + 1, 1) |> :binary.first(), 16))
+      min(12, rem(binary_part(program, state.counter + 1, 1) |> :binary.first(), 16))
 
-    value = de_le(binary_part(state.program, state.counter + 1, 8), 8)
-    Common.update_register(output, state.registers, register_index, value)
+    value = de_le(binary_part(program, state.counter + 1, 8), 8)
+    state = %{state | registers: List.replace_at(state.registers, register_index, value)}
+    {:continue, state}
   end
 
-  defp get_params(state) do
+  defp get_params(program, bitmask, counter) do
     register_index =
-      min(12, rem(binary_part(state.program, state.counter + 1, 1) |> :binary.first(), 16))
+      min(12, rem(binary_part(program, counter + 1, 1) |> :binary.first(), 16))
 
-    l_x = min(4, skip(state.counter, state.bitmask) - 1)
-    addr = decode_bytes_signed(state.program, state.counter + 2, l_x)
+    l_x = min(4, skip(counter, bitmask) - 1)
+    addr = decode_bytes_signed(program, counter + 2, l_x)
 
     {register_index, addr}
   end

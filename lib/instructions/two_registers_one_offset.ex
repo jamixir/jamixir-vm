@@ -3,12 +3,12 @@ defmodule Instructions.TwoRegistersOneOffset do
   alias Instructions.Executor
   use Transitions
 
-  def execute(instruction, state, output) do
-    {w_a, w_b, v_x, start_set} = get_params(state)
+  def execute(instruction, program, bitmask, _jump_table, state) do
+    {w_a, w_b, v_x, start_set} = get_params(program, bitmask, state)
 
     comparison_result = instruction_to_op(instruction, w_a, w_b)
     {exit_status, counter} = Executor.branch(v_x, comparison_result, state.counter, start_set)
-    %StepOutput{output | exit_status: exit_status, counter: counter}
+    {exit_status, %{state | counter: counter}}
   end
 
   defp instruction_to_op(instruction, w_a, w_b) do
@@ -23,24 +23,24 @@ defmodule Instructions.TwoRegistersOneOffset do
   end
 
   # Formula (A.24)
-  defp get_params(state) do
+  defp get_params(program, bitmask, state) do
     r_a =
-      binary_part(state.program, state.counter + 1, 1)
+      binary_part(program, state.counter + 1, 1)
       |> :binary.first()
       |> rem(16)
       |> min(12)
 
     r_b =
-      binary_part(state.program, state.counter + 1, 1)
+      binary_part(program, state.counter + 1, 1)
       |> :binary.first()
       |> div(16)
       |> min(12)
 
-    l_x = min(4, max(0, skip(state.counter, state.bitmask) - 1))
-    v_x = decode_bytes_signed(state.program, state.counter + 2, l_x)
+    l_x = min(4, max(0, skip(state.counter, bitmask) - 1))
+    v_x = decode_bytes_signed(program, state.counter + 2, l_x)
     w_a = Enum.at(state.registers, r_a)
     w_b = Enum.at(state.registers, r_b)
-    start_set = basic_block_starts(state.program, state.bitmask)
+    start_set = basic_block_starts(program, bitmask)
 
     {w_a, w_b, v_x, start_set}
   end
