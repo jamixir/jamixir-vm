@@ -1,5 +1,6 @@
 defmodule SingleStep do
   alias Instructions.Executor
+  alias PVM.State
   use PVM.Utils
   use Instructions
 
@@ -7,11 +8,11 @@ defmodule SingleStep do
           :continue | :panic | :out_of_gas | {:fault, non_neg_integer()} | {:ecall, integer()}
 
   def run(program, bitmask, jump_table, %State{} = state) do
-    if state.counter >= byte_size(state.program) do
+    if state.counter >= byte_size(program) do
       {:panic, state}
     else
       opcode =
-        state.program |> binary_part(state.counter, 1) |> :binary.first() |> op()
+        program |> binary_part(state.counter, 1) |> :binary.first() |> op()
 
       {exit_reason, state_} =
         Executor.execute_instruction(opcode, program, bitmask, jump_table, state)

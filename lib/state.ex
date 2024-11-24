@@ -1,6 +1,6 @@
 # Formula (A.5) v0.5
 
-defmodule State do
+defmodule PVM.State do
   @type t :: %__MODULE__{
           counter: non_neg_integer(),
           gas: non_neg_integer(),
