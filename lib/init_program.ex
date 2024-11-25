@@ -1,14 +1,13 @@
 defmodule PVM.InitProgram do
-  alias PVM.Memory
   alias PVM.Decoder
   import Bitwise
 
   # Constants from A.31
-  @zp 1 <<< 14
-  @zq 1 <<< 16
-  @zi 1 <<< 24
+  def zp, do: 1 <<< 14
+  def zq, do: 1 <<< 16
+  def zi, do: 1 <<< 24
 
-  def initialize_program(binary) do
+  def parse_program_segments(binary) when byte_size(binary) >= 15 do
     with {:ok, o_size, rest} <- read_size(binary, 3),
          {:ok, w_size, rest} <- read_size(rest, 3),
          {:ok, z, rest} <- read_size(rest, 2),
@@ -17,10 +16,20 @@ defmodule PVM.InitProgram do
          {:ok, w, rest} <- read_bytes(rest, w_size),
          {:ok, c_size, rest} <- read_size(rest, 4),
          {:ok, c} <- read_final_segment(rest, c_size) do
-      # Verify condition A.33
-      if verify_size_constraint(o_size, w_size, z,s) do
+      {:ok, {o_size, o, w_size, w, z, s, c}}
+    else
+      _ -> {:error, :invalid_format}
+    end
+  end
+
+  def parse_program_segments(_), do: {:error, :insufficient_bytes}
+
+  def initialize_program(binary) do
+    with {:ok, {o_size, o, w_size, w, z, s, c}} <- parse_program_segments(binary) do
+         # Verify condition A.33
+      if verify_size_constraint(o_size, w_size, z, s) do
         registers = initialize_registers(o_size, z, s)
-        memory = construct_memory(o, w, z, binary)
+        memory = construct_memory(o, w, c, z, s)
         {c, registers, memory}
       else
         nil
@@ -54,12 +63,12 @@ defmodule PVM.InitProgram do
 
   defp read_final_segment(_, _), do: :error
 
-  defp q(x), do: ceil(x / @zq) * @zq
-  defp p(x), do: ceil(x / @zp) * @zp
+  def q(x), do: ceil(x / zq()) * zq()
+  def p(x), do: ceil(x / zp()) * zp()
 
   # Implements condition A.33: 5Zq + Q(|o|) + Q(|w| + zZp) + Q(s) + Zi ≤ 2^32
-  defp verify_size_constraint(o_size, w_size, z, s) do
-    q(o_size) + q(w_size + z * @zp) + q(s) <= (1 <<< 32 )- (5 * @zq) - @zi
+  def verify_size_constraint(o_size, w_size, z, s) do
+    q(o_size) + q(w_size + z * zp()) + q(s) <= (1 <<< 32) - 5 * zq() - zi()
   end
 
   defp initialize_registers(a_size, z, s) do
@@ -68,17 +77,38 @@ defmodule PVM.InitProgram do
 
     registers
     |> List.replace_at(0, 1 <<< (32 - 1) <<< 16)
-    |> List.replace_at(1, 1 <<< (32 - 2 * @zq - @zi))
-    |> List.replace_at(7, 1 <<< (32 - @zq - @zi))
+    |> List.replace_at(1, 1 <<< (32 - 2 * zq() - zi()))
+    |> List.replace_at(7, 1 <<< (32 - zq() - zi()))
     |> List.replace_at(8, a_size)
   end
 
-  defp construct_memory(o, w, z, a) do
-    # Implements A.34 memory initialization
-    # This is a simplified version - you'll need to implement the full memory layout
-    Memory.new()
-    |> Memory.write_segment(0, o)
-    |> Memory.write_segment(@zq + byte_size(o), w)
-    |> Memory.write_segment(1 <<< (32 - @zq - @zi), a)
+  @spec construct_memory(binary(), binary(), binary(), integer(), integer()) :: Memory.t()
+  def construct_memory(o, w, a, z, s) do
+    o_size = byte_size(o)
+    w_size = byte_size(w)
+    a_size = byte_size(a)
+
+    memory = %Memory{}
+    |> write_with_access(zq(), o, :read)
+    |> write_with_access(2 * zq() + q(o_size), w, :write)
+    |> write_with_access(1 <<< 32 - zq() - zi(), a, :read)
+
+
+    # Set access permissions for entire regions (including padding)
+    memory = memory
+    |> Memory.set_access(zq() + o_size, p(o_size) - o_size, :read)
+    |> Memory.set_access(2 * zq() + q(o_size) + w_size, p(w_size) + z * zp() - w_size, :write)
+    |> Memory.set_access(1 <<< 32 - 2 * zq() - zi() - p(s), p(s), :write)  # stack area
+    |> Memory.set_access(1 <<< 32 - zq() - zi() + a_size, p(a_size) - a_size, :read)
+
+    # Set remaining memory as inaccessible
+    Memory.set_default_access(memory, nil)
+  end
+
+  @spec write_with_access(Memory.t(), integer(), binary(), :read | :write | nil) :: Memory.t()
+  defp write_with_access(memory, address, data, access) do
+    size = byte_size(data)
+    {:ok, memory} = Memory.write(memory, address, data)
+    Memory.set_access(memory, address, size, access)
   end
 end
