@@ -24,12 +24,13 @@ defmodule PVM.InitProgram do
 
   def parse_program_segments(_), do: {:error, :insufficient_bytes}
 
-  def initialize_program(binary) do
-    with {:ok, {o_size, o, w_size, w, z, s, c}} <- parse_program_segments(binary) do
+  def initialize_program(program, a) do
+    with {:ok, {o_size, o, w_size, w, z, s, c}} <- parse_program_segments(program) do
          # Verify condition A.33
       if verify_size_constraint(o_size, w_size, z, s) do
-        registers = initialize_registers(o_size, z, s)
-        memory = construct_memory(o, w, c, z, s)
+
+        registers = initialize_registers(a)
+        memory = construct_memory(o, w, a, z, s)
         {c, registers, memory}
       else
         nil
@@ -71,15 +72,15 @@ defmodule PVM.InitProgram do
     q(o_size) + q(w_size + z * zp()) + q(s) <= (1 <<< 32) - 5 * zq() - zi()
   end
 
-  defp initialize_registers(a_size, z, s) do
+  def initialize_registers(a) do
     # Implements A.35 register initialization
     registers = List.duplicate(0, 13)
 
     registers
-    |> List.replace_at(0, 1 <<< (32 - 1) <<< 16)
-    |> List.replace_at(1, 1 <<< (32 - 2 * zq() - zi()))
-    |> List.replace_at(7, 1 <<< (32 - zq() - zi()))
-    |> List.replace_at(8, a_size)
+    |> List.replace_at(0, 0xFFFF_0000)
+    |> List.replace_at(1, 0xFEFE_0000)
+    |> List.replace_at(7, 0xFEFF_0000)
+    |> List.replace_at(8, byte_size(a))
   end
 
   @spec construct_memory(binary(), binary(), binary(), integer(), integer()) :: Memory.t()
@@ -94,7 +95,7 @@ defmodule PVM.InitProgram do
     |> write_with_access(1 <<< 32 - zq() - zi(), a, :read)
 
 
-    # Set access permissions for entire regions (including padding)
+    # Set access permissions for padding regions
     memory = memory
     |> Memory.set_access(zq() + o_size, p(o_size) - o_size, :read)
     |> Memory.set_access(2 * zq() + q(o_size) + w_size, p(w_size) + z * zp() - w_size, :write)

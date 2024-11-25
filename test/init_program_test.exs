@@ -229,4 +229,94 @@ defmodule PVM.InitProgramTest do
       assert {:ok, _} = Memory.write(memory, w_start, test_data)
     end
   end
+
+  describe "initialize_registers/1" do
+    test "initializes registers with correct values" do
+      registers = InitProgram.initialize_registers(<<1,2,3,4>>)
+
+      # Check specific registers that should have predefined values (A.35)
+      assert Enum.at(registers, 0) == 0xFFFF_0000  # r0
+      assert Enum.at(registers, 1) == 0xFEFE_0000  # r1
+      assert Enum.at(registers, 7) == 0xFEFF_0000  # r7
+      assert Enum.at(registers, 8) == 4         # r8 should contain a_size
+
+      # Check that other registers are initialized to 0
+      assert Enum.at(registers, 2) == 0
+      assert Enum.at(registers, 3) == 0
+      assert Enum.at(registers, 4) == 0
+      assert Enum.at(registers, 5) == 0
+      assert Enum.at(registers, 6) == 0
+      assert Enum.at(registers, 9) == 0
+      assert Enum.at(registers, 10) == 0
+      assert Enum.at(registers, 11) == 0
+      assert Enum.at(registers, 12) == 0
+
+      # Check total number of registers
+      assert length(registers) == 13
+    end
+  end
+
+  describe "initialize_program/2" do
+    test "successfully initializes program with valid input" do
+      # Create a valid program binary (8KB segments)
+      page_size = 4096
+      test_pattern = :binary.copy(<<65>>, 2 * page_size)  # "A" repeated for 8KB
+
+      binary = <<
+        (2 * page_size)::little-size(24),  # o_size (3 bytes)
+        (2 * page_size)::little-size(24),  # w_size (3 bytes)
+        1::little-size(16),                # z (2 bytes)
+        1::little-size(24),                # s (3 bytes)
+        test_pattern::binary,              # o (8KB)
+        test_pattern::binary,              # w (8KB)
+        (2 * page_size)::little-size(32),  # c_size (4 bytes)
+        test_pattern::binary               # c (8KB)
+      >>
+
+      args = :binary.copy(<<66>>, 2 * page_size)  # "B" repeated for 8KB
+
+      assert {code, registers, memory} = InitProgram.initialize_program(binary, args)
+
+      # Verify we got valid components back
+      assert byte_size(code) == 2 * page_size
+      assert length(registers) == 13
+      assert is_struct(memory, Memory)
+    end
+
+    test "returns nil for invalid program" do
+      # Create an invalid program (sizes too large)
+      binary = <<
+        0xFF, 0xFF, 0xFF,  # o_size (too large)
+        1, 0, 0,           # w_size
+        1, 0,              # z
+        1, 0, 0,           # s
+        65,                # o
+        66,                # w
+        1, 0, 0, 0,        # c_size
+        67                 # c
+      >>
+
+      args = "test"
+      assert InitProgram.initialize_program(binary, args) == nil
+    end
+
+    test "returns nil for invalid size constraints" do
+      # Create a program that would violate A.33
+      huge_size = 1 <<< 30  # Very large size that should violate constraints
+
+      binary = <<
+        huge_size::little-size(24),  # o_size
+        1::little-size(24),          # w_size
+        1::little-size(16),          # z
+        1::little-size(24),          # s
+        65,                          # o
+        66,                          # w
+        1::little-size(32),          # c_size
+        67                           # c
+      >>
+
+      args = "test"
+      assert InitProgram.initialize_program(binary, args) == nil
+    end
+  end
 end
