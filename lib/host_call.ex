@@ -5,52 +5,55 @@ defmodule PVM.HostCall do
 
   alias PVM.State
   use PVM.Utils
+  alias PVM.Decoder
 
-  @type host_call_function :: (any(), State.t(), any() ->
-    {:continue, {State.t(), any()}} |
-    {:fault, integer()} |
-    {:halt, any()}
-  )
+  @type host_call_state :: %{
+          gas: non_neg_integer(),
+          registers: list(integer()),
+          memory: Memory.t()
+        }
 
-  @type vm_exit_reason ::
-    :continue | :panic | :out_of_gas | {:fault, integer()} | {:host_call, any()}
+  @type exit_reason :: :continue | :halt | :panic | :out_of_gas
+  @type fault_result :: {:fault, non_neg_integer()}
+  @type host_fn :: (non_neg_integer(), host_call_state(), any() ->
+                      {exit_reason, {State.t(), any()}} | fault_result)
+
+  @type context :: any()
 
   @doc """
   Executes a host call state transition according to ΨH definition.
   """
-  @spec execute(
-    binary(),           # program
-    State.t(),          # current state
-    host_call_function, # host call implementation (f in the formula)
-    any()              # additional context X
-  ) :: {{vm_exit_reason(), State.t()}, any()}
-  def execute(program, initial_state, host_fn, context) do
-    # First execute the VM
-    case VM.execute(program, initial_state) do
-      # Terminal conditions - return as is with context
+  @spec execute(binary(), State.t(), host_fn(), context()) ::
+          {exit_reason | :fault, State.t(), context()}
+  def execute(program, state, host_fn, context) do
+    case VM.execute(program, state) do
       {reason, state} when reason in [:panic, :halt, :out_of_gas] ->
-        {{reason, state}, context}
+        {reason, state, context}
 
       {{:fault, page}, state} ->
         {{:fault, page}, state, context}
 
-      # Host call case
       {{:ecall, host_data}, state} ->
-        case host_fn.(host_data, state, context) do
-          # Fault during host call - return immediately
-          {:fault, page} ->
-            {{:fault, page}, state, context}
+        host_state = Map.drop(state, [:counter])
+        handle_host_call(host_data, host_state, host_fn, context, program)
+    end
+  end
 
-          # Continue case - recursive call with new state
-          {:continue, {new_state, new_context}} ->
-            # Move counter forward past the host call
-            next_counter = state.counter + 1 + skip(state.counter, program)
-            execute(program, %{new_state | counter: next_counter}, host_fn, new_context)
+  @spec handle_host_call(non_neg_integer(), host_call_state(), host_fn(), context(), binary()) ::
+          {exit_reason | {:fault, non_neg_integer()}, State.t(), context()}
+  defp handle_host_call(host_data, state, host_fn, context, program) do
+    case host_fn.(host_data, state, context) do
+      {:fault, page} ->
+        {{:fault, page}, state, context}
 
-          # Host call completed with halt
-          {reason, {final_state, final_context}} when reason in [:halt, :panic, :out_of_gas] ->
-            {{reason, final_state}, final_context}
-        end
+      {:continue, {new_state, new_context}} ->
+        {_, bitmask, _} = Decoder.decode_program(program)
+        skip = skip(state.counter, bitmask)
+        next_counter = state.counter + 1 + skip
+        execute(program, %{new_state | counter: next_counter}, host_fn, new_context)
+
+      {reason, {final_state, final_context}} when reason in [:halt, :panic, :out_of_gas] ->
+        {reason, %{final_state | counter: state.counter}, final_context}
     end
   end
 end
