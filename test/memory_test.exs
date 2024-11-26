@@ -124,7 +124,7 @@ defmodule MemoryTest do
       |> Memory.set_access(@page_size, @page_size, nil)  # Make second page inaccessible
 
       result = Memory.read(memory, @page_size + 10, 1)
-      assert result == {:error, {:fault, @page_size}}  # Should return page-aligned address
+      assert result == {:error, {:fault, 1}}  # Should return page-aligned address
     end
 
     test "cross-page operation fails if any page lacks permission" do
@@ -178,6 +178,94 @@ defmodule MemoryTest do
       assert MapSet.member?(readable, 1)
       refute MapSet.member?(readable, 0)
       refute MapSet.member?(writeable, 0)
+    end
+  end
+
+  describe "default permissions" do
+    test "changing default permission affects unset pages" do
+      memory = %Memory{}
+      |> Memory.set_default_access(:read)
+
+      # Should succeed since default is now read
+      assert {:ok, _} = Memory.read(memory, @page_size * 5, 4)
+
+      # Write should fail since default is read-only
+      assert {:error, {:fault, 5}} = Memory.write(memory, @page_size * 5, <<1, 2>>)
+
+      # Explicitly set pages should not be affected by default
+      memory = Memory.set_access(memory, 0, @page_size, :write)
+      assert {:ok, _} = Memory.write(memory, 0, <<1, 2>>)
+    end
+  end
+
+  describe "uninitialized memory" do
+    test "reading unwritten addresses returns zeros" do
+      memory = %Memory{}
+
+      # Read from middle of first page
+      assert {:ok, <<0, 0, 0, 0>>} = Memory.read(memory, @page_size >>> 1, 4)
+
+      # Read across unwritten pages
+      assert {:ok, <<0, 0, 0, 0>>} = Memory.read(memory, @page_size - 2, 4)
+    end
+  end
+
+  describe "page size changes" do
+    test "changing page size preserves access permissions correctly" do
+      original_page_size = @page_size
+      double_page_size = @page_size * 2
+
+      # Set up initial memory with double page size
+      memory = %Memory{}
+      |> Memory.set_page_size(double_page_size)
+      |> Memory.set_access(0, double_page_size * 2, :read)  # Make first two double-pages read-only
+
+      # Change to original page size
+      memory = Memory.set_page_size(memory, original_page_size)
+
+      # Set middle page to no access and last page to write
+      memory = memory
+      |> Memory.set_access(original_page_size, original_page_size, nil)
+      |> Memory.set_access(original_page_size * 2, original_page_size, :write)
+
+      # Test boundaries
+      # First page should be read-only
+      assert {:ok, _} = Memory.read(memory, 0, 4)
+      assert {:error, {:fault, 0}} = Memory.write(memory, 0, <<1>>)
+
+      # Middle page should have no access
+      assert {:error, {:fault, 1}} = Memory.read(memory, original_page_size + 4, 4)
+      assert {:error, {:fault, 1}} = Memory.write(memory, original_page_size + 4, <<1>>)
+
+      # Last page should be writable
+      assert {:ok, _} = Memory.read(memory, original_page_size * 2 + 4, 4)
+      assert {:ok, _} = Memory.write(memory, original_page_size * 2 + 4, <<1>>)
+    end
+
+    test "page size changes handle boundary conditions" do
+      memory = %Memory{}
+      |> Memory.set_page_size(@page_size * 2)  # Start with double page size
+
+      # Write some data across what will be a future page boundary
+      {:ok, memory} = Memory.write(memory, @page_size - 2, <<1, 2, 3, 4>>)
+
+      # Now change permissions to read-only
+      memory = memory
+      |> Memory.set_access(0, @page_size * 4, :read)
+
+      # Change to smaller page size
+      memory = Memory.set_page_size(memory, @page_size)
+
+      # Verify permissions were correctly split
+      assert {:ok, _} = Memory.read(memory, 0, 4)  # First page readable
+      assert {:ok, _} = Memory.read(memory, @page_size, 4)  # Second page readable
+
+      # Verify data remained intact across the boundary
+      assert {:ok, <<1, 2, 3, 4>>} = Memory.read(memory, @page_size - 2, 4)
+
+      # Verify we can't write to the pages anymore
+      assert {:error, {:fault, 0}} = Memory.write(memory, 0, <<1>>)
+      assert {:error, {:fault, 1}} = Memory.write(memory, @page_size, <<1>>)
     end
   end
 end

@@ -1,118 +1,56 @@
 defmodule Memory do
   import Bitwise
 
-  # Zp = 4096 octets per page (4KB)
-  # Formula (4.25) v0.5
-  def page_size, do: 1 <<< 12
-  # 4GB (2^32 bytes)
-  # Formula (4.24) v0.5
-  def memory_size, do: 1 <<< 32
-  # Number of pages
-  # Formula (4.24) v0.5
-  def page_count, do: 1 <<< 20
+  @default_page_size 1 <<< 12  # 4KB per page
+  @memory_size 1 <<< 32        # 4GB total memory
+
+  def memory_size, do: @memory_size
 
   @type t :: %__MODULE__{
-          # Map of page number to page data
-          data: %{non_neg_integer() => binary()},
-          # Map of page number to access permissions
-          access: %{non_neg_integer() => atom()},
-          default_access: atom()
-        }
+    data: %{non_neg_integer() => byte()},
+    access: %{non_neg_integer() => atom()},
+    default_access: atom(),
+    page_size: pos_integer()
+  }
 
   defstruct data: %{},
             access: %{},
-            default_access: :write
+            default_access: :write,
+            page_size: @default_page_size
+
+  def set_page_size(%__MODULE__{} = memory, size) do
+    new_access = recompute_access_permissions(memory, size)
+    %__MODULE__{memory | page_size: size, access: new_access}
+  end
 
   defp wrap_address(address) do
     rem(address, memory_size())
   end
 
-  defp wrap_page(page) do
-    rem(page, page_count())
-  end
-
-  defp page_range(start_page, end_page) do
-    if end_page >= start_page do
-      start_page..end_page
-    else
-      # When wrapping occurs, we need to go from start to max, then 0 to end
-      Enum.to_list(start_page..(page_count() - 1)) ++ Enum.to_list(0..end_page)
-    end
-  end
-
   def read(%__MODULE__{} = memory, address, length) do
     wrapped_address = wrap_address(address)
-    start_page = wrap_page(div(wrapped_address, page_size()))
-    end_page = wrap_page(div(wrapped_address + max(0, length - 1), page_size()))
 
-    case check_permissions(memory, page_range(start_page, end_page), :read) do
+    {start_page, end_page} = get_page_range(wrapped_address, length, memory.page_size)
+
+    case check_permissions(memory, start_page, end_page, :read) do
       :ok ->
-        data =
-          0..(length - 1)
-          |> Enum.map(fn offset ->
-            abs_addr = wrap_address(wrapped_address + offset)
-            page_num = wrap_page(div(abs_addr, page_size()))
-            page_offset = rem(abs_addr, page_size())
-
-            case Map.get(memory.data, page_num) do
-              nil ->
-                0
-
-              page_data ->
-                case page_data do
-                  <<_::binary-size(page_offset), byte::8, _::binary>> -> byte
-                  _ -> 0
-                end
-            end
-          end)
-          |> :binary.list_to_bin()
-
+        data = read_from_sparse(memory.data, wrapped_address, length)
         {:ok, data}
 
       {:error, page} ->
-        {:error, {:fault, page * page_size()}}
+        {:error, {:fault, page}}
     end
   end
 
   def write(%__MODULE__{} = memory, address, value) when is_binary(value) do
     wrapped_address = wrap_address(address)
-    start_page = wrap_page(div(wrapped_address, page_size()))
-    end_page = wrap_page(div(wrapped_address + max(0,byte_size(value) - 1), page_size()))
+    length = byte_size(value)
 
-    case check_permissions(memory, page_range(start_page, end_page), :write) do
+    {start_page, end_page} = get_page_range(wrapped_address, length, memory.page_size)
+
+    case check_permissions(memory, start_page, end_page, :write) do
       :ok ->
-        start_offset = rem(wrapped_address, page_size())
-
-        new_data =
-          Enum.reduce(page_range(start_page, end_page), {memory.data, 0}, fn page_num,
-                                                                             {acc, bytes_written} ->
-            page_offset = if page_num == start_page, do: start_offset, else: 0
-            current_page = Map.get(acc, page_num, <<0::size(page_size() * 8)>>)
-
-            # Calculate how many bytes go into this page
-            bytes_remaining = byte_size(value) - bytes_written
-            bytes_in_page = min(bytes_remaining, page_size() - page_offset)
-
-            # Extract the portion of data for this page
-            <<_::binary-size(bytes_written), page_data::binary-size(bytes_in_page), _::binary>> =
-              value
-
-            # Create new page with the correct portion of data
-            new_page =
-              case current_page do
-                <<pre::binary-size(page_offset), _::binary-size(bytes_in_page), post::binary>> ->
-                  pre <> page_data <> post
-
-                _ ->
-                  pad_pre = binary_part(current_page, 0, page_offset)
-                  pad_pre <> page_data
-              end
-
-            {Map.put(acc, page_num, new_page), bytes_written + bytes_in_page}
-          end)
-          # Get just the map, discard bytes_written
-          |> elem(0)
-
+        new_data = write_to_sparse(memory.data, wrapped_address, value)
         {:ok, %__MODULE__{memory | data: new_data}}
 
       {:error, page} ->
@@ -120,34 +58,80 @@ defmodule Memory do
     end
   end
 
+  defp read_from_sparse(data, address, length) do
+    0..(length - 1)
+    |> Enum.map(fn offset ->
+      wrapped_addr = wrap_address(address + offset)
+      Map.get(data, wrapped_addr, 0)
+    end)
+    |> :binary.list_to_bin()
+  end
+
+  defp write_to_sparse(data, address, value) do
+    value
+    |> :binary.bin_to_list()
+    |> Enum.with_index()
+    |> Enum.reduce(data, fn {byte, index}, acc ->
+      wrapped_addr = wrap_address(address + index)
+      Map.put(acc, wrapped_addr, byte)
+    end)
+  end
+
+  defp check_permissions(memory, start_page, end_page, required_access) do
+    page_range = get_sequential_pages(start_page, end_page, div(memory_size(), memory.page_size))
+
+    Enum.reduce_while(page_range, :ok, fn page, _acc ->
+      current_access = Map.get(memory.access, page, memory.default_access)
+
+      cond do
+        required_access == :read and current_access in [:read, :write] -> {:cont, :ok}
+        required_access == :write and current_access == :write -> {:cont, :ok}
+        true -> {:halt, {:error, page}}
+      end
+    end)
+  end
+
+  defp get_page_range(start_address, length, page_size) do
+    start_page = div(start_address, page_size)
+    end_page = div(start_address + max(0, length - 1), page_size)
+    {start_page, end_page}
+  end
+
+  defp get_sequential_pages(start_page, end_page, total_pages) do
+    if end_page >= start_page do
+      start_page..end_page
+    else
+      Enum.to_list(start_page..(total_pages - 1)) ++ Enum.to_list(0..end_page)
+    end
+  end
+
+  defp recompute_access_permissions(memory, new_page_size) do
+    old_page_size = memory.page_size
+
+    Enum.map(memory.access, fn {page, access} ->
+      start_addr = page * old_page_size
+      {start_addr, start_addr + old_page_size - 1, access}
+    end)
+    |> Enum.reduce(%{}, fn {start_addr, end_addr, access}, acc ->
+      start_page = div(start_addr, new_page_size)
+      end_page = div(end_addr, new_page_size)
+
+      Enum.reduce(start_page..end_page, acc, fn page, inner_acc ->
+        Map.put(inner_acc, page, access)
+      end)
+    end)
+  end
+
   def set_access(%__MODULE__{} = memory, address, length, access_type) do
-    start_page = wrap_page(div(address, page_size()))
-    end_page = wrap_page(div(address + max(0, length - 1), page_size()))
+    {start_page, end_page} = get_page_range(address, length, memory.page_size)
 
     new_access =
-      Enum.reduce(page_range(start_page, end_page), memory.access, fn page_num, acc ->
-        Map.put(acc, page_num, access_type)
+      get_sequential_pages(start_page, end_page, div(memory_size(), memory.page_size))
+      |> Enum.reduce(memory.access, fn page, acc ->
+        Map.put(acc, page, access_type)
       end)
 
     %__MODULE__{memory | access: new_access}
-  end
-
-  defp check_permissions(memory, page_range, required_access) do
-    result =
-      Enum.reduce_while(page_range, :ok, fn page_num, _acc ->
-        current_access = Map.get(memory.access, page_num, memory.default_access)
-
-        cond do
-          required_access == :read and current_access in [:read, :write] -> {:cont, :ok}
-          required_access == :write and current_access == :write -> {:cont, :ok}
-          true -> {:halt, {:error, page_num}}
-        end
-      end)
-
-    case result do
-      :ok -> :ok
-      {:error, page} -> {:error, page}
-    end
   end
 
   def set_default_access(%__MODULE__{} = memory, access_type) do
