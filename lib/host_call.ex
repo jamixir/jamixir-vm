@@ -3,28 +3,17 @@ defmodule PVM.HostCall do
   Implements the host-call state machine (ΨH) as defined in formula A.27.
   """
 
-  alias PVM.State
+  alias PVM.{State, Types}
   use PVM.Utils
   alias PVM.Decoder
 
-  @type host_call_state :: %{
-          gas: non_neg_integer(),
-          registers: list(integer()),
-          memory: Memory.t()
-        }
 
-  @type exit_reason :: :continue | :halt | :panic | :out_of_gas
-  @type fault_result :: {:fault, non_neg_integer()}
-  @type host_fn :: (non_neg_integer(), host_call_state(), any() ->
-                      {exit_reason, {State.t(), any()}} | fault_result)
-
-  @type context :: any()
 
   @doc """
   Executes a host call state transition according to ΨH definition.
   """
-  @spec execute(binary(), State.t(), host_fn(), context()) ::
-          {exit_reason | :fault, State.t(), context()}
+  @spec execute(binary(), State.t(), Types.host_fn(), Types.context()) ::
+          {Types.exit_reason() | Types.fault_result(), State.t(), Types.context()}
   def execute(program, state, host_fn, context) do
     case VM.execute(program, state) do
       {reason, state} when reason in [:panic, :halt, :out_of_gas] ->
@@ -39,8 +28,8 @@ defmodule PVM.HostCall do
     end
   end
 
-  @spec handle_host_call(non_neg_integer(), host_call_state(), host_fn(), context(), binary()) ::
-          {exit_reason | {:fault, non_neg_integer()}, State.t(), context()}
+  @spec handle_host_call(non_neg_integer(), Types.host_call_state(), Types.host_fn(), Types.context(), binary()) ::
+          {Types.exit_reason() | Types.fault_result(), State.t(), Types.context()}
   defp handle_host_call(host_data, state, host_fn, context, program) do
     case host_fn.(host_data, state, context) do
       {:fault, page} ->

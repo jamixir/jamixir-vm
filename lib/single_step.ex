@@ -1,12 +1,13 @@
 defmodule SingleStep do
+  alias PVM.{State, Types, Utils}
+  use Utils
   alias Instructions.Executor
-  alias PVM.State
-  use PVM.Utils
   use Instructions
 
-  @type exit_reason ::
-          :continue | :panic | :out_of_gas | {:fault, non_neg_integer()} | {:ecall, integer()}
+  @type exit_reason :: Types.vm_exit_reason()
 
+  @spec run(binary(), binary(), list(non_neg_integer()), State.t()) ::
+          {exit_reason(), State.t()}
   def run(program, bitmask, jump_table, %State{} = state) do
     if state.counter >= byte_size(program) do
       {:panic, state}
