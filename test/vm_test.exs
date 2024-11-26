@@ -4,7 +4,6 @@ defmodule VMTest do
   use PVM.Decoder
   use PVM.Utils
   use Instructions
-  @initial_gas 100_000
 
   def create_program(program, bitmask, jump_table \\ [], z \\ 1) do
     PVM.Encoder.encode_program(program, bitmask, jump_table, z)
