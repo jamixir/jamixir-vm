@@ -26,9 +26,8 @@ defmodule PVM.InitProgram do
 
   def initialize_program(program, a) do
     with {:ok, {o_size, o, w_size, w, z, s, c}} <- parse_program_segments(program) do
-         # Verify condition A.33
+      # Verify condition A.33
       if verify_size_constraint(o_size, w_size, z, s) do
-
         registers = initialize_registers(a)
         memory = construct_memory(o, w, a, z, s)
         {c, registers, memory}
@@ -88,20 +87,24 @@ defmodule PVM.InitProgram do
     o_size = byte_size(o)
     w_size = byte_size(w)
     a_size = byte_size(a)
+    memory = Memory.set_page_size(%Memory{}, zp())
 
-    memory = %Memory{}
-    |> write_with_access(zq(), o, :read)
-    |> write_with_access(2 * zq() + q(o_size), w, :write)
-    |> write_with_access(1 <<< 32 - zq() - zi(), a, :read)
-
+    memory =
+      memory
+      |> write_with_access(zq(), o, :read)
+      |> write_with_access(2 * zq() + q(o_size), w, :write)
+      |> write_with_access(1 <<< (32 - zq() - zi()), a, :read)
 
     # Set access permissions for padding regions
-    memory = memory
-    |> Memory.set_access(zq() + o_size, p(o_size) - o_size, :read)
-    |> Memory.set_access(2 * zq() + q(o_size) + w_size, p(w_size) + z * zp() - w_size, :write)
-    |> Memory.set_access(1 <<< 32 - 2 * zq() - zi() - p(s), p(s), :write)  # stack area
-    |> Memory.set_access(1 <<< 32 - zq() - zi() + a_size, p(a_size) - a_size, :read)
+    memory =
+      memory
+      |> Memory.set_access(zq() + o_size, p(o_size) - o_size, :read)
+      |> Memory.set_access(2 * zq() + q(o_size) + w_size, p(w_size) + z * zp() - w_size, :write)
+      # stack area
+      |> Memory.set_access(1 <<< (32 - 2 * zq() - zi() - p(s)), p(s), :write)
+      |> Memory.set_access(1 <<< (32 - zq() - zi() + a_size), p(a_size) - a_size, :read)
 
+    memory = Memory.reset_page_size(memory)
     # Set remaining memory as inaccessible
     Memory.set_default_access(memory, nil)
   end

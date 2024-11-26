@@ -23,6 +23,10 @@ defmodule Memory do
     %__MODULE__{memory | page_size: size, access: new_access}
   end
 
+  def reset_page_size(%__MODULE__{} = memory) do
+    set_page_size(memory, @default_page_size)
+  end
+
   defp wrap_address(address) do
     rem(address, memory_size())
   end
