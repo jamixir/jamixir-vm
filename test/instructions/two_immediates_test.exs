@@ -1,8 +1,7 @@
 defmodule Instructions.TwoImmediatesTest do
   use ExUnit.Case
-  use Instructions
-  alias Instructions.TwoImmediates
-  alias PVM.State
+  use PVM.Instructions
+  alias PVM.{Instructions.TwoImmediates, Memory, State}
 
   describe "store immediate operations" do
     test "store_imm_u8 writes byte value" do

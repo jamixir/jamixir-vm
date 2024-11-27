@@ -1,6 +1,7 @@
 defmodule MemoryTest do
   use ExUnit.Case
   import Bitwise
+  alias PVM.Memory
 
   # Constants matching Memory module
   @page_size 1 <<< 12      # 4KB pages

@@ -1,7 +1,7 @@
 defmodule TransitionsTest do
   use ExUnit.Case
-  use Transitions
-  doctest Transitions
+  use PVM.Transitions
+  doctest PVM.Transitions
 
   describe "z_n/2" do
     test "handles values below threshold" do

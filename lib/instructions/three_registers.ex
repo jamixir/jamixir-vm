@@ -1,6 +1,6 @@
-defmodule Instructions.ThreeRegisters do
+defmodule PVM.Instructions.ThreeRegisters do
   use PVM.Utils
-  use Transitions
+  use PVM.Transitions
   import Bitwise
 
   # 32-bit arithmetic operations

@@ -1,8 +1,8 @@
 defmodule Instructions.RegImmediateOffsetTest do
   use ExUnit.Case
-  use Instructions
-  alias Instructions.RegImmediateOffset
-  alias PVM.State
+  use PVM.Instructions
+  alias PVM.{Instructions.RegImmediateOffset, State}
+
   describe "load_imm_jump" do
     test "loads immediate value and jumps" do
       # Program: load_imm_jump r1, 42, target=10

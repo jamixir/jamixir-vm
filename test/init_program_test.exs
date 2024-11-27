@@ -1,6 +1,6 @@
 defmodule PVM.InitProgramTest do
   use ExUnit.Case
-  alias PVM.InitProgram
+  alias PVM.{InitProgram, Memory}
   import Bitwise
 
   describe "parse_program_segments/1" do

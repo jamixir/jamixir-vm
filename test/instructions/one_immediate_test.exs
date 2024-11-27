@@ -1,11 +1,8 @@
 defmodule Instructions.OneImmediateTest do
   use ExUnit.Case
-  use Instructions
+  use PVM.Instructions
 
-  alias Instructions.OneImmediate
-  alias PVM.State
-
-
+  alias PVM.{State, Instructions.OneImmediate}
 
   describe "ecalli" do
     test "sets ecall exit status with immediate value" do

@@ -1,15 +1,12 @@
-defmodule VM do
-  use PVM.Encoder
-  use PVM.Utils
-  alias PVM.Types
-  alias PVM.State
-  use Instructions
+defmodule PVM.VM do
+  use PVM.{Encoder, Instructions, Utils}
+  alias PVM.{State, SingleStep, Types, Decoder}
 
   # Main execution function with previous output state
   @spec execute(binary(), State.t()) :: {Types.vm_exit_reason(), State.t()}
   def execute(p, state) do
     # Decode the program blob into components
-    {program, bitmask, jump_table} = PVM.Decoder.decode_program(p)
+    {program, bitmask, jump_table} = Decoder.decode_program(p)
 
     # Execute according to Ψ function rules
     {exit_reason, state_} = SingleStep.run(program, bitmask, jump_table, state)

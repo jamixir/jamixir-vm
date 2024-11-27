@@ -1,8 +1,7 @@
-defmodule Instructions.RegImmediate do
-  use PVM.Utils
+defmodule PVM.Instructions.RegImmediate do
   import Bitwise
-  use PVM.{Decoder, Encoder}
-  alias Instructions.Executor
+  use PVM.{Decoder, Encoder, Utils}
+  alias PVM.{Instructions.Executor, Memory}
 
   # Section (A.19) v0.5
   def execute(:jump_ind, program, bitmask, jump_table, state) do

@@ -5,11 +5,11 @@ defmodule PVM.State do
           counter: non_neg_integer(),
           gas: non_neg_integer(),
           registers: list(integer()),
-          memory: Memory.t()
+          memory: PVM.Memory.t()
         }
 
   defstruct counter: 0,
             gas: 0,
             registers: List.duplicate(0, 13),
-            memory: %Memory{}
+            memory: %PVM.Memory{}
 end

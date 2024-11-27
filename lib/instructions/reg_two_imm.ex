@@ -1,8 +1,7 @@
-defmodule Instructions.RegTwoImm do
-  use PVM.Utils
+defmodule PVM.Instructions.RegTwoImm do
   import Bitwise
-  use PVM.{Decoder, Encoder}
-
+  use PVM.{Decoder, Encoder, Utils}
+  alias PVM.Memory
   # Section (A.20) v0.5
 
   def execute(:store_imm_ind_u8, program, bitmask, state) do

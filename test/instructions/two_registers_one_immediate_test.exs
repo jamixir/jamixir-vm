@@ -1,8 +1,7 @@
 defmodule Instructions.TwoRegistersOneImmediateTest do
   use ExUnit.Case
-  use Instructions
-  alias Instructions.TwoRegistersOneImmediate
-  alias PVM.State
+  use PVM.Instructions
+  alias PVM.{Instructions.TwoRegistersOneImmediate, Memory, State}
 
 
   describe "store operations" do

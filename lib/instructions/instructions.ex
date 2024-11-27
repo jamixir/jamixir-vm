@@ -1,4 +1,4 @@
-defmodule Instructions do
+defmodule PVM.Instructions do
   @moduledoc """
   Defines opcodes and gas costs for the PVM
   """
@@ -6,12 +6,12 @@ defmodule Instructions do
   defmacro __using__(_opts) do
     quote do
       def op(instruction) when is_atom(instruction),
-        do: Instructions.to_byte(instruction)
+        do: PVM.Instructions.to_byte(instruction)
 
-      def op(byte) when is_integer(byte), do: Instructions.from_byte(byte)
+      def op(byte) when is_integer(byte), do: PVM.Instructions.from_byte(byte)
 
       def gas_cost(instruction) when is_atom(instruction),
-        do: Instructions.gas_cost(instruction)
+        do: PVM.Instructions.gas_cost(instruction)
     end
   end
 

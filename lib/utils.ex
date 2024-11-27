@@ -1,7 +1,7 @@
 defmodule PVM.Utils do
-  use Instructions
-  use PVM.Decoder
+  use PVM.{Decoder, Instructions}
   import Bitwise
+  alias PVM.Instructions
 
   # Formula (A.2) v0.5
   def skip(i, bitmask) when is_binary(bitmask) do

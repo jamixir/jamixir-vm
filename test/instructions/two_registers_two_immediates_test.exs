@@ -1,8 +1,7 @@
 defmodule Instructions.TwoRegistersTwoImmediatesTest do
   use ExUnit.Case
-  use Instructions
-  alias Instructions.TwoRegistersTwoImmediates
-  alias PVM.State
+  use PVM.Instructions
+  alias PVM.{Instructions.TwoRegistersTwoImmediates, State}
 
   describe "load_imm_jump_ind" do
     test "loads immediate value and performs valid indirect jump" do

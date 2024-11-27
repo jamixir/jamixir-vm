@@ -1,4 +1,4 @@
-defmodule Memory do
+defmodule PVM.Memory do
   import Bitwise
 
   @default_page_size 1 <<< 12  # 4KB per page

@@ -3,7 +3,7 @@ defmodule PVM.ArgInvoc do
   Implements the PVM program-argument invocation function (ΨM) as defined in formula A.36.
   """
 
-  alias PVM.{InitProgram, HostCall, State, Types}
+  alias PVM.{InitProgram, HostCall, State, Types, Memory}
 
 
 

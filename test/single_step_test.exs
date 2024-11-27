@@ -1,9 +1,7 @@
 defmodule SingleStepTest do
   use ExUnit.Case
-  alias PVM.State
-  use PVM.Decoder
-  use PVM.Utils
-  use Instructions
+  alias PVM.{State, SingleStep, Memory}
+  use PVM.{Decoder, Utils, Instructions}
 
 
 

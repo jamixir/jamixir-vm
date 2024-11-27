@@ -1,9 +1,8 @@
 defmodule Instructions.ThreeRegistersTest do
   use ExUnit.Case
-  use Instructions
+  use PVM.Instructions
   import Bitwise
-  alias Instructions.ThreeRegisters
-  alias PVM.State
+  alias PVM.{Instructions.ThreeRegisters, State}
 
   describe "32-bit arithmetic operations" do
     test "add_32 performs addition" do

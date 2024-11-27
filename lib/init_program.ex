@@ -1,5 +1,5 @@
 defmodule PVM.InitProgram do
-  alias PVM.Decoder
+  alias PVM.{Decoder, Memory}
   import Bitwise
 
   # Constants from A.31

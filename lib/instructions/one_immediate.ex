@@ -1,7 +1,7 @@
-defmodule Instructions.OneImmediate do
-  use Transitions
+defmodule PVM.Instructions.OneImmediate do
+  use PVM.Transitions
   use PVM.Utils
-  alias Instructions.Executor
+  alias PVM.Instructions.Executor
 
   # Section (A.5.2) v0.4.5
   def execute(:ecalli, program, bitmask, state) do

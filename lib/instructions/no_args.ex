@@ -1,4 +1,4 @@
-defmodule Instructions.NoArgs do
+defmodule PVM.Instructions.NoArgs do
   # Section (A.5.1) v0.4.5
   def execute(:trap, state),
     do: {:panic, state}

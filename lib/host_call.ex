@@ -3,11 +3,8 @@ defmodule PVM.HostCall do
   Implements the host-call state machine (ΨH) as defined in formula A.27.
   """
 
-  alias PVM.{State, Types}
+  alias PVM.{Decoder, State, Types, VM}
   use PVM.Utils
-  alias PVM.Decoder
-
-
 
   @doc """
   Executes a host call state transition according to ΨH definition.
@@ -28,7 +25,13 @@ defmodule PVM.HostCall do
     end
   end
 
-  @spec handle_host_call(non_neg_integer(), Types.host_call_state(), Types.host_fn(), Types.context(), binary()) ::
+  @spec handle_host_call(
+          non_neg_integer(),
+          Types.host_call_state(),
+          Types.host_fn(),
+          Types.context(),
+          binary()
+        ) ::
           {Types.exit_reason() | Types.fault_result(), State.t(), Types.context()}
   defp handle_host_call(host_data, state, host_fn, context, program) do
     case host_fn.(host_data, state, context) do

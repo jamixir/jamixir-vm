@@ -1,4 +1,4 @@
-defmodule Instructions.TwoRegisters do
+defmodule PVM.Instructions.TwoRegisters do
   def execute(:move_reg, program, _bitmask, _jump_table, state) do
     {r_d, r_a} = get_params(program, state.counter)
     w_a = Enum.at(state.registers, r_a)

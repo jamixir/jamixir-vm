@@ -1,7 +1,6 @@
 defmodule PVM.CodecTest do
   use ExUnit.Case
-  alias PVM.Encoder
-  alias PVM.Decoder
+  alias PVM.{Decoder, Encoder}
 
   describe "program encoding/decoding" do
     test "encodes and decodes program with empty jump table" do

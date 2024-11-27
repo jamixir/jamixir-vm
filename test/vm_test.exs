@@ -1,9 +1,7 @@
 defmodule VMTest do
   use ExUnit.Case
-  alias PVM.State
-  use PVM.Decoder
-  use PVM.Utils
-  use Instructions
+  alias PVM.{State, Memory, VM}
+  use PVM.{Decoder, Utils, Instructions}
 
   def create_program(program, bitmask, jump_table \\ [], z \\ 1) do
     PVM.Encoder.encode_program(program, bitmask, jump_table, z)

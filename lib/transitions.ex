@@ -1,4 +1,4 @@
-defmodule Transitions do
+defmodule PVM.Transitions do
   import Bitwise
 
   # Formula (A.7) v0.5
@@ -39,10 +39,10 @@ defmodule Transitions do
 
   defmacro __using__(_) do
     quote do
-      def u2i(value, num_bytes), do: Transitions.unsigned_to_signed(value, num_bytes)
-      def i2u(value, num_bytes), do: Transitions.signed_to_unsigned(value, num_bytes)
-      def u2b(value, num_bytes), do: Transitions.int_to_bits(value, num_bytes)
-      def b2u(bits), do: Transitions.bits_to_int(bits)
+      def u2i(value, num_bytes), do: PVM.Transitions.unsigned_to_signed(value, num_bytes)
+      def i2u(value, num_bytes), do: PVM.Transitions.signed_to_unsigned(value, num_bytes)
+      def u2b(value, num_bytes), do: PVM.Transitions.int_to_bits(value, num_bytes)
+      def b2u(bits), do: PVM.Transitions.bits_to_int(bits)
     end
   end
 end

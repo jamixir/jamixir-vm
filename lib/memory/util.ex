@@ -1,6 +1,6 @@
-defmodule Memory.Util do
+defmodule PVM.Memory.Util do
   def write(state, addr, value) do
-    case Memory.write(state.memory, addr, value) do
+    case PVM.Memory.write(state.memory, addr, value) do
       {:error, {:fault, fault_addr}} ->
         {{:fault, fault_addr}, state}
       {:ok, new_memory} ->
@@ -9,7 +9,7 @@ defmodule Memory.Util do
   end
 
   def read(state, addr, length) do
-    case Memory.read(state.memory, addr, length) do
+    case PVM.Memory.read(state.memory, addr, length) do
       {:error, {:fault, fault_addr}} ->
         {{:fault, fault_addr}, state}
       {:ok, data} ->

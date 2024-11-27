@@ -1,5 +1,6 @@
-defmodule Instructions.Executor do
-  alias Instructions.{
+defmodule PVM.Instructions.Executor do
+  alias PVM.Instructions
+  alias PVM.Instructions.{
     NoArgs,
     OneImmediate,
     TwoImmediates,

@@ -1,8 +1,7 @@
 defmodule Instructions.RegTwoImmTest do
   use ExUnit.Case
-  use Instructions
-  alias Instructions.RegTwoImm
-  alias PVM.State
+  use PVM.Instructions
+  alias PVM.{Instructions.RegTwoImm, Memory, State}
 
   describe "store_imm_ind operations" do
     test "store_imm_ind_u8 writes byte value at register-based address" do

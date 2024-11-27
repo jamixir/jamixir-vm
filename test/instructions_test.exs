@@ -1,5 +1,6 @@
 defmodule InstructionsTest do
   use ExUnit.Case
+  alias PVM.Instructions
 
   test "all instruction types are consistently defined across maps" do
     # Get instructions from opcode map

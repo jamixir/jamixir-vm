@@ -1,6 +1,6 @@
 defmodule Instructions.NoArgsTest do
   use ExUnit.Case
-  alias Instructions.NoArgs
+  alias PVM.Instructions.NoArgs
 
   describe "trap" do
     test "sets panic exit status" do

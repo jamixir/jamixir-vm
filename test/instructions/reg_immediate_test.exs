@@ -1,8 +1,7 @@
 defmodule Instructions.RegImmediateTest do
   use ExUnit.Case
-  use Instructions
-  alias Instructions.RegImmediate
-  alias PVM.State
+  use PVM.Instructions
+  alias PVM.{Instructions.RegImmediate, Memory, State}
 
   describe "load operations" do
     test "load_imm loads immediate value into register" do

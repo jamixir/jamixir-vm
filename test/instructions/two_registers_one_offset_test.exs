@@ -1,8 +1,7 @@
 defmodule Instructions.TwoRegistersOneOffsetTest do
   use ExUnit.Case
-  use Instructions
-  alias Instructions.TwoRegistersOneOffset
-  alias PVM.State
+  use PVM.Instructions
+  alias PVM.{Instructions.TwoRegistersOneOffset, State}
 
   describe "branch comparison operations" do
     test "branch_eq branches when values are equal" do

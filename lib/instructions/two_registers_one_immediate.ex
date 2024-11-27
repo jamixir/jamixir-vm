@@ -1,8 +1,7 @@
-defmodule Instructions.TwoRegistersOneImmediate do
-  use PVM.Utils
+defmodule PVM.Instructions.TwoRegistersOneImmediate do
   import Bitwise
-  use PVM.{Decoder, Encoder}
-  use Transitions
+  use PVM.{Decoder, Encoder, Utils, Transitions}
+  alias PVM.Memory
 
   # Store instructions
   def execute(instruction, program, bitmask, state)
@@ -41,7 +40,7 @@ defmodule Instructions.TwoRegistersOneImmediate do
       {:error, {:fault, fault_addr}} ->
         {{:fault, fault_addr}, state}
 
-      {:ok,value} ->
+      {:ok, value} ->
         state = %{state | registers: List.replace_at(state.registers, r_a, de_le(value, size))}
         {:continue, state}
     end

@@ -1,7 +1,8 @@
-defmodule Instructions.TwoImmediates do
-  use PVM.Utils
+defmodule PVM.Instructions.TwoImmediates do
   import Bitwise
-  use PVM.Encoder
+  use PVM.{Encoder, Utils}
+  alias PVM.Memory
+
   # Section (A.17) v0.5
 
   def execute(:store_imm_u8, program, bitmask, state) do

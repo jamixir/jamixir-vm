@@ -1,8 +1,7 @@
-defmodule SingleStep do
-  alias PVM.{State, Types, Utils}
+defmodule PVM.SingleStep do
+  alias PVM.{State, Types, Utils, Instructions.Executor, Instructions}
   use Utils
-  alias Instructions.Executor
-  use Instructions
+  use PVM.Instructions
 
   @type exit_reason :: Types.vm_exit_reason()
 
