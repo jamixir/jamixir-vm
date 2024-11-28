@@ -1,17 +1,19 @@
 defmodule PVM.Memory do
   import Bitwise
 
-  @default_page_size 1 <<< 12  # 4KB per page
-  @memory_size 1 <<< 32        # 4GB total memory
+  # 4KB per page
+  @default_page_size 1 <<< 12
+  # 4GB total memory
+  @memory_size 1 <<< 32
 
   def memory_size, do: @memory_size
 
   @type t :: %__MODULE__{
-    data: %{non_neg_integer() => byte()},
-    access: %{non_neg_integer() => atom()},
-    default_access: atom(),
-    page_size: pos_integer()
-  }
+          data: %{non_neg_integer() => byte()},
+          access: %{non_neg_integer() => atom()},
+          default_access: atom(),
+          page_size: pos_integer()
+        }
 
   defstruct data: %{},
             access: %{},
@@ -157,5 +159,11 @@ defmodule PVM.Memory do
       Map.get(memory.access, page, memory.default_access) == :write
     end)
     |> MapSet.new()
+  end
+
+  def check_range_access(%__MODULE__{} = memory, address, length, required_access) do
+    wrapped_address = wrap_address(address)
+    {start_page, end_page} = get_page_range(wrapped_address, length, memory.page_size)
+    check_permissions(memory, start_page, end_page, required_access)
   end
 end

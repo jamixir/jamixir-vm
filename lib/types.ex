@@ -2,7 +2,7 @@ defmodule PVM.Types do
   @moduledoc """
   Common types used across the PVM implementation.
   """
-alias PVM.State
+  alias PVM.{State, Memory}
 
   @type exit_reason :: :continue | :halt | :panic | :out_of_gas
   @type vm_exit_reason :: exit_reason | fault_result() | ecall_result()
@@ -19,5 +19,5 @@ alias PVM.State
   }
 
   @type host_fn :: (non_neg_integer(), host_call_state(), context() ->
-                    {exit_reason(), {State.t(), context()}} | fault_result())
+                    {exit_reason(), State.t(), context()} | fault_result())
 end
