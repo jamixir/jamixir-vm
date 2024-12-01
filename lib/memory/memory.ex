@@ -33,6 +33,10 @@ defmodule PVM.Memory do
     rem(address, memory_size())
   end
 
+  def number_of_pages(%__MODULE__{} = memory) do
+    div(memory_size(), memory.page_size)
+  end
+
   def read(%__MODULE__{} = memory, address, length) do
     wrapped_address = wrap_address(address)
 
@@ -84,7 +88,7 @@ defmodule PVM.Memory do
   end
 
   defp check_permissions(memory, start_page, end_page, required_access) do
-    page_range = get_sequential_pages(start_page, end_page, div(memory_size(), memory.page_size))
+    page_range = get_sequential_pages(start_page, end_page, number_of_pages(memory))
 
     Enum.reduce_while(page_range, :ok, fn page, _acc ->
       current_access = Map.get(memory.access, page, memory.default_access)
@@ -99,7 +103,9 @@ defmodule PVM.Memory do
 
   defp get_page_range(start_address, length, page_size) do
     start_page = div(start_address, page_size)
-    end_page = div(start_address + max(0, length - 1), page_size)
+    end_address = wrap_address(start_address + max(0, length - 1))
+    end_page = div(end_address, page_size)
+
     {start_page, end_page}
   end
 
@@ -132,7 +138,22 @@ defmodule PVM.Memory do
     {start_page, end_page} = get_page_range(address, length, memory.page_size)
 
     new_access =
-      get_sequential_pages(start_page, end_page, div(memory_size(), memory.page_size))
+      get_sequential_pages(start_page, end_page, number_of_pages(memory))
+      |> Enum.reduce(memory.access, fn page, acc ->
+        Map.put(acc, page, access_type)
+      end)
+
+    %__MODULE__{memory | access: new_access}
+  end
+
+  def set_access_by_page(%__MODULE__{} = memory, start_page, num_pages, access_type) do
+    total_pages = number_of_pages(memory)
+    start_page = rem(start_page, total_pages)
+    end_page = rem(start_page - 1 + num_pages, total_pages)
+    page_range = get_sequential_pages(start_page, end_page, total_pages)
+
+    new_access =
+      page_range
       |> Enum.reduce(memory.access, fn page, acc ->
         Map.put(acc, page, access_type)
       end)
@@ -164,6 +185,14 @@ defmodule PVM.Memory do
   def check_range_access(%__MODULE__{} = memory, address, length, required_access) do
     wrapped_address = wrap_address(address)
     {start_page, end_page} = get_page_range(wrapped_address, length, memory.page_size)
+    check_permissions(memory, start_page, end_page, required_access)
+  end
+
+  def check_pages_access(%__MODULE__{} = memory, start_page, num_pages, required_access) do
+    total_pages = number_of_pages(memory)
+    start_page = rem(start_page, total_pages)
+    end_page = rem(start_page - 1 + num_pages, total_pages)
+
     check_permissions(memory, start_page, end_page, required_access)
   end
 end
