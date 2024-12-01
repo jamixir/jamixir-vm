@@ -369,15 +369,15 @@ defmodule MemoryTest do
 
       # Check single page
       # Page 0 is writable
-      assert :ok = Memory.check_pages_access(memory, 0, 1, :write)
+      assert  Memory.check_pages_access?(memory, 0, 1, :write)
       # Page 1 is readable
-      assert :ok = Memory.check_pages_access(memory, 1, 1, :read)
+      assert Memory.check_pages_access?(memory, 1, 1, :read)
       # Page 1 isn't writable
-      assert {:error, 1} = Memory.check_pages_access(memory, 1, 1, :write)
+      refute Memory.check_pages_access?(memory, 1, 1, :write)
 
       # Check multiple pages
       # Fails on page 1
-      assert {:error, 1} = Memory.check_pages_access(memory, 0, 2, :write)
+      refute Memory.check_pages_access?(memory, 0, 2, :write)
     end
 
     test "check_pages_access handles wrapping" do
@@ -389,10 +389,9 @@ defmodule MemoryTest do
       memory = Memory.set_access_by_page(memory, last_page, 2, :read)
 
       # Check wrap-around access
-      assert {:error, last_page} =
-               Memory.check_pages_access(memory, last_page, 2, :write)
+      refute Memory.check_pages_access?(memory, last_page, 2, :write)
 
-      assert :ok = Memory.check_pages_access(memory, last_page, 2, :read)
+      assert Memory.check_pages_access?(memory, last_page, 2, :read)
     end
 
     test "set_access_by_page handles wrap of first page" do
