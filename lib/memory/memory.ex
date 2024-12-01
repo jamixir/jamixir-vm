@@ -182,17 +182,17 @@ defmodule PVM.Memory do
     |> MapSet.new()
   end
 
-  def check_range_access(%__MODULE__{} = memory, address, length, required_access) do
+  def check_range_access?(%__MODULE__{} = memory, address, length, required_access) do
     wrapped_address = wrap_address(address)
     {start_page, end_page} = get_page_range(wrapped_address, length, memory.page_size)
-    check_permissions(memory, start_page, end_page, required_access)
+    check_permissions(memory, start_page, end_page, required_access) == :ok
   end
 
-  def check_pages_access(%__MODULE__{} = memory, start_page, num_pages, required_access) do
+  def check_pages_access?(%__MODULE__{} = memory, start_page, num_pages, required_access) do
     total_pages = number_of_pages(memory)
     start_page = rem(start_page, total_pages)
     end_page = rem(start_page - 1 + num_pages, total_pages)
 
-    check_permissions(memory, start_page, end_page, required_access)
+    check_permissions(memory, start_page, end_page, required_access) == :ok
   end
 end
