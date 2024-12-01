@@ -1,6 +1,6 @@
 defmodule SingleStepTest do
   use ExUnit.Case
-  alias PVM.{State, SingleStep, Memory}
+  alias PVM.{State, SingleStep, Memory, Registers}
   use PVM.{Decoder, Utils, Instructions}
 
 
@@ -77,7 +77,7 @@ defmodule SingleStepTest do
       # First instruction: load_imm
       {exit_reason, state_} = SingleStep.run(program, bitmask, jump_table, state)
       assert exit_reason == :continue
-      assert Enum.at(state_.registers, 1) == 42
+      assert Registers.get(state_.registers, 1) == 42
 
       # Second instruction: store_u8
       state_ = %{state_ | counter: 3, registers: state_.registers}
@@ -89,7 +89,7 @@ defmodule SingleStepTest do
       state_ = %{state_ | counter: 6, memory: state_.memory}
       {exit_reason, state_} = SingleStep.run(program, bitmask, jump_table, state_)
       assert exit_reason == :continue
-      assert Enum.at(state_.registers, 2) == 42
+      assert Registers.get(state_.registers, 2) == 42
     end
 
     test "steps two_immediates instructions" do
@@ -142,7 +142,7 @@ defmodule SingleStepTest do
       # First execute load_imm
       {exit_reason, state_} = SingleStep.run(program, bitmask, jump_table, state)
       assert exit_reason == :continue
-      assert Enum.at(state_.registers, 2) == 42
+      assert Registers.get(state_.registers, 2) == 42
 
       {exit_reason, state_} = SingleStep.run(program, bitmask, jump_table, state_)
 
@@ -151,9 +151,9 @@ defmodule SingleStepTest do
 
       assert exit_reason == :continue
       # r1 should now have r2's value
-      assert Enum.at(state_.registers, 1) == 42
+      assert Registers.get(state_.registers, 1) == 42
       # r2 should be unchanged
-      assert Enum.at(state_.registers, 2) == 42
+      assert Registers.get(state_.registers, 2) == 42
       # Should advance past the move_reg instruction
       assert state_.counter == 5
     end

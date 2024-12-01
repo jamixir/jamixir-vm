@@ -2,7 +2,7 @@ defmodule PVM.Utils.ProgramUtilsTest do
   use ExUnit.Case
   use PVM.Instructions
   alias PVM.Utils.ProgramUtils
-  alias PVM.{State, VM, Memory}
+  alias PVM.{Registers, State, VM}
 
   describe "halt helpers" do
     test "create_halt_program creates minimal halting program" do
@@ -54,9 +54,7 @@ defmodule PVM.Utils.ProgramUtilsTest do
       # Should halt and have executed the original instructions
       assert exit_reason == :halt
       assert state.counter == 0
-      assert Enum.at(state.registers, 1) == 30  # sum
-      assert Enum.at(state.registers, 2) == 11  # final i value
-      assert Enum.at(state.registers, 3) == 10  # loop end condition
+      assert Registers.get(state.registers, [1, 2, 3]) == [30, 11, 10]
     end
   end
 end

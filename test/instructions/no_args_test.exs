@@ -1,6 +1,6 @@
 defmodule Instructions.NoArgsTest do
   use ExUnit.Case
-  alias PVM.Instructions.NoArgs
+  alias PVM.{Instructions.NoArgs, Registers}
 
   describe "trap" do
     test "sets panic exit status" do
@@ -14,7 +14,7 @@ defmodule Instructions.NoArgsTest do
       initial_state = %PVM.State{
         counter: 1,
         gas: 100,
-        registers: [0, 1, 2],
+        registers: %Registers{r0: 0, r1: 1, r2: 2},
       }
 
       {exit_reason, state_} = NoArgs.execute(:fallthrough, initial_state)

@@ -1,7 +1,7 @@
 defmodule Instructions.TwoRegistersTwoImmediatesTest do
   use ExUnit.Case
   use PVM.Instructions
-  alias PVM.{Instructions.TwoRegistersTwoImmediates, State}
+  alias PVM.{Instructions.TwoRegistersTwoImmediates, Registers, State}
 
   describe "load_imm_jump_ind" do
     test "loads immediate value and performs valid indirect jump" do
@@ -30,13 +30,13 @@ defmodule Instructions.TwoRegistersTwoImmediatesTest do
       jump_table = [2, 4, 6, 8, 10]
 
       # Set up register 2 with base address 8
-      state = %State{registers: List.replace_at(%State{}.registers, 2, 5)}
+      state = %State{registers: %Registers{r2: 5}}
 
       {exit_status, state} =
         TwoRegistersTwoImmediates.execute(:load_imm_jump_ind, program, bitmask, jump_table, state)
 
       # Check immediate value was loaded
-      assert Enum.at(state.registers, 1) == 42
+      assert state.registers.r1 == 42
       #  a will be 1 + 5 = 6
       # we will jimp to counter = jump_table[a / 2 -1] = jump_table[3 -1] = 6
 
@@ -50,12 +50,12 @@ defmodule Instructions.TwoRegistersTwoImmediatesTest do
       jump_table = [2, 4, 6, 8, 10]
 
       # Set register to create unaligned target (odd number)
-      state = %State{registers: List.replace_at(%State{}.registers, 2, 2)}
+      state = %State{registers: %Registers{r2: 2}}
 
       {exit_status, state} =
         TwoRegistersTwoImmediates.execute(:load_imm_jump_ind, program, bitmask, jump_table, state)
 
-      assert Enum.at(state.registers, 1) == 42
+      assert state.registers.r1 == 42
       assert exit_status == :panic
       assert state.counter == 0
     end

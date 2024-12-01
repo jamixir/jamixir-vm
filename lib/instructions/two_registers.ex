@@ -1,14 +1,15 @@
 defmodule PVM.Instructions.TwoRegisters do
+  alias PVM.Registers
   def execute(:move_reg, program, _bitmask, _jump_table, state) do
     {r_d, r_a} = get_params(program, state.counter)
-    w_a = Enum.at(state.registers, r_a)
+    w_a = Registers.get(state.registers, r_a)
 
-    {:continue, %{state | registers: List.replace_at(state.registers, r_d, w_a)}}
+    {:continue, %{state | registers: Registers.set(state.registers, r_d, w_a)}}
   end
 
   def execute(:sbrk, program, _bitmask, _jump_table, state) do
     {_r_d, r_a} = get_params(program, state.counter)
-    _w_a = Enum.at(state.registers, r_a)
+    _w_a = Registers.get(state.registers, r_a)
 
     # TODO
     {:continue, state}

@@ -1,6 +1,6 @@
 defmodule PVM.InitProgramTest do
   use ExUnit.Case
-  alias PVM.{InitProgram, Memory}
+  alias PVM.{InitProgram, Memory, Registers}
   import Bitwise
 
   describe "parse_program_segments/1" do
@@ -235,24 +235,11 @@ defmodule PVM.InitProgramTest do
       registers = InitProgram.initialize_registers(<<1,2,3,4>>)
 
       # Check specific registers that should have predefined values (A.35)
-      assert Enum.at(registers, 0) == 0xFFFF_0000  # r0
-      assert Enum.at(registers, 1) == 0xFEFE_0000  # r1
-      assert Enum.at(registers, 7) == 0xFEFF_0000  # r7
-      assert Enum.at(registers, 8) == 4         # r8 should contain a_size
+      assert Registers.get(registers, [0, 1, 7, 8]) == [0xFFFF_0000, 0xFEFE_0000, 0xFEFF_0000, 4]
 
       # Check that other registers are initialized to 0
-      assert Enum.at(registers, 2) == 0
-      assert Enum.at(registers, 3) == 0
-      assert Enum.at(registers, 4) == 0
-      assert Enum.at(registers, 5) == 0
-      assert Enum.at(registers, 6) == 0
-      assert Enum.at(registers, 9) == 0
-      assert Enum.at(registers, 10) == 0
-      assert Enum.at(registers, 11) == 0
-      assert Enum.at(registers, 12) == 0
+      assert Registers.get(registers, [2, 3, 4, 5, 6, 9, 10, 11, 12]) == [0, 0, 0, 0, 0, 0, 0, 0, 0]
 
-      # Check total number of registers
-      assert length(registers) == 13
     end
   end
 
@@ -279,7 +266,7 @@ defmodule PVM.InitProgramTest do
 
       # Verify we got valid components back
       assert byte_size(code) == 2 * page_size
-      assert length(registers) == 13
+      assert %Registers{} = registers
       assert is_struct(memory, Memory)
     end
 

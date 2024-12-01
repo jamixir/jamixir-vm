@@ -1,6 +1,6 @@
 defmodule VMTest do
   use ExUnit.Case
-  alias PVM.{State, Memory, VM}
+  alias PVM.{State, Memory, VM, Registers}
   use PVM.{Decoder, Utils, Instructions}
 
   def create_program(program, bitmask, jump_table \\ [], z \\ 1) do
@@ -64,8 +64,7 @@ defmodule VMTest do
 
       assert exit_reason == :panic
       assert state_.counter == 0  # Ended after fallthrough
-      assert Enum.at(state_.registers, 1) == 10   # From first load_imm
-      assert Enum.at(state_.registers, 2) == 55   # From jumped-to load_imm
+      assert Registers.get(state_.registers, [1, 2]) == [10, 55]   # From first and jumped-to load_imm
 
       # Verify skipped store_imm_u8 instructions didn't execute
       assert Memory.read(state_.memory, 10, 1) == {:ok, <<0>>}
@@ -92,8 +91,7 @@ defmodule VMTest do
 
       assert exit_reason == :panic
       assert state_.counter == 0
-      assert Enum.at(state_.registers, 1) == 42
-      assert Enum.at(state_.registers, 2) == 42
+      assert Registers.get(state_.registers, [1, 2]) == [42, 42]
       assert Memory.read(state_.memory, 10, 1) == {:ok, <<42>>}
       assert Memory.read(state_.memory, 20, 1) == {:ok, <<42>>}
     end
@@ -113,8 +111,7 @@ defmodule VMTest do
 
       assert exit_reason == :panic
       assert state_.counter == 0
-      assert Enum.at(state_.registers, 1) == de_le(<<78, 56>>, 2)  # Lower 16 bits
-      assert Enum.at(state_.registers, 2) == de_le(<<34, 12>>, 2)  # Upper 16 bits
+      assert Registers.get(state_.registers, [1, 2]) == [de_le(<<78, 56>>, 2), de_le(<<34, 12>>, 2)]  # Lower 16 bits
       assert Memory.read(state_.memory, 10, 4) == {:ok, <<78, 56, 34, 12>>}
     end
 
@@ -141,9 +138,7 @@ defmodule VMTest do
       assert exit_reason == :halt
       # Stopped at jump_ind
       assert state_.counter == 0
-      assert Enum.at(state_.registers, 1) == 42
-      assert Enum.at(state_.registers, 2) == 24
-      assert Enum.at(state_.registers, 3) == 0xFFFF_FFFF_FFFF_0000
+      assert Registers.get(state_.registers, [1, 2, 3]) == [42, 24, 0xFFFF_FFFF_FFFF_0000]
       assert Memory.read(state_.memory, 100, 1) == {:ok, <<42>>}
       assert Memory.read(state_.memory, 101, 1) == {:ok, <<24>>}
     end
@@ -172,7 +167,7 @@ defmodule VMTest do
       assert exit_reason == :panic
       assert state_.counter == 0
       # Verify the 64-bit immediate load worked
-      assert Enum.at(state_.registers, 1) == 0xDCBA987654321001
+      assert Registers.get(state_.registers, 1) == 0xDCBA987654321001
       # Verify memory contents:
       # First location should have zero-extended 32-bit value
       assert Memory.read(state_.memory, 16, 8) == {:ok, <<0x78, 0x56, 0x34, 0x12, 0, 0, 0, 0>>}
@@ -210,7 +205,7 @@ defmodule VMTest do
 
       assert exit_reason == :panic  # From final fallthrough
       assert state_.counter == 0
-      assert Enum.at(state_.registers, 1) == 42
+      assert Registers.get(state_.registers, 1) == 42
       assert Memory.read(state_.memory, 20, 1) == {:ok, <<99>>}  # Verify branch was taken
     end
     test "not equel - no jump" do
@@ -238,7 +233,7 @@ defmodule VMTest do
 
       assert exit_reason == :panic  # From final fallthrough
       assert state_.counter == 0
-      assert Enum.at(state_.registers, 1) == 7
+      assert Registers.get(state_.registers, 1) == 7
       assert Memory.read(state_.memory, 20, 1) == {:ok, <<0>>}  # Verify branch was taken
     end
 
@@ -269,7 +264,7 @@ defmodule VMTest do
 
       assert exit_reason == :panic  # From final fallthrough
       assert state_.counter == 0
-      assert Enum.at(state_.registers, 1) == 42
+      assert Registers.get(state_.registers, 1) == 42
       assert Memory.read(state_.memory, 10, 1) == {:ok, <<99>>}  # Verify jump was taken
     end
 
@@ -303,7 +298,7 @@ defmodule VMTest do
 
       assert exit_reason == :panic  # From final fallthrough
       assert state_.counter == 0
-      assert Enum.at(state_.registers, 1) == 0xFFFF_FFFF_FFFF_FFFF
+        assert Registers.get(state_.registers, 1) == 0xFFFF_FFFF_FFFF_FFFF
       assert Memory.read(state_.memory, 30, 1) == {:ok, <<77>>}  # Verify branch was taken
     end
 
@@ -369,9 +364,7 @@ defmodule VMTest do
       # Read the result from memory - should be 2 + 4 + 6 + 8 + 10 = 30
       assert Memory.read(state_.memory, 3, 4) == {:ok, <<30, 0, 0, 0>>}
       # Verify final register values
-      assert Enum.at(state_.registers, 1) == 30  # sum
-      assert Enum.at(state_.registers, 2) == 11  # final i value
-      assert Enum.at(state_.registers, 3) == 10  # loop end condition
+      assert Registers.get(state_.registers, [1, 2, 3]) == [30, 11, 10]  # sum, final i value, loop end condition
     end
 
   end
@@ -469,7 +462,7 @@ defmodule VMTest do
 
       assert exit_reason == :panic  # From fallthrough
       assert state_.counter == 0  # Reached fallthrough instruction
-      assert Enum.at(state_.registers, 1) == 42  # Verify immediate was loaded
+      assert Registers.get(state_.registers, 1) == 42  # Verify immediate was loaded
     end
   end
 end

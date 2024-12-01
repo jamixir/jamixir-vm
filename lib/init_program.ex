@@ -1,5 +1,5 @@
 defmodule PVM.InitProgram do
-  alias PVM.{Decoder, Memory}
+  alias PVM.{Decoder, Memory, Registers}
   import Bitwise
 
   # Constants from A.31
@@ -73,13 +73,7 @@ defmodule PVM.InitProgram do
 
   def initialize_registers(a) do
     # Implements A.35 register initialization
-    registers = List.duplicate(0, 13)
-
-    registers
-    |> List.replace_at(0, 0xFFFF_0000)
-    |> List.replace_at(1, 0xFEFE_0000)
-    |> List.replace_at(7, 0xFEFF_0000)
-    |> List.replace_at(8, byte_size(a))
+    %Registers{r0: 0xFFFF_0000, r1: 0xFEFE_0000, r7: 0xFEFF_0000, r8: byte_size(a)}
   end
 
   @spec construct_memory(binary(), binary(), binary(), integer(), integer()) :: Memory.t()

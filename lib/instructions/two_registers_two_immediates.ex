@@ -1,12 +1,12 @@
 defmodule PVM.Instructions.TwoRegistersTwoImmediates do
   use PVM.Utils
-  alias PVM.Instructions.Executor
+  alias PVM.{Instructions.Executor, Registers}
   use PVM.Transitions
   import Bitwise
 
   def execute(:load_imm_jump_ind, program, bitmask, jump_table, state) do
     {r_a, r_b, v_x, v_y} = get_params(program, bitmask, state.counter)
-    w_b = Enum.at(state.registers, r_b)
+    w_b = Registers.get(state.registers, r_b)
 
     jump_addr = rem(w_b + v_y, 1 <<< 32)
     start_set = basic_block_starts(program, bitmask)
@@ -14,7 +14,7 @@ defmodule PVM.Instructions.TwoRegistersTwoImmediates do
     {exit_status, counter} = Executor.djump(jump_addr, state.counter, jump_table, start_set)
 
     {exit_status,
-     %{state | counter: counter, registers: List.replace_at(state.registers, r_a, v_x)}}
+     %{state | counter: counter, registers: Registers.set(state.registers, r_a, v_x)}}
   end
 
   # Formula (A.25) from specification

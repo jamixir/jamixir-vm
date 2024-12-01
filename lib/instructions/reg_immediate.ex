@@ -1,12 +1,12 @@
 defmodule PVM.Instructions.RegImmediate do
   import Bitwise
   use PVM.{Decoder, Encoder, Utils}
-  alias PVM.{Instructions.Executor, Memory}
+  alias PVM.{Instructions.Executor, Memory, Registers}
 
   # Section (A.19) v0.5
   def execute(:jump_ind, program, bitmask, jump_table, state) do
     {register_index, addr} = get_params(program, bitmask, state.counter)
-    register_value = Enum.at(state.registers, register_index)
+    register_value = Registers.get(state.registers, register_index)
     start_set = basic_block_starts(program, bitmask)
 
     {exit_status, counter} =
@@ -22,7 +22,7 @@ defmodule PVM.Instructions.RegImmediate do
 
   def execute(:load_imm, program, bitmask, _jump_table, state) do
     {register_index, value} = get_params(program, bitmask, state.counter)
-    state = %{state | registers: List.replace_at(state.registers, register_index, value)}
+    state = %{state | registers: Registers.set(state.registers, register_index, value)}
     {:continue, state}
   end
 
@@ -36,7 +36,7 @@ defmodule PVM.Instructions.RegImmediate do
       {:ok, value} ->
         state = %{
           state
-          | registers: List.replace_at(state.registers, register_index, :binary.first(value))
+          | registers: Registers.set(state.registers, register_index, :binary.first(value))
         }
 
         {:continue, state}
@@ -57,7 +57,7 @@ defmodule PVM.Instructions.RegImmediate do
 
         state = %{
           state
-          | registers: List.replace_at(state.registers, register_index, signed_value)
+          | registers: Registers.set(state.registers, register_index, signed_value)
         }
 
         {:continue, state}
@@ -74,7 +74,7 @@ defmodule PVM.Instructions.RegImmediate do
       {:ok, value} ->
         state = %{
           state
-          | registers: List.replace_at(state.registers, register_index, de_le(value, 2))
+          | registers: Registers.set(state.registers, register_index, de_le(value, 2))
         }
 
         {:continue, state}
@@ -96,7 +96,7 @@ defmodule PVM.Instructions.RegImmediate do
 
         state = %{
           state
-          | registers: List.replace_at(state.registers, register_index, signed_value)
+          | registers: Registers.set(state.registers, register_index, signed_value)
         }
 
         {:continue, state}
@@ -113,7 +113,7 @@ defmodule PVM.Instructions.RegImmediate do
       {:ok, value} ->
         state = %{
           state
-          | registers: List.replace_at(state.registers, register_index, de_le(value, 4))
+          | registers: Registers.set(state.registers, register_index, de_le(value, 4))
         }
 
         {:continue, state}
@@ -135,7 +135,7 @@ defmodule PVM.Instructions.RegImmediate do
 
         state = %{
           state
-          | registers: List.replace_at(state.registers, register_index, signed_value)
+          | registers: Registers.set(state.registers, register_index, signed_value)
         }
 
         {:continue, state}
@@ -152,7 +152,7 @@ defmodule PVM.Instructions.RegImmediate do
       {:ok, value} ->
         state = %{
           state
-          | registers: List.replace_at(state.registers, register_index, de_le(value, 8))
+          | registers: Registers.set(state.registers, register_index, de_le(value, 8))
         }
 
         {:continue, state}
@@ -161,25 +161,25 @@ defmodule PVM.Instructions.RegImmediate do
 
   def execute(:store_u8, program, bitmask, _jump_table, state) do
     {register_index, addr} = get_params(program, bitmask, state.counter)
-    value = Enum.at(state.registers, register_index)
+    value = Registers.get(state.registers, register_index)
     Memory.Util.write(state, addr, <<rem(value, 1 <<< 8)>>)
   end
 
   def execute(:store_u16, program, bitmask, _jump_table, state) do
     {register_index, addr} = get_params(program, bitmask, state.counter)
-    value = Enum.at(state.registers, register_index)
+    value = Registers.get(state.registers, register_index)
     Memory.Util.write(state, addr, e_le(rem(value, 1 <<< 16), 2))
   end
 
   def execute(:store_u32, program, bitmask, _jump_table, state) do
     {register_index, addr} = get_params(program, bitmask, state.counter)
-    value = Enum.at(state.registers, register_index)
+    value = Registers.get(state.registers, register_index)
     Memory.Util.write(state, addr, e_le(rem(value, 1 <<< 32), 4))
   end
 
   def execute(:store_u64, program, bitmask, _jump_table, state) do
     {register_index, addr} = get_params(program, bitmask, state.counter)
-    value = Enum.at(state.registers, register_index)
+    value = Registers.get(state.registers, register_index)
     Memory.Util.write(state, addr, e_le(value, 8))
   end
 
@@ -188,7 +188,7 @@ defmodule PVM.Instructions.RegImmediate do
       min(12, rem(binary_part(program, state.counter + 1, 1) |> :binary.first(), 16))
 
     value = de_le(binary_part(program, state.counter + 1, 8), 8)
-    state = %{state | registers: List.replace_at(state.registers, register_index, value)}
+    state = %{state | registers: Registers.set(state.registers, register_index, value)}
     {:continue, state}
   end
 

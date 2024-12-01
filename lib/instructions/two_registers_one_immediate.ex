@@ -1,14 +1,14 @@
 defmodule PVM.Instructions.TwoRegistersOneImmediate do
   import Bitwise
   use PVM.{Decoder, Encoder, Utils, Transitions}
-  alias PVM.Memory
+  alias PVM.{Memory, Registers}
 
   # Store instructions
   def execute(instruction, program, bitmask, state)
       when instruction in [:store_ind_u8, :store_ind_u16, :store_ind_u32, :store_ind_u64] do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
-    w_a = Enum.at(state.registers, r_a)
-    w_b = Enum.at(state.registers, r_b)
+    w_a = Registers.get(state.registers, r_a)
+    w_b = Registers.get(state.registers, r_b)
 
     {size, bits} =
       case instruction do
@@ -26,7 +26,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
   def execute(instruction, program, bitmask, state)
       when instruction in [:load_ind_u8, :load_ind_u16, :load_ind_u32, :load_ind_u64] do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
-    w_b = Enum.at(state.registers, r_b)
+    w_b = Registers.get(state.registers, r_b)
 
     size =
       case instruction do
@@ -41,7 +41,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
         {{:fault, fault_addr}, state}
 
       {:ok, value} ->
-        state = %{state | registers: List.replace_at(state.registers, r_a, de_le(value, size))}
+        state = %{state | registers: Registers.set(state.registers, r_a, de_le(value, size))}
         {:continue, state}
     end
   end
@@ -50,7 +50,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
   def execute(instruction, program, bitmask, state)
       when instruction in [:load_ind_i8, :load_ind_i16, :load_ind_i32] do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
-    w_b = Enum.at(state.registers, r_b)
+    w_b = Registers.get(state.registers, r_b)
 
     size =
       case instruction do
@@ -70,7 +70,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
           |> u2i(size)
           |> i2u(8)
 
-        state = %{state | registers: List.replace_at(state.registers, r_a, unsigned_8bit)}
+        state = %{state | registers: Registers.set(state.registers, r_a, unsigned_8bit)}
         {:continue, state}
     end
   end
@@ -79,7 +79,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
   def execute(instruction, program, bitmask, state)
       when instruction in [:add_imm_32, :mul_imm_32, :neg_add_imm_32] do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
-    w_b = Enum.at(state.registers, r_b)
+    w_b = Registers.get(state.registers, r_b)
 
     result =
       case instruction do
@@ -89,7 +89,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
       end
       |> to_64bit(4)
 
-    state = %{state | registers: List.replace_at(state.registers, r_a, result)}
+    state = %{state | registers: Registers.set(state.registers, r_a, result)}
     {:continue, state}
   end
 
@@ -97,7 +97,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
   def execute(instruction, program, bitmask, state)
       when instruction in [:and_imm, :xor_imm, :or_imm] do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
-    w_b = Enum.at(state.registers, r_b)
+    w_b = Registers.get(state.registers, r_b)
 
     operation =
       case instruction do
@@ -107,7 +107,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
       end
 
     result = b2u(Enum.zip_with(u2b(w_b, 8), u2b(v_x, 8), operation))
-    state = %{state | registers: List.replace_at(state.registers, r_a, result)}
+    state = %{state | registers: Registers.set(state.registers, r_a, result)}
     {:continue, state}
   end
 
@@ -115,7 +115,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
   def execute(instruction, program, bitmask, state)
       when instruction in [:set_lt_u_imm, :set_lt_s_imm, :set_gt_u_imm, :set_gt_s_imm] do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
-    w_b = Enum.at(state.registers, r_b)
+    w_b = Registers.get(state.registers, r_b)
 
     result =
       case instruction do
@@ -125,7 +125,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
         :set_gt_s_imm -> if u2i(w_b, 8) > u2i(v_x, 8), do: 1, else: 0
       end
 
-    state = %{state | registers: List.replace_at(state.registers, r_a, result)}
+    state = %{state | registers: Registers.set(state.registers, r_a, result)}
     {:continue, state}
   end
 
@@ -140,7 +140,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
              :shar_r_imm_alt_32
            ] do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
-    w_b = Enum.at(state.registers, r_b)
+    w_b = Registers.get(state.registers, r_b)
 
     result =
       case instruction do
@@ -169,7 +169,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
           div(u2i(v_x, 4), 1 <<< shift) |> i2u(8)
       end
 
-    state = %{state | registers: List.replace_at(state.registers, r_a, result)}
+    state = %{state | registers: Registers.set(state.registers, r_a, result)}
     {:continue, state}
   end
 
@@ -177,8 +177,8 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
   def execute(instruction, program, bitmask, state)
       when instruction in [:cmov_iz_imm, :cmov_nz_imm] do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
-    w_b = Enum.at(state.registers, r_b)
-    w_a = Enum.at(state.registers, r_a)
+    w_b = Registers.get(state.registers, r_b)
+    w_a = Registers.get(state.registers, r_a)
 
     result =
       case instruction do
@@ -186,7 +186,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
         :cmov_nz_imm -> if w_b != 0, do: v_x, else: w_a
       end
 
-    state = %{state | registers: List.replace_at(state.registers, r_a, result)}
+    state = %{state | registers: Registers.set(state.registers, r_a, result)}
     {:continue, state}
   end
 
@@ -194,7 +194,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
   def execute(instruction, program, bitmask, state)
       when instruction in [:add_imm_64, :mul_imm_64, :neg_add_imm_64] do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
-    w_b = Enum.at(state.registers, r_b)
+    w_b = Registers.get(state.registers, r_b)
 
     result =
       case instruction do
@@ -203,7 +203,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
         :neg_add_imm_64 -> rem(v_x + (1 <<< 64) - w_b, 1 <<< 64)
       end
 
-    state = %{state | registers: List.replace_at(state.registers, r_a, result)}
+    state = %{state | registers: Registers.set(state.registers, r_a, result)}
     {:continue, state}
   end
 
@@ -218,7 +218,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
              :shar_r_imm_alt_64
            ] do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
-    w_b = Enum.at(state.registers, r_b)
+    w_b = Registers.get(state.registers, r_b)
 
     result =
       case instruction do
@@ -247,7 +247,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
           div(u2i(v_x, 8), 1 <<< shift) |> i2u(8)
       end
 
-    state = %{state | registers: List.replace_at(state.registers, r_a, result)}
+    state = %{state | registers: Registers.set(state.registers, r_a, result)}
     {:continue, state}
   end
 

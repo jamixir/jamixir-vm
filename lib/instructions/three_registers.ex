@@ -1,6 +1,7 @@
 defmodule PVM.Instructions.ThreeRegisters do
   use PVM.Utils
   use PVM.Transitions
+  alias PVM.Registers
   import Bitwise
 
   # 32-bit arithmetic operations
@@ -17,7 +18,7 @@ defmodule PVM.Instructions.ThreeRegisters do
       |> rem(1 <<< 32)
       |> to_64bit(4)
 
-    state = %{state | registers: List.replace_at(state.registers, r_d, result)}
+    state = %{state | registers: Registers.set(state.registers, r_d, result)}
     {:continue, state}
   end
 
@@ -55,7 +56,7 @@ defmodule PVM.Instructions.ThreeRegisters do
           i2u(rem(a, b), 8)
       end
 
-    state = %{state | registers: List.replace_at(state.registers, r_d, result)}
+    state = %{state | registers: Registers.set(state.registers, r_d, result)}
     {:continue, state}
   end
 
@@ -72,7 +73,7 @@ defmodule PVM.Instructions.ThreeRegisters do
         :shar_r_32 -> w_a |> rem(1 <<< 32) |> to_64bit(4) |> div(1 <<< shift) |> i2u(8)
       end
 
-    state = %{state | registers: List.replace_at(state.registers, r_d, result)}
+    state = %{state | registers: Registers.set(state.registers, r_d, result)}
     {:continue, state}
   end
 
@@ -89,7 +90,7 @@ defmodule PVM.Instructions.ThreeRegisters do
       end
       |> rem(1 <<< 64)
 
-    state = %{state | registers: List.replace_at(state.registers, r_d, result)}
+    state = %{state | registers: Registers.set(state.registers, r_d, result)}
     {:continue, state}
   end
 
@@ -120,7 +121,7 @@ defmodule PVM.Instructions.ThreeRegisters do
           i2u(rem(u2i(w_a, 8), u2i(w_b, 8)), 8)
       end
 
-    state = %{state | registers: List.replace_at(state.registers, r_d, result)}
+    state = %{state | registers: Registers.set(state.registers, r_d, result)}
     {:continue, state}
   end
 
@@ -137,7 +138,7 @@ defmodule PVM.Instructions.ThreeRegisters do
         :shar_r_64 -> div(u2i(w_a, 8), 1 <<< shift) |> i2u(8)
       end
 
-    state = %{state | registers: List.replace_at(state.registers, r_d, result)}
+    state = %{state | registers: Registers.set(state.registers, r_d, result)}
     {:continue, state}
   end
 
@@ -155,7 +156,7 @@ defmodule PVM.Instructions.ThreeRegisters do
 
     result = b2u(Enum.zip_with(u2b(w_a, 8), u2b(w_b, 8), operation))
 
-    state = %{state | registers: List.replace_at(state.registers, r_d, result)}
+    state = %{state | registers: Registers.set(state.registers, r_d, result)}
     {:continue, state}
   end
 
@@ -176,7 +177,7 @@ defmodule PVM.Instructions.ThreeRegisters do
           (u2i(w_a, 8) * w_b) |> div(1 <<< 64) |> i2u(8)
       end
 
-    state = %{state | registers: List.replace_at(state.registers, r_d, result)}
+    state = %{state | registers: Registers.set(state.registers, r_d, result)}
     {:continue, state}
   end
 
@@ -191,7 +192,7 @@ defmodule PVM.Instructions.ThreeRegisters do
         :set_lt_s -> if(u2i(w_a, 8) < u2i(w_b, 8), do: 1, else: 0)
       end
 
-    state = %{state | registers: List.replace_at(state.registers, r_d, result)}
+    state = %{state | registers: Registers.set(state.registers, r_d, result)}
     {:continue, state}
   end
 
@@ -199,7 +200,7 @@ defmodule PVM.Instructions.ThreeRegisters do
   def execute(instruction, program, state)
       when instruction in [:cmov_iz, :cmov_nz] do
     {w_a, w_b, r_d} = get_params(program, state)
-    w_d = Enum.at(state.registers, r_d)
+    w_d = Registers.get(state.registers, r_d)
 
     result =
       case instruction do
@@ -207,7 +208,7 @@ defmodule PVM.Instructions.ThreeRegisters do
         :cmov_nz -> if(w_b != 0, do: w_a, else: w_d)
       end
 
-    state = %{state | registers: List.replace_at(state.registers, r_d, result)}
+    state = %{state | registers: Registers.set(state.registers, r_d, result)}
     {:continue, state}
   end
 
@@ -217,9 +218,9 @@ defmodule PVM.Instructions.ThreeRegisters do
     byte2 = binary_part(program, state.counter + 2, 1) |> :binary.first()
 
     r_a = min(12, rem(byte1, 16))
-    w_a = Enum.at(state.registers, r_a)
+    w_a = Registers.get(state.registers, r_a)
     r_b = min(12, div(byte1, 16))
-    w_b = Enum.at(state.registers, r_b)
+    w_b = Registers.get(state.registers, r_b)
     r_d = min(12, byte2)
 
     {w_a, w_b, r_d}

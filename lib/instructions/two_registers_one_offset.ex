@@ -1,6 +1,6 @@
 defmodule PVM.Instructions.TwoRegistersOneOffset do
   use PVM.Utils
-  alias PVM.Instructions.Executor
+  alias PVM.{Instructions.Executor, Registers}
   use PVM.Transitions
 
   def execute(instruction, program, bitmask, state) do
@@ -38,8 +38,8 @@ defmodule PVM.Instructions.TwoRegistersOneOffset do
 
     l_x = min(4, max(0, skip(state.counter, bitmask) - 1))
     v_x = decode_bytes_signed(program, state.counter + 2, l_x)
-    w_a = Enum.at(state.registers, r_a)
-    w_b = Enum.at(state.registers, r_b)
+    w_a = Registers.get(state.registers, r_a)
+    w_b = Registers.get(state.registers, r_b)
     start_set = basic_block_starts(program, bitmask)
 
     {w_a, w_b, v_x, start_set}

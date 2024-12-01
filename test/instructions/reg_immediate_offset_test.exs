@@ -1,7 +1,7 @@
 defmodule Instructions.RegImmediateOffsetTest do
   use ExUnit.Case
   use PVM.Instructions
-  alias PVM.{Instructions.RegImmediateOffset, State}
+  alias PVM.{Instructions.RegImmediateOffset, Registers, State}
 
   describe "load_imm_jump" do
     test "loads immediate value and jumps" do
@@ -12,7 +12,7 @@ defmodule Instructions.RegImmediateOffsetTest do
       {exit_reason, state_} =
         RegImmediateOffset.execute(:load_imm_jump, program, bitmask, %State{})
 
-      assert Enum.at(state_.registers, 1) == 42
+      assert state_.registers.r1 == 42
       assert state_.counter == 4
       assert exit_reason == :continue
     end
@@ -35,7 +35,7 @@ defmodule Instructions.RegImmediateOffsetTest do
         <<op(:branch_eq_imm), 0x11, 42, 9, op(:store_imm_u8), 0x01, 10, 5, op(:fallthrough)>>
 
       bitmask = <<1, 0, 0, 0, 1, 0, 0, 0, 1>>
-      state = %State{registers: List.replace_at(%State{}.registers, 1, 42)}
+      state = %State{registers: %Registers{r1: 42}}
       {exit_reason, state_} = RegImmediateOffset.execute(:branch_eq_imm, program, bitmask, state)
 
       assert state_.counter == 9
@@ -48,7 +48,7 @@ defmodule Instructions.RegImmediateOffsetTest do
           op(:fallthrough)>>
 
       bitmask = <<1, 0, 0, 0, 1, 0, 0, 0, 1, 1>>
-      state = %State{registers: List.replace_at(%State{}.registers, 1, 43)}
+      state = %State{registers: %Registers{r1: 43}}
       {exit_reason, state_} = RegImmediateOffset.execute(:branch_ne_imm, program, bitmask, state)
 
       assert state_.counter == 10
@@ -58,7 +58,7 @@ defmodule Instructions.RegImmediateOffsetTest do
     test "branch_lt_u_imm compares unsigned values" do
       program = <<op(:branch_lt_u_imm), 0x11, 0xFF, 5, op(:fallthrough)>>
       bitmask = <<1, 0, 0, 0, 1>>
-      state = %State{registers: List.replace_at(%State{}.registers, 1, 0x7F)}
+      state = %State{registers: %Registers{r1: 0x7F}}
 
       {exit_reason, state_} =
         RegImmediateOffset.execute(:branch_lt_u_imm, program, bitmask, state)
@@ -70,7 +70,7 @@ defmodule Instructions.RegImmediateOffsetTest do
     test "branch_le_u_imm handles equal values" do
       program = <<op(:branch_le_u_imm), 0x11, 0x80, 5, op(:fallthrough)>>
       bitmask = <<1, 0, 0, 0, 1>>
-      state = %State{registers: List.replace_at(%State{}.registers, 1, 0x80)}
+      state = %State{registers: %Registers{r1: 0x80}}
 
       {exit_reason, state_} =
         RegImmediateOffset.execute(:branch_le_u_imm, program, bitmask, state)
@@ -82,7 +82,7 @@ defmodule Instructions.RegImmediateOffsetTest do
     test "branch_ge_u_imm handles greater values" do
       program = <<op(:branch_ge_u_imm), 0x11, 0x7F, 5, op(:fallthrough)>>
       bitmask = <<1, 0, 0, 0, 1>>
-      state = %State{registers: List.replace_at(%State{}.registers, 1, 0x80)}
+      state = %State{registers: %Registers{r1: 0x80}}
 
       {exit_reason, state_} =
         RegImmediateOffset.execute(:branch_ge_u_imm, program, bitmask, state)
@@ -94,7 +94,7 @@ defmodule Instructions.RegImmediateOffsetTest do
     test "branch_gt_u_imm handles strictly greater values" do
       program = <<op(:branch_gt_u_imm), 0x11, 0x7F, 5, op(:fallthrough)>>
       bitmask = <<1, 0, 0, 0, 1>>
-      state = %State{registers: List.replace_at(%State{}.registers, 1, 0x80)}
+      state = %State{registers: %Registers{r1: 0x80}}
 
       {exit_reason, state_} =
         RegImmediateOffset.execute(:branch_gt_u_imm, program, bitmask, state)
@@ -108,7 +108,7 @@ defmodule Instructions.RegImmediateOffsetTest do
     test "branch_lt_s_imm compares signed values" do
       program = <<op(:branch_lt_s_imm), 0x11, 0x07, 5, op(:fallthrough)>>
       bitmask = <<1, 0, 0, 0, 1>>
-      state = %State{registers: List.replace_at(%State{}.registers, 1, 0x04)}
+      state = %State{registers: %Registers{r1: 0x04}}
 
       {exit_reason, state_} =
         RegImmediateOffset.execute(:branch_lt_s_imm, program, bitmask, state)
@@ -120,7 +120,7 @@ defmodule Instructions.RegImmediateOffsetTest do
     test "branch_le_s_imm handles equal signed values" do
       program = <<op(:branch_le_s_imm), 0x11, 0x08, 5, op(:fallthrough)>>
       bitmask = <<1, 0, 0, 0, 1>>
-      state = %State{registers: List.replace_at(%State{}.registers, 1, 0x08)}
+      state = %State{registers: %Registers{r1: 0x08}}
 
       {exit_reason, state_} =
         RegImmediateOffset.execute(:branch_le_s_imm, program, bitmask, state)
@@ -132,7 +132,7 @@ defmodule Instructions.RegImmediateOffsetTest do
     test "branch_ge_s_imm handles greater signed values" do
       program = <<op(:branch_ge_s_imm), 0x11, 0x0D, 5, op(:fallthrough)>>
       bitmask = <<1, 0, 0, 0, 1>>
-      state = %State{registers: List.replace_at(%State{}.registers, 1, 0x0F)}
+      state = %State{registers: %Registers{r1: 0x0F}}
 
       {exit_reason, state_} =
         RegImmediateOffset.execute(:branch_ge_s_imm, program, bitmask, state)
@@ -144,7 +144,7 @@ defmodule Instructions.RegImmediateOffsetTest do
     test "branch_gt_s_imm handles strictly greater signed values" do
       program = <<op(:branch_gt_s_imm), 0x11, 0x0C, 5, op(:fallthrough)>>
       bitmask = <<1, 0, 0, 0, 1>>
-      state = %State{registers: List.replace_at(%State{}.registers, 1, 0x0D)}
+      state = %State{registers: %Registers{r1: 0x0D}}
 
       {exit_reason, state_} =
         RegImmediateOffset.execute(:branch_gt_s_imm, program, bitmask, state)
@@ -158,7 +158,7 @@ defmodule Instructions.RegImmediateOffsetTest do
     test "handles multi-byte immediate and offset values" do
       program = <<op(:branch_eq_imm), 0x21, 0xFF, 0x0F, 0x05, 0x00, op(:fallthrough)>>
       bitmask = <<1, 0, 0, 0, 0, 1>>
-      state = %State{registers: List.replace_at(%State{}.registers, 1, 0x0FFF)}
+      state = %State{registers: %Registers{r1: 0x0FFF}}
 
       {exit_reason, state_} =
         RegImmediateOffset.execute(:branch_eq_imm, program, bitmask, state)
@@ -170,7 +170,7 @@ defmodule Instructions.RegImmediateOffsetTest do
     test "caps register index to 12" do
       program = <<op(:branch_eq_imm), 0x5D, 0x2A, 0x00, 0x00, 0x00, 7, op(:fallthrough)>>
       bitmask = <<1, 0, 0, 0, 0, 0, 0, 1>>
-      state = %State{registers: List.replace_at(%State{}.registers, 12, 42)}
+      state = %State{registers: %Registers{r12: 42}}
 
       {exit_reason, state_} =
         RegImmediateOffset.execute(:branch_eq_imm, program, bitmask, state)

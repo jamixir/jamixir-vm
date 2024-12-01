@@ -1,7 +1,7 @@
 defmodule Instructions.TwoRegistersOneImmediateTest do
   use ExUnit.Case
   use PVM.Instructions
-  alias PVM.{Instructions.TwoRegistersOneImmediate, Memory, State}
+  alias PVM.{Instructions.TwoRegistersOneImmediate, Memory, Registers, State}
 
 
   describe "store operations" do
@@ -14,11 +14,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
     test "store_ind_u8 writes byte value" do
       program = <<op(:store_ind_u8), 0x21, 10>>
       bitmask = <<1, 0, 0>>
-      state = %State{}
-      # w_a = 42
-      state = %{state | registers: List.replace_at(state.registers, 1, 42)}
-      # w_b = 100
-      state = %{state | registers: List.replace_at(state.registers, 2, 100)}
+      state = %State{registers: %Registers{r1: 42, r2: 100}}
 
       {exit_status, state} = TwoRegistersOneImmediate.execute(:store_ind_u8, program, bitmask, state)
       assert exit_status == :continue
@@ -28,9 +24,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
     test "store_ind_u16 writes 16-bit value" do
       program = <<op(:store_ind_u16), 0x21, 10>>
       bitmask = <<1, 0, 0>>
-      state = %State{}
-      state = %{state | registers: List.replace_at(state.registers, 2, 100)}
-      state = %{state | registers: List.replace_at(state.registers, 1, 0x1234)}
+      state = %State{registers: %Registers{r2: 100, r1: 0x1234} }
 
       {exit_status, state} = TwoRegistersOneImmediate.execute(:store_ind_u16, program, bitmask, state)
       assert exit_status == :continue
@@ -40,9 +34,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
     test "store_ind_u32 writes 32-bit value" do
       program = <<op(:store_ind_u32), 0x21, 10>>
       bitmask = <<1, 0, 0>>
-      state = %State{}
-      state = %{state | registers: List.replace_at(state.registers, 2, 100)}
-      state = %{state | registers: List.replace_at(state.registers, 1, 0x12345678)}
+      state = %State{registers: %Registers{r2: 100, r1: 0x12345678}}
 
       {exit_status, state} = TwoRegistersOneImmediate.execute(:store_ind_u32, program, bitmask, state)
       assert exit_status == :continue
@@ -52,9 +44,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
     test "store_ind_u64 writes 64-bit value" do
       program = <<op(:store_ind_u64), 0x21, 10>>
       bitmask = <<1, 0, 0>>
-      state = %State{}
-      state = %{state | registers: List.replace_at(state.registers, 2, 100)}
-      state = %{state | registers: List.replace_at(state.registers, 1, 0x123456789ABCDEF0)}
+      state = %State{registers: %Registers{r2: 100, r1: 0x123456789ABCDEF0}}
 
       {exit_status, state} = TwoRegistersOneImmediate.execute(:store_ind_u64, program, bitmask, state)
       assert exit_status == :continue
@@ -69,44 +59,40 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
       program = <<op(:load_ind_u8), 0x21, 10>>
       bitmask = <<1, 0, 0>>
       {:ok, memory} = Memory.write(%Memory{}, 110, <<42>>)
-      state = %State{memory: memory}
-      state = %{state | registers: List.replace_at(state.registers, 2, 100)}
+      state = %State{memory: memory, registers: %Registers{r2: 100}}
       {exit_status, state} = TwoRegistersOneImmediate.execute(:load_ind_u8, program, bitmask, state)
       assert exit_status == :continue
-      assert Enum.at(state.registers, 1) == 42
+      assert state.registers.r1 == 42
     end
 
     test "load_ind_u16 reads 16-bit value" do
       program = <<op(:load_ind_u16), 0x21, 10>>
       bitmask = <<1, 0, 0>>
       {:ok, memory} = Memory.write(%Memory{}, 110, <<0x34, 0x12>>)
-      state = %State{memory: memory}
-      state = %{state | registers: List.replace_at(state.registers, 2, 100)}
+      state = %State{memory: memory, registers: %Registers{r2: 100}}
       {exit_status, state} = TwoRegistersOneImmediate.execute(:load_ind_u16, program, bitmask, state)
       assert exit_status == :continue
-      assert Enum.at(state.registers, 1) == 0x1234
+      assert state.registers.r1 == 0x1234
     end
 
     test "load_ind_u32 reads 32-bit value" do
       program = <<op(:load_ind_u32), 0x21, 10>>
       bitmask = <<1, 0, 0>>
       {:ok, memory} = Memory.write(%Memory{}, 110, <<0x78, 0x56, 0x34, 0x12>>)
-      state = %State{memory: memory}
-      state = %{state | registers: List.replace_at(state.registers, 2, 100)}
+      state = %State{memory: memory, registers: %Registers{r2: 100}}
       {exit_status, state} = TwoRegistersOneImmediate.execute(:load_ind_u32, program, bitmask, state)
       assert exit_status == :continue
-      assert Enum.at(state.registers, 1) == 0x12345678
+      assert state.registers.r1 == 0x12345678
     end
 
     test "load_ind_u64 reads 64-bit value" do
       program = <<op(:load_ind_u64), 0x21, 10>>
       bitmask = <<1, 0, 0>>
       {:ok, memory} = Memory.write(%Memory{}, 110, <<0xF0, 0xDE, 0xBC, 0x9A, 0x78, 0x56, 0x34, 0x12>>)
-      state = %State{memory: memory}
-      state = %{state | registers: List.replace_at(state.registers, 2, 100)}
+      state = %State{memory: memory, registers: %Registers{r2: 100}}
       {exit_status, state} = TwoRegistersOneImmediate.execute(:load_ind_u64, program, bitmask, state)
       assert exit_status == :continue
-      assert Enum.at(state.registers, 1) == 0x123456789ABCDEF0
+      assert state.registers.r1 == 0x123456789ABCDEF0
     end
   end
 
@@ -116,33 +102,30 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
       program = <<op(:load_ind_i8), 0x21, 10>>
       bitmask = <<1, 0, 0>>
       {:ok, memory} = Memory.write(%Memory{}, 110, <<0x80>>)
-      state = %State{memory: memory}
-      state = %{state | registers: List.replace_at(state.registers, 2, 100)}
+      state = %State{memory: memory, registers: %Registers{r2: 100}}
       {exit_status, state} = TwoRegistersOneImmediate.execute(:load_ind_i8, program, bitmask, state)
       assert exit_status == :continue
-      assert Enum.at(state.registers, 1) == 0xFFFF_FFFF_FFFF_FF80
+      assert state.registers.r1 == 0xFFFF_FFFF_FFFF_FF80
     end
 
     test "load_ind_i16 reads signed 16-bit value" do
       program = <<op(:load_ind_i16), 0x21, 10>>
       bitmask = <<1, 0, 0>>
       {:ok, memory} = Memory.write(%Memory{}, 110, <<0x50, 0x80>>)
-      state = %State{memory: memory}
-      state = %{state | registers: List.replace_at(state.registers, 2, 100)}
+      state = %State{memory: memory, registers: %Registers{r2: 100}}
       {exit_status, state} = TwoRegistersOneImmediate.execute(:load_ind_i16, program, bitmask, state)
       assert exit_status == :continue
-      assert Enum.at(state.registers, 1) == 0xFFFF_FFFF_FFFF_8050
+      assert state.registers.r1 == 0xFFFF_FFFF_FFFF_8050
     end
 
     test "load_ind_i32 reads signed 32-bit value" do
       program = <<op(:load_ind_i32), 0x21, 10>>
       bitmask = <<1, 0, 0>>
       {:ok, memory} = Memory.write(%Memory{}, 110, <<0x03, 0x02, 0x01, 0x80>>)
-      state = %State{memory: memory}
-      state = %{state | registers: List.replace_at(state.registers, 2, 100)}
+      state = %State{memory: memory, registers: %Registers{r2: 100}}
       {exit_status, state} = TwoRegistersOneImmediate.execute(:load_ind_i32, program, bitmask, state)
       assert exit_status == :continue
-      assert Enum.at(state.registers, 1) == 0xFFFF_FFFF_8001_0203
+      assert state.registers.r1 == 0xFFFF_FFFF_8001_0203
     end
   end
 
@@ -151,31 +134,28 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
     test "add_imm_32 performs addition" do
       program = <<op(:add_imm_32), 0x21, 5>>
       bitmask = <<1, 0, 0>>
-      state = %State{}
-      state = %{state | registers: List.replace_at(state.registers, 2, 10)}
+      state = %State{registers: %Registers{r2: 10}}
       {exit_status, state} = TwoRegistersOneImmediate.execute(:add_imm_32, program, bitmask, state)
       assert exit_status == :continue
-      assert Enum.at(state.registers, 1) == 15
+      assert state.registers.r1 == 15
     end
 
     test "mul_imm_32 performs multiplication" do
       program = <<op(:mul_imm_32), 0x21, 5>>
       bitmask = <<1, 0, 0>>
-      state = %State{}
-      state = %{state | registers: List.replace_at(state.registers, 2, 10)}
+      state = %State{registers: %Registers{r2: 10}}
       {exit_status, state} = TwoRegistersOneImmediate.execute(:mul_imm_32, program, bitmask, state)
       assert exit_status == :continue
-      assert Enum.at(state.registers, 1) == 50
+      assert state.registers.r1 == 50
     end
 
     test "neg_add_imm_32 performs negated addition" do
       program = <<op(:neg_add_imm_32), 0x21, 5>>
       bitmask = <<1, 0, 0>>
-      state = %State{}
-      state = %{state | registers: List.replace_at(state.registers, 2, 10)}
+      state = %State{registers: %Registers{r2: 10}}
       {exit_status, state} = TwoRegistersOneImmediate.execute(:neg_add_imm_32, program, bitmask, state)
       assert exit_status == :continue
-      assert Enum.at(state.registers, 1) == 0xFFFF_FFFF_FFFF_FFFB
+      assert state.registers.r1 == 0xFFFF_FFFF_FFFF_FFFB
     end
   end
 
@@ -183,31 +163,28 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
     test "and_imm performs bitwise AND" do
       program = <<op(:and_imm), 0x21, 0b0000_1011>>
       bitmask = <<1, 0, 0>>
-      state = %State{}
-      state = %{state | registers: List.replace_at(state.registers, 2, 0b1011_1101)}
+      state = %State{registers: %Registers{r2: 0b1011_1101}}
       {exit_status, state} = TwoRegistersOneImmediate.execute(:and_imm, program, bitmask, state)
       assert exit_status == :continue
-      assert Enum.at(state.registers, 1) == 0b0000_1001
+      assert state.registers.r1 == 0b0000_1001
     end
 
     test "or_imm performs bitwise OR" do
       program = <<op(:or_imm), 0x21, 0b0000_1011>>
       bitmask = <<1, 0, 0>>
-      state = %State{}
-      state = %{state | registers: List.replace_at(state.registers, 2, 0b1011_1101)}
+      state = %State{registers: %Registers{r2: 0b1011_1101}}
       {exit_status, state} = TwoRegistersOneImmediate.execute(:or_imm, program, bitmask, state)
       assert exit_status == :continue
-      assert Enum.at(state.registers, 1) == 0b1011_1111
+      assert state.registers.r1 == 0b1011_1111
     end
 
     test "xor_imm performs bitwise XOR" do
       program = <<op(:xor_imm), 0x21, 0b0010_1011>>
       bitmask = <<1, 0, 0>>
-      state = %State{}
-      state = %{state | registers: List.replace_at(state.registers, 2, 0b1011_1101)}
+      state = %State{registers: %Registers{r2: 0b1011_1101}}
       {exit_status, state} = TwoRegistersOneImmediate.execute(:xor_imm, program, bitmask, state)
       assert exit_status == :continue
-      assert Enum.at(state.registers, 1) == 0b1001_0110
+      assert state.registers.r1 == 0b1001_0110
     end
   end
 
@@ -215,42 +192,37 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
     test "set_lt_u_imm sets register when unsigned less than" do
       program = <<op(:set_lt_u_imm), 0x21, 0x10>>
       bitmask = <<1, 0, 0>>
-      state = %State{}
-      state = %{state | registers: List.replace_at(state.registers, 2, 0x0F)}
+      state = %State{registers: %Registers{r2: 0x0F}}
       {exit_status, state} = TwoRegistersOneImmediate.execute(:set_lt_u_imm, program, bitmask, state)
       assert exit_status == :continue
-      assert Enum.at(state.registers, 1) == 1
+      assert state.registers.r1 == 1
     end
 
     test "set_lt_s_imm sets register when signed less than" do
       program = <<op(:set_lt_s_imm), 0x21, 0x79>>
       bitmask = <<1, 0, 0>>
-      state = %State{}
-      state = %{state | registers: List.replace_at(state.registers, 2, 0x78)}
+      state = %State{registers: %Registers{r2: 0x78}}
       {exit_status, state} = TwoRegistersOneImmediate.execute(:set_lt_s_imm, program, bitmask, state)
       assert exit_status == :continue
-      assert Enum.at(state.registers, 1) == 1
+      assert state.registers.r1 == 1
     end
 
     test "set_gt_u_imm sets register when unsigned greater than" do
       program = <<op(:set_gt_u_imm), 0x21, 0x10>>
       bitmask = <<1, 0, 0>>
-      state = %State{}
-      state = %{state | registers: List.replace_at(state.registers, 2, 0x11)}
+      state = %State{registers: %Registers{r2: 0x11}}
       {exit_status, state} = TwoRegistersOneImmediate.execute(:set_gt_u_imm, program, bitmask, state)
       assert exit_status == :continue
-      assert Enum.at(state.registers, 1) == 1
+      assert state.registers.r1 == 1
     end
 
     test "set_gt_s_imm sets register when signed greater than" do
       program = <<op(:set_gt_s_imm), 0x21, 0xFF>>
       bitmask = <<1, 0, 0>>
-      state = %State{}
-      # 127 in signed
-      state = %{state | registers: List.replace_at(state.registers, 2, 0x7F)}
+      state = %State{registers: %Registers{r2: 0x7F}}
       {exit_status, state} = TwoRegistersOneImmediate.execute(:set_gt_s_imm, program, bitmask, state)
       assert exit_status == :continue
-      assert Enum.at(state.registers, 1) == 1
+      assert state.registers.r1 == 1
     end
   end
 
@@ -258,31 +230,28 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
     test "shlo_l_imm shifts left" do
       program = <<op(:shlo_l_imm_32), 0x21, 2>>
       bitmask = <<1, 0, 0>>
-      state = %State{}
-      state = %{state | registers: List.replace_at(state.registers, 2, 3)}
+      state = %State{registers: %Registers{r2: 3}}
       {exit_status, state} = TwoRegistersOneImmediate.execute(:shlo_l_imm_32, program, bitmask, state)
       assert exit_status == :continue
-      assert Enum.at(state.registers, 1) == 12
+      assert state.registers.r1 == 12
     end
 
     test "shlo_r_imm shifts right" do
       program = <<op(:shlo_r_imm_32), 0x21, 1>>
       bitmask = <<1, 0, 0>>
-      state = %State{}
-      state = %{state | registers: List.replace_at(state.registers, 2, 4)}
+      state = %State{registers: %Registers{r2: 4}}
       {exit_status, state} = TwoRegistersOneImmediate.execute(:shlo_r_imm_32, program, bitmask, state)
       assert exit_status == :continue
-      assert Enum.at(state.registers, 1) == 2
+      assert state.registers.r1 == 2
     end
 
     test "shar_r_imm performs arithmetic right shift" do
       program = <<op(:shar_r_imm_32), 0x21, 1>>
       bitmask = <<1, 0, 0>>
-      state = %State{}
-      state = %{state | registers: List.replace_at(state.registers, 2, 0xFFFF_FFFC)}
+      state = %State{ registers: %Registers{r2: 0xFFFF_FFFC}}
       {exit_status, state} = TwoRegistersOneImmediate.execute(:shar_r_imm_32, program, bitmask, state)
       assert exit_status == :continue
-      assert Enum.at(state.registers, 1) == 0xFFFF_FFFF_FFFF_FFFE
+      assert state.registers.r1 == 0xFFFF_FFFF_FFFF_FFFE
     end
   end
 
@@ -290,34 +259,28 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
     test "shlo_l_imm_alt_32 performs alternative left shift" do
       program = <<op(:shlo_l_imm_alt_32), 0x21, 0x78>>
       bitmask = <<1, 0, 0>>
-      state = %State{}
-      # shift by 4
-      state = %{state | registers: List.replace_at(state.registers, 2, 4)}
+      state = %State{registers: %Registers{r2: 4}}
       {exit_status, state} = TwoRegistersOneImmediate.execute(:shlo_l_imm_alt_32, program, bitmask, state)
       assert exit_status == :continue
-      assert Enum.at(state.registers, 1) == 0x780
+      assert state.registers.r1 == 0x780
     end
 
     test "shlo_r_imm_alt_32 performs alternative right shift" do
       program = <<op(:shlo_r_imm_alt_32), 0x21, 0x78>>
       bitmask = <<1, 0, 0>>
-      state = %State{}
-      # shift by 4
-      state = %{state | registers: List.replace_at(state.registers, 2, 4)}
+      state = %State{registers: %Registers{r2: 4}}
       {exit_status, state} = TwoRegistersOneImmediate.execute(:shlo_r_imm_alt_32, program, bitmask, state)
       assert exit_status == :continue
-      assert Enum.at(state.registers, 1) == 0x7
+      assert state.registers.r1 == 0x7
     end
 
     test "shar_r_imm_alt_32 performs alternative arithmetic right shift" do
       program = <<op(:shar_r_imm_alt_32), 0x21, 0x78>>
       bitmask = <<1, 0, 0>>
-      state = %State{}
-      # shift by 4
-      state = %{state | registers: List.replace_at(state.registers, 2, 4)}
+      state = %State{registers: %Registers{r2: 4}}
       {exit_status, state} = TwoRegistersOneImmediate.execute(:shar_r_imm_alt_32, program, bitmask, state)
       assert exit_status == :continue
-      assert Enum.at(state.registers, 1) == 0x7
+      assert state.registers.r1 == 0x7
     end
   end
 
@@ -325,21 +288,19 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
     test "cmov_iz_imm moves immediate when register is zero" do
       program = <<op(:cmov_iz_imm), 0x21, 42>>
       bitmask = <<1, 0, 0>>
-      state = %State{}
-      state = %{state | registers: List.replace_at(state.registers, 2, 0)}
+      state = %State{registers: %Registers{r2: 0}}
       {exit_status, state} = TwoRegistersOneImmediate.execute(:cmov_iz_imm, program, bitmask, state)
       assert exit_status == :continue
-      assert Enum.at(state.registers, 1) == 42
+      assert state.registers.r1 == 42
     end
 
     test "cmov_nz_imm moves immediate when register is non-zero" do
       program = <<op(:cmov_nz_imm), 0x21, 42>>
       bitmask = <<1, 0, 0>>
-      state = %State{}
-      state = %{state | registers: List.replace_at(state.registers, 2, 1)}
+      state = %State{registers: %Registers{r2: 1}}
       {exit_status, state} = TwoRegistersOneImmediate.execute(:cmov_nz_imm, program, bitmask, state)
       assert exit_status == :continue
-      assert Enum.at(state.registers, 1) == 42
+      assert state.registers.r1 == 42
     end
   end
 
@@ -347,31 +308,28 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
     test "add_imm_64 performs 64-bit addition" do
       program = <<op(:add_imm_64), 0x21, 0x01, 0x02>>
       bitmask = <<1, 0, 0, 0>>
-      state = %State{}
-      state = %{state | registers: List.replace_at(state.registers, 2, 0xFFFF_FFFF_0000_0000)}
+      state = %State{registers: %Registers{r2: 0xFFFF_FFFF_0000_0000}}
       {exit_status, state} = TwoRegistersOneImmediate.execute(:add_imm_64, program, bitmask, state)
       assert exit_status == :continue
-      assert Enum.at(state.registers, 1) == 0xFFFF_FFFF_0000_0201
+      assert state.registers.r1 == 0xFFFF_FFFF_0000_0201
     end
 
     test "mul_imm_64 performs 64-bit multiplication" do
       program = <<op(:mul_imm_64), 0x21, 2>>
       bitmask = <<1, 0, 0>>
-      state = %State{}
-      state = %{state | registers: List.replace_at(state.registers, 2, 0x8000_0000_0000_0000)}
+      state = %State{registers: %Registers{r2: 0x8000_0000_0000_0000}}
       {exit_status, state} = TwoRegistersOneImmediate.execute(:mul_imm_64, program, bitmask, state)
       assert exit_status == :continue
-      assert Enum.at(state.registers, 1) == 0
+      assert state.registers.r1 == 0
     end
 
     test "neg_add_imm_64 performs 64-bit negated addition" do
       program = <<op(:neg_add_imm_64), 0x21, 5>>
       bitmask = <<1, 0, 0>>
-      state = %State{}
-      state = %{state | registers: List.replace_at(state.registers, 2, 10)}
+      state = %State{registers: %Registers{r2: 10}}
       {exit_status, state} = TwoRegistersOneImmediate.execute(:neg_add_imm_64, program, bitmask, state)
       assert exit_status == :continue
-      assert Enum.at(state.registers, 1) == 0xFFFF_FFFF_FFFF_FFFB
+      assert state.registers.r1 == 0xFFFF_FFFF_FFFF_FFFB
     end
   end
 
@@ -379,41 +337,37 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
     test "shlo_l_imm_64 performs 64-bit left shift" do
       program = <<op(:shlo_l_imm_64), 0x21, 4>>
       bitmask = <<1, 0, 0>>
-      state = %State{}
-      state = %{state | registers: List.replace_at(state.registers, 2, 0x1234_5678_9ABC_DEF0)}
+      state = %State{registers: %Registers{r2: 0x1234_5678_9ABC_DEF0}}
       {exit_status, state} = TwoRegistersOneImmediate.execute(:shlo_l_imm_64, program, bitmask, state)
       assert exit_status == :continue
-      assert Enum.at(state.registers, 1) == 0x2345_6789_ABCD_EF00
+      assert state.registers.r1 == 0x2345_6789_ABCD_EF00
     end
 
     test "shlo_r_imm_64 performs 64-bit logical right shift" do
       program = <<op(:shlo_r_imm_64), 0x21, 4>>
       bitmask = <<1, 0, 0>>
-      state = %State{}
-      state = %{state | registers: List.replace_at(state.registers, 2, 0x1234_5678_9ABC_DEF0)}
+      state = %State{registers: %Registers{r2: 0x1234_5678_9ABC_DEF0}}
       {exit_status, state} = TwoRegistersOneImmediate.execute(:shlo_r_imm_64, program, bitmask, state)
       assert exit_status == :continue
-      assert Enum.at(state.registers, 1) == 0x0123_4567_89AB_CDEF
+      assert state.registers.r1 == 0x0123_4567_89AB_CDEF
     end
 
     test "shar_r_imm_64 performs 64-bit arithmetic right shift" do
       program = <<op(:shar_r_imm_64), 0x21, 4>>
       bitmask = <<1, 0, 0>>
-      state = %State{}
-      state = %{state | registers: List.replace_at(state.registers, 2, 0xF234_5678_9ABC_DEF0)}
+      state = %State{registers: %Registers{r2: 0xF234_5678_9ABC_DEF0}}
       {exit_status, state} = TwoRegistersOneImmediate.execute(:shar_r_imm_64, program, bitmask, state)
       assert exit_status == :continue
-      assert Enum.at(state.registers, 1) == 0xFF23_4567_89AB_CDEF
+      assert state.registers.r1 == 0xFF23_4567_89AB_CDEF
     end
 
     test "shift operations handle shift amount modulo 64" do
       program = <<op(:shlo_l_imm_64), 0x21, 68>>
       bitmask = <<1, 0, 0>>
-      state = %State{}
-      state = %{state | registers: List.replace_at(state.registers, 2, 0x1234_5678_9ABC_DEF0)}
+      state = %State{registers: %Registers{r2: 0x1234_5678_9ABC_DEF0}}
       {exit_status, state} = TwoRegistersOneImmediate.execute(:shlo_l_imm_64, program, bitmask, state)
       assert exit_status == :continue
-      assert Enum.at(state.registers, 1) == 0x2345_6789_ABCD_EF00
+      assert state.registers.r1 == 0x2345_6789_ABCD_EF00
     end
   end
 
@@ -421,31 +375,28 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
     test "shlo_l_imm_alt_64 performs alternative left shift" do
       program = <<op(:shlo_l_imm_alt_64), 0x21, 0x78, 0x56, 0x34, 0x12>>
       bitmask = <<1, 0, 0, 0, 0, 0>>
-      state = %State{}
-      state = %{state | registers: List.replace_at(state.registers, 2, 4)}
+      state = %State{registers: %Registers{r2: 4}}
       {exit_status, state} = TwoRegistersOneImmediate.execute(:shlo_l_imm_alt_64, program, bitmask, state)
       assert exit_status == :continue
-      assert Enum.at(state.registers, 1) == 0x1234_56780
+      assert state.registers.r1 == 0x1234_56780
     end
 
     test "shlo_r_imm_alt_64 performs alternative right shift" do
       program = <<op(:shlo_r_imm_alt_64), 0x21, 0x78, 0x56, 0x34, 0x12>>
       bitmask = <<1, 0, 0, 0, 0, 0>>
-      state = %State{}
-      state = %{state | registers: List.replace_at(state.registers, 2, 4)}
+      state = %State{registers: %Registers{r2: 4}}
       {exit_status, state} = TwoRegistersOneImmediate.execute(:shlo_r_imm_alt_64, program, bitmask, state)
       assert exit_status == :continue
-      assert Enum.at(state.registers, 1) == 0x0123_4567
+      assert state.registers.r1 == 0x0123_4567
     end
 
     test "shar_r_imm_alt_64 performs alternative arithmetic right shift" do
       program = <<op(:shar_r_imm_alt_64), 0x21, 0xF2, 0x34, 0x56, 0x78>>
       bitmask = <<1, 0, 0, 0, 0, 0>>
-      state = %State{}
-      state = %{state | registers: List.replace_at(state.registers, 2, 4)}
+      state = %State{registers: %Registers{r2: 4}}
       {exit_status, state} = TwoRegistersOneImmediate.execute(:shar_r_imm_alt_64, program, bitmask, state)
       assert exit_status == :continue
-      assert Enum.at(state.registers, 1) == 0x7856_34F
+      assert state.registers.r1 == 0x7856_34F
     end
   end
 end
