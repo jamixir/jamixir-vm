@@ -85,7 +85,6 @@ defmodule PVM.InitProgram do
     w_size = byte_size(w)
     a_size = byte_size(a)
 
-    # Calculate all memory regions upfront for validation
     regions = [
       # Program text region: [Zq, Zq + |o|] => R
       {@zq, @zq + o_size, o, :read},
@@ -106,19 +105,8 @@ defmodule PVM.InitProgram do
       {@max_addr - @zq - @zi + a_size, @max_addr - @zq - @zi + p(a_size), nil, :read}
     ]
 
-    # Log expected memory layout for debugging
-    Logger.debug(fn ->
-      regions
-      |> Enum.map(fn {start, end_, _data, access} ->
-        "0x#{Integer.to_string(start, 16)}-0x#{Integer.to_string(end_, 16)} => #{access}"
-      end)
-      |> Enum.join("\n")
-    end)
-
-    # Initialize memory with page size
     memory = Memory.set_page_size(%Memory{}, @zp)
 
-    # Apply all regions at once
     memory =
       Enum.reduce(regions, memory, fn
         {start, end_, nil, access}, mem ->
@@ -134,11 +122,4 @@ defmodule PVM.InitProgram do
     # Set remaining memory as inaccessible
     |> Memory.set_default_access(nil)
   end
-
-  # @spec write_with_access(Memory.t(), integer(), binary(), :read | :write | nil) :: Memory.t()
-  # defp write_with_access(memory, address, data, access) do
-  #   size = byte_size(data)
-  #   {:ok, memory} = Memory.write(memory, address, data)
-  #   Memory.set_access(memory, address, size, access)
-  # end
 end
