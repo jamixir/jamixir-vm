@@ -29,8 +29,8 @@ defmodule PVM.ArgInvoc do
 
   # Transform results according to R function (A.37)
   defp transform_result(:halt, state, context) do
-    start_addr = Enum.at(state.registers, 10)
-    end_addr = Enum.at(state.registers, 11)
+    start_addr = state.registers.r10
+    end_addr = state.registers.r11
 
     case Memory.read(state.memory, start_addr, end_addr - start_addr) do
       {:ok, data} -> {state.gas, data, context}
