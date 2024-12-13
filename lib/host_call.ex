@@ -6,6 +6,8 @@ defmodule PVM.HostCall do
   alias PVM.{Decoder, State, Types, VM}
   use PVM.Utils
 
+  require Logger
+
   @doc """
   Executes a host call state transition according to ΨH definition.
   """
