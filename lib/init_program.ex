@@ -1,11 +1,14 @@
 defmodule PVM.InitProgram do
   alias PVM.{Decoder, Memory, Registers}
   import Bitwise
+  require Logger
 
   # Constants from A.31
-  def zp, do: 1 <<< 14
-  def zq, do: 1 <<< 16
-  def zi, do: 1 <<< 24
+  @zp 0x4000
+  @zq 0x10000
+  @zi 0x1000000
+  # 2^32
+  @max_addr 0x100000000
 
   def parse_program_segments(binary) when byte_size(binary) >= 15 do
     with {:ok, o_size, rest} <- read_size(binary, 3),
@@ -63,12 +66,12 @@ defmodule PVM.InitProgram do
 
   defp read_final_segment(_, _), do: :error
 
-  def q(x), do: ceil(x / zq()) * zq()
-  def p(x), do: ceil(x / zp()) * zp()
+  def q(x), do: ceil(x / @zq) * @zq
+  def p(x), do: ceil(x / @zp) * @zp
 
   # Implements condition A.33: 5Zq + Q(|o|) + Q(|w| + zZp) + Q(s) + Zi ≤ 2^32
   def verify_size_constraint(o_size, w_size, z, s) do
-    q(o_size) + q(w_size + z * zp()) + q(s) <= (1 <<< 32) - 5 * zq() - zi()
+    q(o_size) + q(w_size + z * @zp) + q(s) <= (1 <<< 32) - 5 * @zq - @zi
   end
 
   def initialize_registers(a) do
@@ -81,32 +84,61 @@ defmodule PVM.InitProgram do
     o_size = byte_size(o)
     w_size = byte_size(w)
     a_size = byte_size(a)
-    memory = Memory.set_page_size(%Memory{}, zp())
 
+    # Calculate all memory regions upfront for validation
+    regions = [
+      # Program text region: [Zq, Zq + |o|] => R
+      {@zq, @zq + o_size, o, :read},
+      # Program text padding: [Zq + |o|, Zq + P(|o|)] => R
+      {@zq + o_size, @zq + p(o_size), nil, :read},
+
+      # Data region: [2Zq + Q(|o|), 2Zq + Q(|o|) + |w|] => W
+      {2 * @zq + q(o_size), 2 * @zq + q(o_size) + w_size, w, :write},
+      # Data padding: [2Zq + Q(|o|) + |w|, 2Zq + Q(|o|) + P(|w|) + zZp] => W
+      {2 * @zq + q(o_size) + w_size, 2 * @zq + q(o_size) + p(w_size) + z * @zp, nil, :write},
+
+      # Stack region: [2^32 - 2Zq - Zi - P(s), 2^32 - 2Zq - Zi] => W
+      {@max_addr - 2 * @zq - @zi - p(s), @max_addr - 2 * @zq - @zi, nil, :write},
+
+      # Args region: [2^32 - Zq - Zi, 2^32 - Zq - Zi + |a|] => R
+      {@max_addr - @zq - @zi, @max_addr - @zq - @zi + a_size, a, :read},
+      # Args padding: [2^32 - Zq - Zi + |a|, 2^32 - Zq - Zi + P(|a|)] => R
+      {@max_addr - @zq - @zi + a_size, @max_addr - @zq - @zi + p(a_size), nil, :read}
+    ]
+
+    # Log expected memory layout for debugging
+    Logger.debug(fn ->
+      regions
+      |> Enum.map(fn {start, end_, _data, access} ->
+        "0x#{Integer.to_string(start, 16)}-0x#{Integer.to_string(end_, 16)} => #{access}"
+      end)
+      |> Enum.join("\n")
+    end)
+
+    # Initialize memory with page size
+    memory = Memory.set_page_size(%Memory{}, @zp)
+
+    # Apply all regions at once
     memory =
-      memory
-      |> write_with_access(zq(), o, :read)
-      |> write_with_access(2 * zq() + q(o_size), w, :write)
-      |> write_with_access(1 <<< (32 - zq() - zi()), a, :read)
+      Enum.reduce(regions, memory, fn
+        {start, end_, nil, access}, mem ->
+          Memory.set_access(mem, start, end_ - start, access)
 
-    # Set access permissions for padding regions
-    memory =
-      memory
-      |> Memory.set_access(zq() + o_size, p(o_size) - o_size, :read)
-      |> Memory.set_access(2 * zq() + q(o_size) + w_size, p(w_size) + z * zp() - w_size, :write)
-      # stack area
-      |> Memory.set_access(1 <<< (32 - 2 * zq() - zi() - p(s)), p(s), :write)
-      |> Memory.set_access(1 <<< (32 - zq() - zi() + a_size), p(a_size) - a_size, :read)
+        {start, _end, data, access}, mem ->
+          {:ok, mem} = Memory.write(mem, start, data)
+          Memory.set_access(mem, start, byte_size(data), access)
+      end)
 
-    memory = Memory.reset_page_size(memory)
+    memory
+    |> Memory.reset_page_size()
     # Set remaining memory as inaccessible
-    Memory.set_default_access(memory, nil)
+    |> Memory.set_default_access(nil)
   end
 
-  @spec write_with_access(Memory.t(), integer(), binary(), :read | :write | nil) :: Memory.t()
-  defp write_with_access(memory, address, data, access) do
-    size = byte_size(data)
-    {:ok, memory} = Memory.write(memory, address, data)
-    Memory.set_access(memory, address, size, access)
-  end
+  # @spec write_with_access(Memory.t(), integer(), binary(), :read | :write | nil) :: Memory.t()
+  # defp write_with_access(memory, address, data, access) do
+  #   size = byte_size(data)
+  #   {:ok, memory} = Memory.write(memory, address, data)
+  #   Memory.set_access(memory, address, size, access)
+  # end
 end

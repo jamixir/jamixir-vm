@@ -38,7 +38,7 @@ defmodule PVM.HostCall do
       {:fault, page} ->
         {{:fault, page}, state, context}
 
-      {:continue, {new_state, new_context}} ->
+      {:continue, new_state, new_context} ->
         {_, bitmask, _} = Decoder.decode_program(program)
         skip = skip(state.counter, bitmask)
         next_counter = state.counter + 1 + skip
