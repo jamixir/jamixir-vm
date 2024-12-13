@@ -34,7 +34,9 @@ defmodule PVM.HostCall do
         ) ::
           {Types.exit_reason() | Types.fault_result(), State.t(), Types.context()}
   defp handle_host_call(host_data, state, host_fn, context, program) do
-    case host_fn.(host_data, state, context) do
+    r = host_fn.(host_data, state, context)
+    Logger.info("Host call result: #{inspect(r)}")
+    case r do
       {:fault, page} ->
         {{:fault, page}, state, context}
 
