@@ -93,7 +93,7 @@ defmodule Instructions.RegImmediateTest do
 
     test "load_imm_64 loads 64-bit immediate value into register" do
       # Create program with load_imm_64 instruction (0x26), register 1, and 64-bit value
-      program = <<op(:load_imm_64), 0x02, 0x56, 0x34, 0x12, 0xFC, 0xDE, 0xBA, 0x98>>
+      program = <<op(:load_imm_64), 1, 0x02, 0x56, 0x34, 0x12, 0xFC, 0xDE, 0xBA, 0x98>>
       bitmask = <<1, 0, 0, 0, 0, 0, 0, 0, 0>>
       jump_table = []
 
@@ -101,7 +101,7 @@ defmodule Instructions.RegImmediateTest do
         RegImmediate.execute(:load_imm_64, program, bitmask, jump_table, %State{})
 
       assert exit_status == :continue
-      assert state.registers.r2 == 0x98BADEFC12345602
+      assert state.registers.r1 == 0x98BADEFC12345602
     end
 
     test "load_imm_64 handles register index greater than 12" do

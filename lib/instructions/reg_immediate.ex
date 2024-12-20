@@ -187,7 +187,7 @@ defmodule PVM.Instructions.RegImmediate do
     register_index =
       min(12, rem(binary_part(program, state.counter + 1, 1) |> :binary.first(), 16))
 
-    value = de_le(binary_part(program, state.counter + 1, 8), 8)
+    value = de_le(binary_part(program, state.counter + 2, 8), 8)
     state = %{state | registers: Registers.set(state.registers, register_index, value)}
     {:continue, state}
   end
