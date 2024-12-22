@@ -17,42 +17,57 @@ defmodule PVM.Registers do
           :r0 | :r1 | :r2 | :r3 | :r4 | :r5 | :r6 | :r7 | :r8 | :r9 | :r10 | :r11 | :r12 | 0..12
   @type t :: %__MODULE__{}
 
-  @spec get(t(), register() | [register()]) :: integer() | %{register() => integer()}
+  @spec get(t(), register()) :: integer()
   def get(%__MODULE__{} = reg, register) when is_atom(register) do
     Map.get(reg, register)
   end
 
-  def get(%__MODULE__{} = reg, registers) when is_list(registers) do
-    registers
-    |> Enum.map(fn
-      reg_num when is_integer(reg_num) -> String.to_atom("r#{reg_num}")
-      reg_atom -> reg_atom
-    end)
-    |> Enum.map(fn reg_name -> Map.get(reg, reg_name) end)
+  @spec get(t(), [atom()]) :: [integer()]
+  def get(%__MODULE__{} = reg, registers) when is_list(registers) and is_atom(hd(registers)) do
+    Enum.map(registers, &Map.get(reg, &1))
   end
 
+  @spec get(t(), [integer()]) :: [integer()]
+  def get(%__MODULE__{} = reg, registers) when is_list(registers) and is_integer(hd(registers)) do
+    registers
+    |> Enum.map(&String.to_atom("r#{&1}"))
+    |> Enum.map(&Map.get(reg, &1))
+  end
+
+  @spec get(t(), integer()) :: integer()
   def get(%__MODULE__{} = reg, register) when is_integer(register) and register in 0..12 do
     get(reg, String.to_atom("r#{register}"))
   end
 
-  @spec set(t(), register(), integer()) :: t()
-  @spec set(t(), %{register() => integer()}) :: t()
+  @spec set(t(), atom(), integer()) :: t()
   def set(%__MODULE__{} = reg, register, value) when is_atom(register) and is_integer(value) do
     %{reg | register => value}
   end
 
+  @spec set(t(), integer(), integer()) :: t()
   def set(%__MODULE__{} = reg, register, value)
       when is_integer(register) and register in 0..12 and is_integer(value) do
     set(reg, String.to_atom("r#{register}"), value)
   end
 
+  @spec set(t(), %{atom() => integer()}) :: t()
   def set(%__MODULE__{} = reg, updates) when is_map(updates) do
-    updates
-    |> Enum.map(fn
-      {reg_num, value} when is_integer(reg_num) -> {String.to_atom("r#{reg_num}"), value}
-      other -> other
-    end)
-    |> Map.new()
-    |> then(fn updates -> struct!(reg, updates) end)
+    if Enum.all?(Map.keys(updates), &is_atom/1) do
+      struct!(reg, updates)
+    else
+      raise ArgumentError, "All keys must be atoms"
+    end
+  end
+
+  @spec set(t(), %{integer() => integer()}) :: t()
+  def set(%__MODULE__{} = reg, updates) when is_map(updates) do
+    if Enum.all?(Map.keys(updates), &is_integer/1) do
+      updates
+      |> Enum.map(fn {reg_num, value} -> {String.to_atom("r#{reg_num}"), value} end)
+      |> Map.new()
+      |> then(fn updates -> struct!(reg, updates) end)
+    else
+      raise ArgumentError, "All keys must be integers"
+    end
   end
 end
