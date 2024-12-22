@@ -13,7 +13,8 @@ defmodule PVM.Registers do
             r11: 0,
             r12: 0
 
-  @type register :: :r0 | :r1 | :r2 | :r3 | :r4 | :r5 | :r6 | :r7 | :r8 | :r9 | :r10 | :r11 | :r12 | 0..12
+  @type register ::
+          :r0 | :r1 | :r2 | :r3 | :r4 | :r5 | :r6 | :r7 | :r8 | :r9 | :r10 | :r11 | :r12 | 0..12
   @type t :: %__MODULE__{}
 
   @spec get(t(), register() | [register()]) :: integer() | %{register() => integer()}
@@ -40,6 +41,11 @@ defmodule PVM.Registers do
     %{reg | register => value}
   end
 
+  def set(%__MODULE__{} = reg, register, value)
+      when is_integer(register) and register in 0..12 and is_integer(value) do
+    set(reg, String.to_atom("r#{register}"), value)
+  end
+
   def set(%__MODULE__{} = reg, updates) when is_map(updates) do
     updates
     |> Enum.map(fn
@@ -48,9 +54,5 @@ defmodule PVM.Registers do
     end)
     |> Map.new()
     |> then(fn updates -> struct!(reg, updates) end)
-  end
-
-  def set(%__MODULE__{} = reg, register, value) when is_integer(register) and register in 0..12 and is_integer(value) do
-    set(reg, String.to_atom("r#{register}"), value)
   end
 end

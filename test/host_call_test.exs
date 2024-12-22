@@ -1,6 +1,6 @@
 defmodule PVM.HostCallTest do
   use ExUnit.Case
-  alias PVM.{HostCall, State, VM}
+  alias PVM.{HostCall, State}
   use PVM.Instructions
 
   def create_program(program, bitmask, jump_table \\ [], z \\ 1) do

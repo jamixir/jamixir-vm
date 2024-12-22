@@ -106,7 +106,7 @@ defmodule Instructions.RegImmediateTest do
 
     test "load_imm_64 handles register index greater than 12" do
       # Test with register index 15 (should be capped to 12)
-      program = <<op(:load_imm_64), 0x0F, 0x56, 0x34, 0x12, 0xFC, 0xDE, 0xBA, 0x98>>
+      program = <<op(:load_imm_64), 15,0x0F, 0x56, 0x34, 0x12, 0xFC, 0xDE, 0xBA, 0x98>>
       bitmask = <<1, 0, 0, 0, 0, 0, 0, 0, 0>>
       jump_table = []
 

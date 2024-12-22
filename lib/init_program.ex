@@ -10,6 +10,11 @@ defmodule PVM.InitProgram do
   # 2^32
   @max_addr 0x100000000
 
+  def zp, do: @zp
+  def zq, do: @zq
+  def zi, do: @zi
+  def max_addr, do: @max_addr
+
   def parse_program_segments(binary) when byte_size(binary) >= 15 do
     with {:ok, o_size, rest} <- read_size(binary, 3),
          {:ok, w_size, rest} <- read_size(rest, 3),

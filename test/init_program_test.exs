@@ -163,7 +163,7 @@ defmodule PVM.InitProgramTest do
       assert {:ok, _} = Memory.write(memory, w_start, "test")
 
       # Test arguments (read-only)
-      args_start = 1 <<< 32 - InitProgram.zq() - InitProgram.zi()
+      args_start = InitProgram.max_addr()  - InitProgram.zq() - InitProgram.zi()
       assert {:ok, "args"} = Memory.read(memory, args_start, 4)
       assert {:error, {:fault, _}} = Memory.write(memory, args_start, "fail")
     end

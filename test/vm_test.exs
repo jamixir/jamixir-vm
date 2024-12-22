@@ -151,13 +151,13 @@ defmodule VMTest do
       # store_u64 r1, 24
       program = <<
         op(:store_imm_u64), 1, 16, 0x78, 0x56, 0x34, 0x12,  # Only 32-bit immediate
-        op(:load_imm_64), 0x01, 0x10, 0x32, 0x54, 0x76, 0x98, 0xBA, 0xDC,
+        op(:load_imm_64), 0x01, 0x01, 0x10, 0x32, 0x54, 0x76, 0x98, 0xBA, 0xDC,
         op(:store_u64), 1, 24
       >>
 
       bitmask = <<
         1, 0, 0, 0, 0, 0,0,              # store_imm_u64 (4-byte immediate)
-        1, 0, 0, 0, 0, 0, 0, 0, 0,  # load_imm_64 (8-byte immediate)
+        1, 0, 0, 0, 0, 0, 0, 0, 0, 0,  # load_imm_64 (8-byte immediate)
         1, 0, 0                         # store_u64
       >>
 
