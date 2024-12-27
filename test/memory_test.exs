@@ -298,7 +298,7 @@ defmodule MemoryTest do
   test "handles page permissions when access wraps memory" do
     memory = %Memory{}
     # Last two bytes of memory
-    wrap_addr = Memory.memory_size() - 2
+    wrap_addr = memory.size - 2
 
     # Make last page read-only
     memory = Memory.set_access(memory, wrap_addr, 1, :read)
@@ -407,6 +407,86 @@ defmodule MemoryTest do
       assert {:error, {:fault, 2}} = Memory.write(memory, @page_size * 2, <<1>>)
       assert {:ok, _} = Memory.read(memory, @page_size * 3, 10)
       assert {:error, {:fault, 3}} = Memory.write(memory, @page_size * 3, <<1>>)
+    end
+  end
+
+  describe "memory size operations" do
+    test "basic operations with custom memory size" do
+      memory = %Memory{}
+               |> Memory.set_size(10240)  # 10KB
+               |> Memory.set_page_size(1024)  # 1KB pages, so 10 pages total
+
+      # Verify number of pages
+      assert Memory.number_of_pages(memory) == 10
+
+      # Test write/read within bounds
+      {:ok, memory} = Memory.write(memory, 5120, <<1, 2, 3, 4>>)  # Write at page 5
+      assert {:ok, <<1, 2, 3, 4>>} = Memory.read(memory, 5120, 4)
+
+      # Test address wrapping
+      {:ok, memory} = Memory.write(memory, 10240, <<5, 6>>)  # Should wrap to address 0
+      assert {:ok, <<5, 6>>} = Memory.read(memory, 0, 2)
+
+      # Test cross-page operations
+      {:ok, memory} = Memory.write(memory, 1022, <<7, 8, 9, 10>>)  # Cross pages 0-1
+      assert {:ok, <<7, 8, 9, 10>>} = Memory.read(memory, 1022, 4)
+
+      # Test permissions
+      memory = Memory.set_access(memory, 3072, 1024, :read)  # Make page 3 read-only
+      assert {:error, {:fault, 3}} = Memory.write(memory, 3072, <<1>>)
+      assert {:ok, <<0>>} = Memory.read(memory, 3072, 1)
+
+      # Test large addresses wrap correctly
+      big_addr = 100_000
+      wrapped_addr = rem(big_addr, 10240)
+      {:ok, memory} = Memory.write(memory, big_addr, <<42>>)
+      assert {:ok, <<42>>} = Memory.read(memory, wrapped_addr, 1)
+    end
+
+    test "page operations with custom memory size" do
+      memory = %Memory{}
+               |> Memory.set_size(10240)  # 10KB
+               |> Memory.set_page_size(1024)  # 1KB pages
+
+      # Set permissions by page
+      memory = Memory.set_access_by_page(memory, 8, 3, :read)  # Should wrap to page 0
+
+      # Check permissions wrapped correctly
+      assert Memory.check_pages_access?(memory, 8, 1, :read)
+      assert Memory.check_pages_access?(memory, 9, 1, :read)
+      assert Memory.check_pages_access?(memory, 0, 1, :read)
+      assert Memory.check_pages_access?(memory, 1, 1, :write)  # Default access
+
+      # Test page range wrapping
+      memory = Memory.set_access_by_page(memory, 9, 2, nil)  # Should affect pages 9 and 0
+      refute Memory.check_pages_access?(memory, 9, 1, :read)
+      refute Memory.check_pages_access?(memory, 0, 1, :read)
+    end
+
+    test "invalid operations with custom memory size" do
+      memory = %Memory{}
+               |> Memory.set_size(10240)
+               |> Memory.set_page_size(1024)
+
+      # Try to set page size larger than memory size
+      assert {:error, :pagesize_too_large} = Memory.set_page_size(memory, 20480)
+
+      # Verify original page size remains
+      assert memory.page_size == 1024
+    end
+
+    test "readable/writeable indices with custom memory size" do
+      memory = %Memory{}
+               |> Memory.set_size(10240)  # 10KB
+               |> Memory.set_page_size(1024)  # 1KB pages
+               |> Memory.set_access_by_page(8, 3, :read)  # Pages 8,9,0
+               |> Memory.set_access_by_page(3, 2, nil)    # Pages 3,4
+
+      readable = Memory.readable_indices(memory)
+      assert MapSet.size(readable) == 3
+      assert MapSet.member?(readable, 8)
+      assert MapSet.member?(readable, 9)
+      assert MapSet.member?(readable, 0)
     end
   end
 end

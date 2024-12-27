@@ -6,45 +6,55 @@ defmodule PVM.Memory do
   # 4GB total memory
   @memory_size 1 <<< 32
 
-  def memory_size, do: @memory_size
+
 
   @type t :: %__MODULE__{
           data: %{non_neg_integer() => byte()},
           access: %{non_neg_integer() => atom()},
           default_access: atom(),
-          page_size: pos_integer()
+          page_size: pos_integer(),
+          size: pos_integer()
         }
 
   defstruct data: %{},
             access: %{},
             default_access: :write,
-            page_size: @default_page_size
+            page_size: @default_page_size,
+            size: @memory_size
 
   def set_page_size(%__MODULE__{} = memory, size) do
-    new_access = recompute_access_permissions(memory, size)
-    %__MODULE__{memory | page_size: size, access: new_access}
+    if size <= memory.size do
+      new_access = recompute_access_permissions(memory, size)
+      %__MODULE__{memory | page_size: size, access: new_access}
+    else
+      {:error, :pagesize_too_large}
+    end
+  end
+
+  def set_size(%__MODULE__{} = memory, size) do
+    %__MODULE__{memory | size: size}
   end
 
   def reset_page_size(%__MODULE__{} = memory) do
     set_page_size(memory, @default_page_size)
   end
 
-  defp wrap_address(address) do
-    rem(address, memory_size())
+  defp wrap_address(%__MODULE__{size: size} , address) do
+    rem(address, size)
   end
 
   def number_of_pages(%__MODULE__{} = memory) do
-    div(memory_size(), memory.page_size)
+    div(memory.size, memory.page_size)
   end
 
   def read(%__MODULE__{} = memory, address, length) do
-    wrapped_address = wrap_address(address)
+    wrapped_address = wrap_address(memory, address)
 
-    {start_page, end_page} = get_page_range(wrapped_address, length, memory.page_size)
+    {start_page, end_page} = get_page_range(memory, wrapped_address, length)
 
     case check_permissions(memory, start_page, end_page, :read) do
       :ok ->
-        data = read_from_sparse(memory.data, wrapped_address, length)
+        data = read_from_sparse(memory, wrapped_address, length)
         {:ok, data}
 
       {:error, page} ->
@@ -53,14 +63,14 @@ defmodule PVM.Memory do
   end
 
   def write(%__MODULE__{} = memory, address, value) when is_binary(value) do
-    wrapped_address = wrap_address(address)
+    wrapped_address = wrap_address(memory, address)
     length = byte_size(value)
 
-    {start_page, end_page} = get_page_range(wrapped_address, length, memory.page_size)
+    {start_page, end_page} = get_page_range(memory, wrapped_address, length)
 
     case check_permissions(memory, start_page, end_page, :write) do
       :ok ->
-        new_data = write_to_sparse(memory.data, wrapped_address, value)
+        new_data = write_to_sparse(memory, wrapped_address, value)
         {:ok, %__MODULE__{memory | data: new_data}}
 
       {:error, page} ->
@@ -68,21 +78,21 @@ defmodule PVM.Memory do
     end
   end
 
-  defp read_from_sparse(data, address, length) do
+  defp read_from_sparse(%__MODULE__{data: data} = memory, address, length) do
     0..(length - 1)
     |> Enum.map(fn offset ->
-      wrapped_addr = wrap_address(address + offset)
+      wrapped_addr = wrap_address(memory, address + offset)
       Map.get(data, wrapped_addr, 0)
     end)
     |> :binary.list_to_bin()
   end
 
-  defp write_to_sparse(data, address, value) do
+  defp write_to_sparse(%__MODULE__{data: data} = memory, address, value) do
     value
     |> :binary.bin_to_list()
     |> Enum.with_index()
     |> Enum.reduce(data, fn {byte, index}, acc ->
-      wrapped_addr = wrap_address(address + index)
+      wrapped_addr = wrap_address(memory, address + index)
       Map.put(acc, wrapped_addr, byte)
     end)
   end
@@ -101,9 +111,9 @@ defmodule PVM.Memory do
     end)
   end
 
-  defp get_page_range(start_address, length, page_size) do
+  defp get_page_range(%__MODULE__{page_size: page_size} = memory, start_address, length) do
     start_page = div(start_address, page_size)
-    end_address = wrap_address(start_address + max(0, length - 1))
+    end_address = wrap_address(memory, start_address + max(0, length - 1))
     end_page = div(end_address, page_size)
 
     {start_page, end_page}
@@ -135,7 +145,7 @@ defmodule PVM.Memory do
   end
 
   def set_access(%__MODULE__{} = memory, address, length, access_type) do
-    {start_page, end_page} = get_page_range(address, length, memory.page_size)
+    {start_page, end_page} = get_page_range(memory, address, length)
 
     new_access =
       get_sequential_pages(start_page, end_page, number_of_pages(memory))
@@ -183,8 +193,8 @@ defmodule PVM.Memory do
   end
 
   def check_range_access?(%__MODULE__{} = memory, address, length, required_access) do
-    wrapped_address = wrap_address(address)
-    {start_page, end_page} = get_page_range(wrapped_address, length, memory.page_size)
+    wrapped_address = wrap_address(memory, address)
+    {start_page, end_page} = get_page_range(memory, wrapped_address, length)
     check_permissions(memory, start_page, end_page, required_access) == :ok
   end
 
