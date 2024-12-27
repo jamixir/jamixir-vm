@@ -154,16 +154,16 @@ defmodule PVM.InitProgramTest do
       memory = InitProgram.construct_memory(o, w, c, z, s)
 
       # Test o segment (read-only)
-      assert {:ok, "code"} = Memory.read(memory, InitProgram.zq(), 4)
-      assert {:error, {:fault, _}} = Memory.write(memory, InitProgram.zq(), "fail")
+      assert {:ok, "code"} = Memory.read(memory, InitProgram.zz(), 4)
+      assert {:error, {:fault, _}} = Memory.write(memory, InitProgram.zz(), "fail")
 
       # Test w segment (writable)
-      w_start = 2 * InitProgram.zq() + InitProgram.q(byte_size(o))
+      w_start = 2 * InitProgram.zz() + InitProgram.z(byte_size(o))
       assert {:ok, "data"} = Memory.read(memory, w_start, 4)
       assert {:ok, _} = Memory.write(memory, w_start, "test")
 
       # Test arguments (read-only)
-      args_start = InitProgram.max_addr()  - InitProgram.zq() - InitProgram.zi()
+      args_start = InitProgram.max_addr()  - InitProgram.zz() - InitProgram.zi()
       assert {:ok, "args"} = Memory.read(memory, args_start, 4)
       assert {:error, {:fault, _}} = Memory.write(memory, args_start, "fail")
     end
@@ -178,14 +178,14 @@ defmodule PVM.InitProgramTest do
       memory = InitProgram.construct_memory(o, w, c, z, s)
 
       # Test padding after o (should be readable zeros)
-      o_end = InitProgram.zq() + 1
+      o_end = InitProgram.zz() + 1
       padding_size = InitProgram.p(1) - 1  # p(1) minus the single byte
       assert {:ok, padding} = Memory.read(memory, o_end, padding_size)
       assert padding == :binary.copy(<<0>>, padding_size)
       assert {:error, {:fault, _}} = Memory.write(memory, o_end, "x")
 
       # Test padding after w (should be writable zeros)
-      w_start = 2 * InitProgram.zq() + InitProgram.q(1)
+      w_start = 2 * InitProgram.zz() + InitProgram.z(1)
       w_end = w_start + 1
       w_padding_size = InitProgram.p(1) - 1
       assert {:ok, w_padding} = Memory.read(memory, w_end, w_padding_size)
@@ -206,8 +206,8 @@ defmodule PVM.InitProgramTest do
 
 
       # Test gap between segments (should be inaccessible)
-      gap_start = InitProgram.zq() + InitProgram.p(byte_size(o))
-      gap_end = 2 * InitProgram.zq() + InitProgram.q(byte_size(o))
+      gap_start = InitProgram.zz() + InitProgram.p(byte_size(o))
+      gap_end = 2 * InitProgram.zz() + InitProgram.z(byte_size(o))
       assert {:error, {:fault, _}} = Memory.read(memory, gap_start, gap_end - gap_start)
     end
 
@@ -221,7 +221,7 @@ defmodule PVM.InitProgramTest do
       memory = InitProgram.construct_memory(o, w, c, z, s)
 
       # Calculate where work area starts
-      w_start = 2 * InitProgram.zq() + InitProgram.q(1)
+      w_start = 2 * InitProgram.zz() + InitProgram.z(1)
 
       # Should be able to write across the entire work area
       work_area_size = InitProgram.p(1) + 2 * InitProgram.zp()

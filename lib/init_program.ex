@@ -4,14 +4,14 @@ defmodule PVM.InitProgram do
   require Logger
 
   # Constants from A.31
-  @zp 0x4000
-  @zq 0x10000
+  @zp 4096
+  @zz 0x10000
   @zi 0x1000000
   # 2^32
   @max_addr 0x100000000
 
   def zp, do: @zp
-  def zq, do: @zq
+  def zz, do: @zz
   def zi, do: @zi
   def max_addr, do: @max_addr
 
@@ -71,12 +71,12 @@ defmodule PVM.InitProgram do
 
   defp read_final_segment(_, _), do: :error
 
-  def q(x), do: ceil(x / @zq) * @zq
+  def z(x), do: ceil(x / @zz) * @zz
   def p(x), do: ceil(x / @zp) * @zp
 
   # Implements condition A.33: 5Zq + Q(|o|) + Q(|w| + zZp) + Q(s) + Zi ≤ 2^32
   def verify_size_constraint(o_size, w_size, z, s) do
-    q(o_size) + q(w_size + z * @zp) + q(s) <= (1 <<< 32) - 5 * @zq - @zi
+    z(o_size) + z(w_size + z * @zp) + z(s) <= (1 <<< 32) - 5 * @zz - @zi
   end
 
   def initialize_registers(a) do
@@ -92,22 +92,22 @@ defmodule PVM.InitProgram do
 
     regions = [
       # Program text region: [Zq, Zq + |o|] => R
-      {@zq, @zq + o_size, o, :read},
+      {@zz, @zz + o_size, o, :read},
       # Program text padding: [Zq + |o|, Zq + P(|o|)] => R
-      {@zq + o_size, @zq + p(o_size), nil, :read},
+      {@zz + o_size, @zz + p(o_size), nil, :read},
 
       # Data region: [2Zq + Q(|o|), 2Zq + Q(|o|) + |w|] => W
-      {2 * @zq + q(o_size), 2 * @zq + q(o_size) + w_size, w, :write},
+      {2 * @zz + z(o_size), 2 * @zz + z(o_size) + w_size, w, :write},
       # Data padding: [2Zq + Q(|o|) + |w|, 2Zq + Q(|o|) + P(|w|) + zZp] => W
-      {2 * @zq + q(o_size) + w_size, 2 * @zq + q(o_size) + p(w_size) + z * @zp, nil, :write},
+      {2 * @zz + z(o_size) + w_size, 2 * @zz + z(o_size) + p(w_size) + z * @zp, nil, :write},
 
       # Stack region: [2^32 - 2Zq - Zi - P(s), 2^32 - 2Zq - Zi] => W
-      {@max_addr - 2 * @zq - @zi - p(s), @max_addr - 2 * @zq - @zi, nil, :write},
+      {@max_addr - 2 * @zz - @zi - p(s), @max_addr - 2 * @zz - @zi, nil, :write},
 
       # Args region: [2^32 - Zq - Zi, 2^32 - Zq - Zi + |a|] => R
-      {@max_addr - @zq - @zi, @max_addr - @zq - @zi + a_size, a, :read},
+      {@max_addr - @zz - @zi, @max_addr - @zz - @zi + a_size, a, :read},
       # Args padding: [2^32 - Zq - Zi + |a|, 2^32 - Zq - Zi + P(|a|)] => R
-      {@max_addr - @zq - @zi + a_size, @max_addr - @zq - @zi + p(a_size), nil, :read}
+      {@max_addr - @zz - @zi + a_size, @max_addr - @zz - @zi + p(a_size), nil, :read}
     ]
 
     memory = Memory.set_page_size(%Memory{}, @zp)

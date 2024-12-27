@@ -19,7 +19,7 @@ defmodule PVM.Instructions.RegTwoImm do
   def execute(:store_imm_ind_u32, program, bitmask, state) do
     {r_a, v_x, v_y} = get_params(program, bitmask, state.counter)
     w_a = Registers.get(state.registers, r_a)
-    Memory.Util.write(state, w_a + v_x, e_le(v_y, 4))
+    Memory.Util.write(state, w_a + v_x, e_le(rem(v_y, 1 <<< 32), 4))
   end
 
   def execute(:store_imm_ind_u64, program, bitmask, state) do
