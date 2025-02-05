@@ -1,6 +1,7 @@
 defmodule PVM.Instructions.TwoRegisters do
   alias PVM.Registers
   alias PVM.Memory
+  use PVM.Transitions
   # Section (A.5.9) v0.6.1
 
   def execute(:move_reg, program, state) do
@@ -13,7 +14,6 @@ defmodule PVM.Instructions.TwoRegisters do
   def execute(:sbrk, program, state) do
     {r_d, r_a} = get_params(program, state.counter)
     bytes_needed = Registers.get(state.registers, r_a)
-
 
     pages_needed = ceil(bytes_needed / state.memory.page_size)
     end_page = Memory.number_of_pages(state.memory) - 1
@@ -44,6 +44,77 @@ defmodule PVM.Instructions.TwoRegisters do
           registers: Registers.set(state.registers, r_d, start_address)
         }}
     end
+  end
+
+  def execute(:count_set_bits_64, program, state) do
+    {r_d, r_a} = get_params(program, state.counter)
+    bits_sum = Registers.get(state.registers, r_a) |> u2b(8) |> Enum.sum()
+    {:continue, %{state | registers: Registers.set(state.registers, r_d, bits_sum)}}
+  end
+
+  def execute(:count_set_bits_32, program, state) do
+    {r_d, r_a} = get_params(program, state.counter)
+
+    bits_sum =
+      Registers.get(state.registers, r_a) |> rem(0x1_0000_0000) |> u2b(4) |> Enum.sum()
+
+    {:continue, %{state | registers: Registers.set(state.registers, r_d, bits_sum)}}
+  end
+
+  def execute(:leading_zero_bits_64, program, state) do
+    {r_d, r_a} = get_params(program, state.counter)
+
+    leading_zero_bits =
+      Registers.get(state.registers, r_a)
+      |> u2b(8)
+      |> Enum.with_index()
+      |> Enum.find_index(fn {bit, _index} -> bit == 1 end)
+
+    {:continue, %{state | registers: Registers.set(state.registers, r_d, leading_zero_bits)}}
+  end
+
+  def execute(:leading_zero_bits_32, program, state) do
+    {r_d, r_a} = get_params(program, state.counter)
+
+    leading_zero_bits =
+      Registers.get(state.registers, r_a)
+      |> rem(0x1_0000_0000)
+      |> u2b(4)
+      |> Enum.with_index()
+      |> Enum.find_index(fn {bit, _index} -> bit == 1 end)
+
+    {:continue, %{state | registers: Registers.set(state.registers, r_d, leading_zero_bits)}}
+  end
+
+  def execute(:trailing_zero_bits_64, program, state) do
+    {r_d, r_a} = get_params(program, state.counter)
+
+    bits = Registers.get(state.registers, r_a) |> u2b(8)
+    len = length(bits)
+
+    trailing_zero_bits =
+      Enum.find_index(0..(len - 1), fn i ->
+        Enum.at(bits, len - 1 - i) == 1
+      end)
+
+    {:continue, %{state | registers: Registers.set(state.registers, r_d, trailing_zero_bits)}}
+  end
+
+  def execute(:trailing_zero_bits_32, program, state) do
+    {r_d, r_a} = get_params(program, state.counter)
+    bits = Registers.get(state.registers, r_a) |> rem(0x1_0000_0000) |> u2b(4)
+    len = length(bits)
+
+    trailing_zero_bits =
+      Enum.find_index(0..(len - 1), fn i -> Enum.at(bits, len - 1 - i) == 1 end)
+
+    {:continue, %{state | registers: Registers.set(state.registers, r_d, trailing_zero_bits)}}
+  end
+
+  def execute(:sign_extend_8, program, state) do
+    {r_d, r_a} = get_params(program, state.counter)
+    sign_extended = Registers.get(state.registers, r_a) |> rem(0x100) |> u2i(1) |> i2u(8)
+    {:continue, %{state | registers: Registers.set(state.registers, r_d, sign_extended)}}
   end
 
   # Formula (A.26) v0.6.1

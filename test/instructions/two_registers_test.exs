@@ -413,4 +413,106 @@ defmodule Instructions.TwoRegistersTest do
       assert new_state.memory.access == memory.access
     end
   end
+
+  describe "count_set_bits_64" do
+    test "counts all bits in a 64-bit number" do
+      program = <<op(:count_set_bits_64), 0x21>>
+      state = %State{registers: %Registers{r2: 0x0000_FFFF_0000_FFFF}}
+
+      {status, new_state} = TwoRegisters.execute(:count_set_bits_64, program, state)
+
+      assert status == :continue
+      assert new_state.registers.r1 == 32  # Half the bits are 1s
+    end
+
+    test "handles zero" do
+      program = <<op(:count_set_bits_64), 0x21>>
+      state = %State{registers: %Registers{r2: 0}}
+
+      {status, new_state} = TwoRegisters.execute(:count_set_bits_64, program, state)
+
+      assert status == :continue
+      assert new_state.registers.r1 == 0
+    end
+  end
+
+  describe "count_set_bits_32" do
+    test "counts set bits in a 32-bit number" do
+      program = <<op(:count_set_bits_32), 0x21>>
+      state = %State{registers: %Registers{r2: 0x0000_FFFF}}
+
+      {status, new_state} = TwoRegisters.execute(:count_set_bits_32, program, state)
+
+      assert status == :continue
+      assert new_state.registers.r1 == 16
+    end
+  end
+
+  describe "leading_zero_bits_64" do
+    test "counts leading zeros" do
+      program = <<op(:leading_zero_bits_64), 0x21>>
+      state = %State{registers: %Registers{r2: 10}}
+
+      {status, new_state} = TwoRegisters.execute(:leading_zero_bits_64, program, state)
+
+      assert status == :continue
+      assert new_state.registers.r1 == 1
+    end
+
+    test "handles no leading zeros" do
+      program = <<op(:leading_zero_bits_64), 0x21>>
+      state = %State{registers: %Registers{r2: 1}}
+
+      {status, new_state} = TwoRegisters.execute(:leading_zero_bits_64, program, state)
+
+      assert status == :continue
+      assert new_state.registers.r1 == 0
+    end
+  end
+
+  describe "leading_zero_bits_32" do
+    test "counts leading zeros" do
+      program = <<op(:leading_zero_bits_32), 0x21>>
+      state = %State{registers: %Registers{r2: 10}}
+
+      {status, new_state} = TwoRegisters.execute(:leading_zero_bits_32, program, state)
+
+      assert status == :continue
+      assert new_state.registers.r1 == 1
+    end
+  end
+
+  describe "trailing_zero_bits_64" do
+    test "counts trailing zeros" do
+      program = <<op(:trailing_zero_bits_64), 0x21>>
+      state = %State{registers: %Registers{r2: 5}}
+
+      {status, new_state} = TwoRegisters.execute(:trailing_zero_bits_64, program, state)
+
+      assert status == :continue
+      assert new_state.registers.r1 == 64 - 3
+    end
+
+    test "handles no trailing zeros" do
+      program = <<op(:trailing_zero_bits_64), 0x21>>
+      state = %State{registers: %Registers{r2: 0xF000_0000_0000_0001}}
+
+      {status, new_state} = TwoRegisters.execute(:trailing_zero_bits_64, program, state)
+
+      assert status == :continue
+      assert new_state.registers.r1 == 0
+    end
+  end
+
+  describe "trailing_zero_bits_32" do
+    test "counts trailing zeros" do
+      program = <<op(:trailing_zero_bits_32), 0x21>>
+      state = %State{registers: %Registers{r2: 5}}
+
+      {status, new_state} = TwoRegisters.execute(:trailing_zero_bits_32, program, state)
+
+      assert status == :continue
+      assert new_state.registers.r1 == 32 - 3
+    end
+  end
 end
