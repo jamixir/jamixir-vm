@@ -1,8 +1,9 @@
 defmodule PVM.Instructions.TwoRegistersOneImmediate do
   import Bitwise
   use PVM.{Decoder, Encoder, Utils, Transitions}
-  alias PVM.Registers
+  alias PVM.{Registers, Utils}
   import PVM.Memory.Util
+  # Section (A.5.10) v0.6.1
 
   # Store instructions
   def execute(instruction, program, bitmask, state)
@@ -245,7 +246,52 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     {:continue, state}
   end
 
-  # Formula (A.23)
+  # Rotation operations
+  def execute(:rot_r_64_imm, program, bitmask, state) do
+    {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
+    number = Registers.get(state.registers, r_b)
+    shift = rem(v_x, 64)
+    result = rotate_right(number, shift, 64)
+
+    state = %{state | registers: Registers.set(state.registers, r_a, result)}
+    {:continue, state}
+  end
+
+  def execute(:rot_r_64_imm_alt, program, bitmask, state) do
+    {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
+    w_b = Registers.get(state.registers, r_b)
+    result = rotate_right(v_x, w_b, 64)
+    state = %{state | registers: Registers.set(state.registers, r_a, result)}
+    {:continue, state}
+  end
+
+  def execute(:rot_r_32_imm, program, bitmask, state) do
+    {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
+    w_b = Registers.get(state.registers, r_b)
+    result = rotate_right(w_b, v_x, 32) |> Utils.extend_to_64bit(4)
+
+    state = %{state | registers: Registers.set(state.registers, r_a, result)}
+    {:continue, state}
+  end
+
+  def execute(:rot_r_32_imm_alt, program, bitmask, state) do
+    {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
+    w_b = Registers.get(state.registers, r_b)
+    result = rotate_right(v_x, w_b, 32) |> Utils.extend_to_64bit(4)
+
+    state = %{state | registers: Registers.set(state.registers, r_a, result)}
+    {:continue, state}
+  end
+
+  defp rotate_right(number, shift_amount, bits) do
+    shift = rem(shift_amount, bits)
+    mask = (1 <<< bits) - 1
+    right_part = number >>> shift
+    left_part = number <<< (bits - shift)
+    (right_part ||| left_part) &&& mask
+  end
+
+  # Formula (A.27) v0.6.1
   defp get_params(program, bitmask, counter) do
     r_a =
       binary_part(program, counter + 1, 1)
