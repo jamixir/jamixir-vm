@@ -112,6 +112,10 @@ defmodule PVM.Instructions do
           | :shlo_l_imm_alt_64
           | :shlo_r_imm_alt_64
           | :shar_r_imm_alt_64
+          | :rot_r_64_imm
+          | :rot_r_64_imm_alt
+          | :rot_r_32_imm
+          | :rot_r_32_imm_alt
           # Two registers and one offset argument
           | :branch_eq
           | :branch_ne
@@ -157,13 +161,18 @@ defmodule PVM.Instructions do
   @opcode_map %{
     trap: 0,
     fallthrough: 1,
+
     ecalli: 10,
+
     load_imm_64: 20,
+
     store_imm_u8: 30,
     store_imm_u16: 31,
     store_imm_u32: 32,
     store_imm_u64: 33,
+
     jump: 40,
+
     jump_ind: 50,
     load_imm: 51,
     load_u8: 52,
@@ -177,10 +186,12 @@ defmodule PVM.Instructions do
     store_u16: 60,
     store_u32: 61,
     store_u64: 62,
+
     store_imm_ind_u8: 70,
     store_imm_ind_u16: 71,
     store_imm_ind_u32: 72,
     store_imm_ind_u64: 73,
+
     load_imm_jump: 80,
     branch_eq_imm: 81,
     branch_ne_imm: 82,
@@ -192,6 +203,7 @@ defmodule PVM.Instructions do
     branch_le_s_imm: 88,
     branch_ge_s_imm: 89,
     branch_gt_s_imm: 90,
+
     move_reg: 100,
     sbrk: 101,
     count_set_bits_64: 102,
@@ -204,6 +216,7 @@ defmodule PVM.Instructions do
     sign_extend_16: 109,
     zero_extend_16: 110,
     reverse_bytes: 111,
+
     store_ind_u8: 120,
     store_ind_u16: 121,
     store_ind_u32: 122,
@@ -242,13 +255,20 @@ defmodule PVM.Instructions do
     shlo_l_imm_alt_64: 155,
     shlo_r_imm_alt_64: 156,
     shar_r_imm_alt_64: 157,
+    rot_r_64_imm: 158,
+    rot_r_64_imm_alt: 159,
+    rot_r_32_imm: 160,
+    rot_r_32_imm_alt: 161,
+
     branch_eq: 170,
     branch_ne: 171,
     branch_lt_u: 172,
     branch_lt_s: 173,
     branch_ge_u: 174,
     branch_ge_s: 175,
+
     load_imm_jump_ind: 180,
+
     add_32: 190,
     sub_32: 191,
     mul_32: 192,
@@ -348,6 +368,10 @@ defmodule PVM.Instructions do
     shlo_l_imm_alt_64: 0,
     shlo_r_imm_alt_64: 0,
     shar_r_imm_alt_64: 0,
+    rot_r_64_imm: 0,
+    rot_r_64_imm_alt: 0,
+    rot_r_32_imm: 0,
+    rot_r_32_imm_alt: 0,
     branch_eq: 0,
     branch_ne: 0,
     branch_ge_u: 0,
@@ -499,7 +523,11 @@ defmodule PVM.Instructions do
       :neg_add_imm_64,
       :shlo_l_imm_alt_64,
       :shlo_r_imm_alt_64,
-      :shar_r_imm_alt_64
+      :shar_r_imm_alt_64,
+      :rot_r_64_imm,
+      :rot_r_64_imm_alt,
+      :rot_r_32_imm,
+      :rot_r_32_imm_alt
     ],
     two_registers_one_offset: [
       :branch_eq,
