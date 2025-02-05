@@ -3,6 +3,9 @@ defmodule PVM.Instructions.ThreeRegisters do
   use PVM.Transitions
   alias PVM.Registers
   import Bitwise
+  @two_32 0x1_0000_0000
+  @two_64 0x1_0000_0000_0000_0000
+  @max_64 0xFFFF_FFFF_FFFF_FFFF
 
   # 32-bit arithmetic operations
   def execute(instruction, program, state)
@@ -12,10 +15,10 @@ defmodule PVM.Instructions.ThreeRegisters do
     result =
       case instruction do
         :add_32 -> w_a + w_b
-        :sub_32 -> w_a + (1 <<< 32) - rem(w_b, 1 <<< 32)
+        :sub_32 -> w_a + @two_32 - rem(w_b, @two_32)
         :mul_32 -> w_a * w_b
       end
-      |> rem(1 <<< 32)
+      |> rem(@two_32)
       |> to_64bit(4)
 
     state = %{state | registers: Registers.set(state.registers, r_d, result)}
@@ -30,26 +33,26 @@ defmodule PVM.Instructions.ThreeRegisters do
     result =
       case instruction do
         :div_u_32 ->
-          if rem(w_b, 1 <<< 32) == 0,
-            do: (1 <<< 64) - 1,
-            else: div(rem(w_a, 1 <<< 32), rem(w_b, 1 <<< 32))
+          if rem(w_b, @two_32) == 0,
+            do: @max_64,
+            else: div(rem(w_a, @two_32), rem(w_b, @two_32))
 
         :div_s_32 ->
-          a = u2i(rem(w_a, 1 <<< 32), 4)
-          b = u2i(rem(w_b, 1 <<< 32), 4)
+          a = u2i(rem(w_a, @two_32), 4)
+          b = u2i(rem(w_b, @two_32), 4)
 
-          if b == 0, do: (1 <<< 64) - 1
+          if b == 0, do: @max_64
           if b == -1 and a == -1 * (1 <<< 31), do: a
           i2u(div(a, b), 8)
 
         :rem_u_32 ->
-          if rem(w_b, 1 <<< 32) == 0,
+          if rem(w_b, @two_32) == 0,
             do: to_64bit(w_a, 4),
-            else: rem(rem(w_a, 1 <<< 32), rem(w_b, 1 <<< 32)) |> to_64bit(4)
+            else: rem(rem(w_a, @two_32), rem(w_b, @two_32)) |> to_64bit(4)
 
         :rem_s_32 ->
-          a = u2i(rem(w_a, 1 <<< 32), 4)
-          b = u2i(rem(w_b, 1 <<< 32), 4)
+          a = u2i(rem(w_a, @two_32), 4)
+          b = u2i(rem(w_b, @two_32), 4)
 
           if b == 0, do: i2u(a, 8)
           if b == -1 and a == -1 * (1 <<< 31), do: 0
@@ -68,9 +71,9 @@ defmodule PVM.Instructions.ThreeRegisters do
 
     result =
       case instruction do
-        :shlo_l_32 -> rem(w_a * (1 <<< shift), 1 <<< 32) |> to_64bit(4)
-        :shlo_r_32 -> div(rem(w_a, 1 <<< 32), 1 <<< shift) |> to_64bit(4)
-        :shar_r_32 -> w_a |> rem(1 <<< 32) |> to_64bit(4) |> div(1 <<< shift) |> i2u(8)
+        :shlo_l_32 -> rem(w_a * (1 <<< shift), @two_32) |> to_64bit(4)
+        :shlo_r_32 -> div(rem(w_a, @two_32), 1 <<< shift) |> to_64bit(4)
+        :shar_r_32 -> w_a |> rem(@two_32) |> to_64bit(4) |> div(1 <<< shift) |> i2u(8)
       end
 
     state = %{state | registers: Registers.set(state.registers, r_d, result)}
@@ -85,10 +88,10 @@ defmodule PVM.Instructions.ThreeRegisters do
     result =
       case instruction do
         :add_64 -> w_a + w_b
-        :sub_64 -> w_a - w_b + (1 <<< 64)
+        :sub_64 -> w_a - w_b + @two_64
         :mul_64 -> w_a * w_b
       end
-      |> rem(1 <<< 64)
+      |> rem(@two_64)
 
     state = %{state | registers: Registers.set(state.registers, r_d, result)}
     {:continue, state}
@@ -102,12 +105,12 @@ defmodule PVM.Instructions.ThreeRegisters do
     result =
       case instruction do
         :div_u_64 ->
-          if rem(w_b, 1 <<< 64) == 0,
-            do: (1 <<< 64) - 1,
+          if rem(w_b, @two_64) == 0,
+            do: @max_64,
             else: div(w_a, w_b)
 
         :div_s_64 ->
-          if w_b == 0, do: (1 <<< 64) - 1
+          if w_b == 0, do: @max_64
           if u2i(w_b, 8) == -1 and u2i(w_a, 8) == -1 * (1 <<< 63), do: w_a
           i2u(div(u2i(w_a, 8), u2i(w_b, 8)), 8)
 
@@ -133,7 +136,7 @@ defmodule PVM.Instructions.ThreeRegisters do
 
     result =
       case instruction do
-        :shlo_l_64 -> rem(w_a * (1 <<< shift), 1 <<< 64)
+        :shlo_l_64 -> rem(w_a * (1 <<< shift), @two_64)
         :shlo_r_64 -> div(w_a, 1 <<< shift)
         :shar_r_64 -> div(u2i(w_a, 8), 1 <<< shift) |> i2u(8)
       end
@@ -168,13 +171,13 @@ defmodule PVM.Instructions.ThreeRegisters do
     result =
       case instruction do
         :mul_upper_s_s ->
-          (u2i(w_a, 8) * u2i(w_b, 8)) |> div(1 <<< 64) |> i2u(8)
+          (u2i(w_a, 8) * u2i(w_b, 8)) |> div(@two_64) |> i2u(8)
 
         :mul_upper_u_u ->
-          div(w_a * w_b, 1 <<< 64)
+          div(w_a * w_b, @two_64)
 
         :mul_upper_s_u ->
-          (u2i(w_a, 8) * w_b) |> div(1 <<< 64) |> i2u(8)
+          (u2i(w_a, 8) * w_b) |> div(@two_64) |> i2u(8)
       end
 
     state = %{state | registers: Registers.set(state.registers, r_d, result)}
