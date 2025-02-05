@@ -44,8 +44,8 @@ defmodule TransitionsTest do
 
   describe "b_n/2" do
     test "converts small numbers to binary" do
-      assert u2b(5, 1) == [0, 0, 0, 0, 0, 1, 0, 1]
-      assert u2b(10, 1) == [0, 0, 0, 0, 1, 0, 1, 0]
+      assert u2b(5, 1) == [1, 0, 1, 0, 0, 0, 0, 0]
+      assert u2b(10, 1) == [0, 1, 0, 1, 0, 0, 0, 0]
     end
 
     test "handles zero" do
@@ -54,17 +54,36 @@ defmodule TransitionsTest do
     end
 
     test "pads to correct width" do
-      # 42 in 8-bit binary should be [0,0,1,0,1,0,1,0]
-      assert u2b(42, 1) == [0, 0, 1, 0, 1, 0, 1, 0]
+      # 42 in 8-bit binary should be [1,0,1,0,1,0,0,0]
+      assert u2b(42, 1) == [0, 1, 0, 1, 0, 1, 0, 0]
       # Same number in 16-bit should have 8 more leading zeros
-      assert u2b(42, 2) == [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0]
+      assert u2b(42, 2) == [0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    end
+  end
+
+  describe "b_n_be/2" do
+    test "converts small numbers to binary in big-endian" do
+      assert u2b_be(5, 1) == [0,0,0,0,0,1,0,1]
+      assert u2b_be(10, 1) == [0,0,0,0,1,0,1,0]
+    end
+
+    test "handles zero" do
+      assert u2b_be(0, 1) == List.duplicate(0, 8)
+      assert u2b_be(0, 2) == List.duplicate(0, 16)
+    end
+
+    test "pads to correct width" do
+      # 42 in 8-bit binary should be [0,0,1,0,1,0,1,0]
+      assert u2b_be(42, 1) == [0,0,1,0,1,0,1,0]
+      # Same number in 16-bit should have 8 more leading zeros
+      assert u2b_be(42, 2) == [0,0,0,0,0,0,0,0,0,0,1,0,1,0,1,0]
     end
   end
 
   describe "b_n_inverse/1" do
     test "converts binary back to numbers" do
-      assert b2u([0, 0, 0, 0, 0, 1, 0, 1]) == 5
-      assert b2u([0, 0, 0, 0, 1, 0, 1, 0]) == 10
+      assert b2u([1, 0, 1, 0, 0, 0, 0, 0]) == 5
+      assert b2u([0, 1, 0, 1, 0, 0, 0, 0]) == 10
     end
 
     test "handles all zeros" do
@@ -82,6 +101,30 @@ defmodule TransitionsTest do
       assert original
              |> u2b(1)
              |> b2u() == original
+    end
+  end
+
+  describe "b_n_be_inverse/1" do
+    test "converts binary back to numbers" do
+      assert b2u_be([0,0,0,0,0,1,0,1]) == 5
+      assert b2u_be([0,0,0,0,1,0,1,0]) == 10
+    end
+
+    test "handles all zeros" do
+      assert b2u_be(List.duplicate(0, 8)) == 0
+      assert b2u_be(List.duplicate(0, 16)) == 0
+    end
+
+    test "handles all ones" do
+      assert b2u_be(List.duplicate(1, 8)) == 255
+      assert b2u_be(List.duplicate(1, 16)) == 65535
+    end
+
+    test "roundtrip conversion" do
+      original = 42
+      assert original
+             |> u2b_be(1)
+             |> b2u_be() == original
     end
   end
 
