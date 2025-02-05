@@ -286,8 +286,8 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
   defp rotate_right(number, shift_amount, bits) do
     shift = rem(shift_amount, bits)
     mask = (1 <<< bits) - 1
-    right_part = number >>> shift
-    left_part = number <<< (bits - shift)
+    left_part = number >>> (bits - shift)
+    right_part = number <<< shift
     (right_part ||| left_part) &&& mask
   end
 
