@@ -4,7 +4,7 @@ defmodule PVM.Instructions.RegImmediateOffset do
   use PVM.Transitions
   alias PVM.Registers
   @type comparison_op :: :eq | :ne | :lt_u | :le_u | :ge_u | :gt_u | :lt_s | :le_s | :ge_s | :gt_s
-
+  # Section (A.5.8) v0.6.1
   def execute(:load_imm_jump, program, bitmask,  state) do
     {r_a, v_x, v_y, start_set} = get_params(program, bitmask, state.counter)
     {exit_reason, counter} = Executor.branch(v_y, true, state.counter, start_set)
@@ -70,7 +70,7 @@ defmodule PVM.Instructions.RegImmediateOffset do
     end
   end
 
-  # Formula (A.21) v0.5
+  # Formula (A.25) v0.6.1
   defp get_params(program, bitmask, counter) do
     r_a =
       binary_part(program, counter + 1, 1)

@@ -4,7 +4,19 @@ defmodule PVM.Instructions.RegImmediate do
   alias PVM.{Instructions.Executor, Registers}
   import PVM.Memory.Util
 
-  # Section (A.19) v0.5
+  # Section (A.5.3) v0.6.1
+  def execute(:load_imm_64, program, _bitmask, _jump_table, state) do
+    # Formula (A.20) v0.6.1
+    register_index =
+      min(12, rem(binary_part(program, state.counter + 1, 1) |> :binary.first(), 16))
+
+    value = de_le(binary_part(program, state.counter + 2, 8), 8)
+
+    state = %{state | registers: Registers.set(state.registers, register_index, value)}
+    {:continue, state}
+  end
+
+  # Section (A.5.6) v0.6.1
   def execute(:jump_ind, program, bitmask, jump_table, state) do
     {register_index, addr} = get_params(program, bitmask, state.counter)
     register_value = Registers.get(state.registers, register_index)
@@ -138,15 +150,7 @@ defmodule PVM.Instructions.RegImmediate do
     write_memory(state, addr, e_le(value, 8))
   end
 
-  def execute(:load_imm_64, program, _bitmask, _jump_table, state) do
-    register_index =
-      min(12, rem(binary_part(program, state.counter + 1, 1) |> :binary.first(), 16))
-
-    value = de_le(binary_part(program, state.counter + 2, 8), 8)
-    state = %{state | registers: Registers.set(state.registers, register_index, value)}
-    {:continue, state}
-  end
-
+  # Formula (A.23) v0.6.1
   defp get_params(program, bitmask, counter) do
     register_index =
       min(12, rem(binary_part(program, counter + 1, 1) |> :binary.first(), 16))

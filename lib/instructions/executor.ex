@@ -30,13 +30,13 @@ defmodule PVM.Instructions.Executor do
     end
   end
 
-  # Formula (A.12) v0.5
+  # Formula (A.16) v0.6.1
   def branch(_value, false, counter, _start_set), do: {:continue, counter}
 
   def branch(value, true, counter, start_set),
     do: if(value in start_set, do: {:continue, value}, else: {:panic, counter})
 
-  # Formula (A.13) v0.5
+  # Formula (A.17) v0.6.1
   def djump(a, counter, jump_table, start_set) do
     alignment_factor = 2
     {quotient, remainder} = {div(a, alignment_factor), rem(a, alignment_factor)}
