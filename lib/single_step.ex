@@ -5,9 +5,11 @@ defmodule PVM.SingleStep do
 
   @type exit_reason :: Types.vm_exit_reason()
 
+  # Formula (A.5) v0.6.1
   @spec run(binary(), binary(), list(non_neg_integer()), State.t()) ::
           {exit_reason(), State.t()}
   def run(program, bitmask, jump_table, %State{} = state) do
+    # equivalent to Formula (A.3) v0.6.1
     if state.counter >= byte_size(program) do
       {:panic, state}
     else
@@ -28,6 +30,9 @@ defmodule PVM.SingleStep do
       case exit_reason do
         {:fault, page} ->
           {{:fault, page}, state}
+
+        :panic ->
+          {:panic, state}
 
         _ ->
           {exit_reason, %{state_ | gas: state.gas - Instructions.gas_cost(opcode)}}

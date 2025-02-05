@@ -38,9 +38,9 @@ defmodule VMTest do
       program = <<
         op(:load_imm), 1, 10,
         op(:jump_ind), 1, 0,
-        op(:store_imm_u8), 1, 10, 42,
+        op(:store_imm_u8), 3, 10, 0, 1, 42,
         op(:trap),
-        op(:store_imm_u8), 1, 20, 99,
+        op(:store_imm_u8), 3, 20, 0, 1, 99,
         op(:fallthrough),
         op(:load_imm), 2, 55,
         op(:fallthrough)
@@ -50,14 +50,14 @@ defmodule VMTest do
       bitmask = <<
         1, 0, 0,             # load_imm
         1, 0, 0,             # jump_ind
-        1, 0, 0, 0,          # store_imm_u8
+        1, 0, 0, 0,0,0,          # store_imm_u8
         1,                   # trap
-        1, 0, 0, 0,          # store_imm_u8
+        1, 0, 0, 0,0,0,          # store_imm_u8
         1,                   # fallthrough
         1, 0, 0,             # load_imm
         1                    # fallthrough
       >>
-      jump_table = [2, 4, 6, 8, 16, 18]
+      jump_table = [2, 4, 6, 8, 20, 22]
 
       p = create_program(program, bitmask, jump_table)
       {exit_reason, state_} = VM.execute(p, %State{})
@@ -67,8 +67,8 @@ defmodule VMTest do
       assert Registers.get(state_.registers, [1, 2]) == [10, 55]   # From first and jumped-to load_imm
 
       # Verify skipped store_imm_u8 instructions didn't execute
-      assert Memory.read(state_.memory, 10, 1) == {:ok, <<0>>}
-      assert Memory.read(state_.memory, 20, 1) == {:ok, <<0>>}
+      assert Memory.read(state_.memory, 0x1000a, 1) == {:ok, <<0>>}
+      assert Memory.read(state_.memory, 0x10014, 1) == {:ok, <<0>>}
     end
 
     test "executes memory operations sequence" do
@@ -79,12 +79,12 @@ defmodule VMTest do
       # load_u8 r2, 20                  (60, 2, 20)
 
       program = <<
-        op(:store_imm_u8), 1, 10, 42,
-        op(:load_u8), 1, 10,
-        op(:store_u8), 1, 20,
-        op(:load_u8), 2, 20
+        op(:store_imm_u8), 3, 10, 0, 1, 42,
+        op(:load_u8), 1, 10, 0, 1,
+        op(:store_u8), 1, 20, 0, 1,
+        op(:load_u8), 2, 20, 0, 1
       >>
-      bitmask = <<1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0>>
+      bitmask = <<1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0>>
 
       p = create_program(program, bitmask)
       {exit_reason, state_} = VM.execute(p, %State{})
@@ -92,8 +92,8 @@ defmodule VMTest do
       assert exit_reason == :panic
       assert state_.counter == 0
       assert Registers.get(state_.registers, [1, 2]) == [42, 42]
-      assert Memory.read(state_.memory, 10, 1) == {:ok, <<42>>}
-      assert Memory.read(state_.memory, 20, 1) == {:ok, <<42>>}
+      assert Memory.read(state_.memory, 0x1000a, 1) == {:ok, <<42>>}
+      assert Memory.read(state_.memory, 0x10014, 1) == {:ok, <<42>>}
     end
 
     test "executes complex load/store with different sizes" do
@@ -101,10 +101,10 @@ defmodule VMTest do
       # store_imm_u32 addr=10, value=0x12345678 (38, 1, 10, 78, 56, 34, 12)
       # load_u16 r1, 10                         (76, 1, 10)
       # load_u16 r2, 12                         (76, 2, 12)
-      program = <<op(:store_imm_u32), 1, 10, 78, 56, 34, 12,
-       op(:load_u16), 1, 10,
-       op(:load_u16), 2, 12>>
-      bitmask = <<1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0>>
+      program = <<op(:store_imm_u32), 3, 10,0, 1, 78, 56, 34, 12,
+       op(:load_u16), 1, 10, 0, 1,
+       op(:load_u16), 2, 12, 0, 1>>
+      bitmask = <<1, 0, 0, 0, 0, 0, 0,0,0, 1, 0, 0,0,0, 1, 0, 0,0,0>>
 
       p = create_program(program, bitmask)
       {exit_reason, state_} = VM.execute(p, %State{})
@@ -112,7 +112,7 @@ defmodule VMTest do
       assert exit_reason == :panic
       assert state_.counter == 0
       assert Registers.get(state_.registers, [1, 2]) == [de_le(<<78, 56>>, 2), de_le(<<34, 12>>, 2)]  # Lower 16 bits
-      assert Memory.read(state_.memory, 10, 4) == {:ok, <<78, 56, 34, 12>>}
+      assert Memory.read(state_.memory, 0x1000a, 4) == {:ok, <<78, 56, 34, 12>>}
     end
 
     test "executes until trap with register operations" do
@@ -126,11 +126,11 @@ defmodule VMTest do
       program = <<
         op(:load_imm), 1, 42,
         op(:load_imm), 2, 24,
-        op(:store_u8), 1, 100,
-        op(:store_u8), 2, 101,
+        op(:store_u8), 1, 100, 0, 1,
+        op(:store_u8), 2, 101, 0, 1,
         op(:load_imm), 3, 0, 0, 0xFF, 0xFF,
         op(:jump_ind), 3, 0>>
-      bitmask = <<1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0>>
+      bitmask = <<1, 0, 0, 1, 0, 0, 1, 0, 0,0,0, 1, 0, 0,0,0, 1, 0, 0, 0, 0, 0, 1, 0, 0>>
 
       p = create_program(program, bitmask)
       {exit_reason, state_} = VM.execute(p, %State{})
@@ -139,8 +139,8 @@ defmodule VMTest do
       # Stopped at jump_ind
       assert state_.counter == 0
       assert Registers.get(state_.registers, [1, 2, 3]) == [42, 24, 0xFFFF_FFFF_FFFF_0000]
-      assert Memory.read(state_.memory, 100, 1) == {:ok, <<42>>}
-      assert Memory.read(state_.memory, 101, 1) == {:ok, <<24>>}
+      assert Memory.read(state_.memory, 0x10064, 1) == {:ok, <<42>>}
+      assert Memory.read(state_.memory, 0x10065, 1) == {:ok, <<24>>}
     end
 
 
@@ -150,15 +150,15 @@ defmodule VMTest do
       # load_imm_64 r1, 0xDCBA987654321001 (full 64-bit value)
       # store_u64 r1, 24
       program = <<
-        op(:store_imm_u64), 1, 16, 0x78, 0x56, 0x34, 0x12,  # Only 32-bit immediate
+        op(:store_imm_u64), 3, 16,0,1, 0x78, 0x56, 0x34, 0x12,  # Only 32-bit immediate
         op(:load_imm_64), 0x01, 0x01, 0x10, 0x32, 0x54, 0x76, 0x98, 0xBA, 0xDC,
-        op(:store_u64), 1, 24
+        op(:store_u64), 1, 0x18,0,1
       >>
 
       bitmask = <<
-        1, 0, 0, 0, 0, 0,0,              # store_imm_u64 (4-byte immediate)
+        1, 0, 0, 0, 0, 0,0,0,0,              # store_imm_u64 (4-byte immediate)
         1, 0, 0, 0, 0, 0, 0, 0, 0, 0,  # load_imm_64 (8-byte immediate)
-        1, 0, 0                         # store_u64
+        1, 0, 0,0,0                         # store_u64
       >>
 
       p = create_program(program, bitmask)
@@ -170,9 +170,9 @@ defmodule VMTest do
       assert Registers.get(state_.registers, 1) == 0xDCBA987654321001
       # Verify memory contents:
       # First location should have zero-extended 32-bit value
-      assert Memory.read(state_.memory, 16, 8) == {:ok, <<0x78, 0x56, 0x34, 0x12, 0, 0, 0, 0>>}
+      assert Memory.read(state_.memory, 0x10010, 8) == {:ok, <<0x78, 0x56, 0x34, 0x12, 0, 0, 0, 0>>}
       # Second location should have full 64-bit value from register
-      assert Memory.read(state_.memory, 24, 8) == {:ok, <<0x01,0x10, 0x32, 0x54, 0x76, 0x98, 0xBA, 0xDC>>}
+      assert Memory.read(state_.memory, 0x10018, 8) == {:ok, <<0x01,0x10, 0x32, 0x54, 0x76, 0x98, 0xBA, 0xDC>>}
     end
 
     test "executes conditional branch sequence" do
@@ -187,7 +187,7 @@ defmodule VMTest do
         op(:branch_eq_imm), 0x11, 42, 5,
         op(:trap),
         op(:fallthrough),
-        op(:store_imm_u8), 1, 20, 99,
+        op(:store_imm_u8), 3, 20, 0, 1, 99,
         op(:fallthrough)
       >>
 
@@ -196,7 +196,7 @@ defmodule VMTest do
         1, 0, 0, 0,        # branch_eq_imm
         1,                 # trap
         1,                 # fallthrough
-        1, 0, 0, 0,        # store_imm_u8
+        1, 0, 0, 0,0,0,        # store_imm_u8
         1                  # fallthrough
       >>
 
@@ -206,7 +206,7 @@ defmodule VMTest do
       assert exit_reason == :panic  # From final fallthrough
       assert state_.counter == 0
       assert Registers.get(state_.registers, 1) == 42
-      assert Memory.read(state_.memory, 20, 1) == {:ok, <<99>>}  # Verify branch was taken
+      assert Memory.read(state_.memory, 0x10014, 1) == {:ok, <<99>>}  # Verify branch was taken
     end
     test "not equel - no jump" do
 
@@ -215,7 +215,7 @@ defmodule VMTest do
         op(:branch_eq_imm), 0x11, 42, 5,
         op(:trap),
         op(:fallthrough),
-        op(:store_imm_u8), 1, 20, 99,
+        op(:store_imm_u8), 3, 20, 0, 1, 99,
         op(:fallthrough)
       >>
 
@@ -224,7 +224,7 @@ defmodule VMTest do
         1, 0, 0, 0,        # branch_eq_imm
         1,                 # trap
         1,                 # fallthrough
-        1, 0, 0, 0,        # store_imm_u8
+        1, 0, 0, 0,0,0,        # store_imm_u8
         1                  # fallthrough
       >>
 
@@ -234,7 +234,7 @@ defmodule VMTest do
       assert exit_reason == :panic  # From final fallthrough
       assert state_.counter == 0
       assert Registers.get(state_.registers, 1) == 7
-      assert Memory.read(state_.memory, 20, 1) == {:ok, <<0>>}  # Verify branch was taken
+      assert Memory.read(state_.memory, 0x10014, 1) == {:ok, <<0>>}  # Verify branch was taken
     end
 
     test "executes load_imm_jump sequence" do
@@ -247,7 +247,7 @@ defmodule VMTest do
         op(:load_imm_jump), 0x11, 42, 6,
         op(:trap),
         op(:fallthrough),
-        op(:store_imm_u8), 1, 10, 99,
+        op(:store_imm_u8), 3, 10, 0, 1, 99,
         op(:fallthrough)
       >>
 
@@ -255,7 +255,7 @@ defmodule VMTest do
         1, 0, 0, 0,        # load_imm_jump
         1,                 # trap
         1,                 # fallthrough
-        1, 0, 0, 0,        # store_imm_u8
+        1, 0, 0, 0,0,0,        # store_imm_u8
         1                  # fallthrough
       >>
 
@@ -265,7 +265,7 @@ defmodule VMTest do
       assert exit_reason == :panic  # From final fallthrough
       assert state_.counter == 0
       assert Registers.get(state_.registers, 1) == 42
-      assert Memory.read(state_.memory, 10, 1) == {:ok, <<99>>}  # Verify jump was taken
+      assert Memory.read(state_.memory, 0x1000a, 1) == {:ok, <<99>>}  # Verify jump was taken
     end
 
     test "executes signed comparison branch sequence" do
@@ -280,7 +280,7 @@ defmodule VMTest do
         op(:branch_lt_s_imm), 0x11, 0, 6,
         op(:trap),
         op(:fallthrough),
-        op(:store_imm_u8), 1, 30, 77,
+        op(:store_imm_u8), 3, 30, 0, 1, 77,
         op(:fallthrough)
       >>
 
@@ -289,7 +289,7 @@ defmodule VMTest do
         1, 0, 0, 0,        # branch_lt_s_imm
         1,                 # trap
         1,                 # fallthrough
-        1, 0, 0, 0,        # store_imm_u8
+        1, 0, 0, 0,0,0,        # store_imm_u8
         1                  # fallthrough
       >>
 
@@ -299,7 +299,7 @@ defmodule VMTest do
       assert exit_reason == :panic  # From final fallthrough
       assert state_.counter == 0
         assert Registers.get(state_.registers, 1) == 0xFFFF_FFFF_FFFF_FFFF
-      assert Memory.read(state_.memory, 30, 1) == {:ok, <<77>>}  # Verify branch was taken
+      assert Memory.read(state_.memory, 0x1001e, 1) == {:ok, <<77>>}  # Verify branch was taken
     end
 
     test "calculates sum of even numbers from 1 to 10" do
@@ -338,7 +338,7 @@ defmodule VMTest do
         #(offset 31)
         op(:jump), 238,                    # Jump back to loop start (offset 13) => 31 -18  => 31 + (255 - 17) = 31 + 238
         # Store result and exit (offset 38):
-        op(:store_u32), 1, 3            # Store sum at memory address 100
+        op(:store_u32), 1, 3,0,1           # Store sum at memory address 0x10003
       >>
 
       bitmask = <<
@@ -354,7 +354,7 @@ defmodule VMTest do
         1,                 # fallthrough (27)
         1, 0, 0,           # add_imm_32 (28*)
         1, 0,              # jump (31)
-        1, 0, 0            # store_u32 (33*)
+        1, 0, 0,0,0         # store_u32 (33*)
       >>
 
       p = create_program(program, bitmask)
@@ -362,7 +362,7 @@ defmodule VMTest do
 
       assert exit_reason == :panic  # Normal termination after last instruction
       # Read the result from memory - should be 2 + 4 + 6 + 8 + 10 = 30
-      assert Memory.read(state_.memory, 3, 4) == {:ok, <<30, 0, 0, 0>>}
+      assert Memory.read(state_.memory, 0x10003, 4) == {:ok, <<30, 0, 0, 0>>}
       # Verify final register values
       assert Registers.get(state_.registers, [1, 2, 3]) == [30, 11, 10]  # sum, final i value, loop end condition
     end
@@ -372,14 +372,14 @@ defmodule VMTest do
   describe "VM.execute memory faults" do
     test "handles memory write fault correctly" do
       # Program:
-      # store_imm_u8 addr=4096, value=42  (62, 2,0x00 10, 42)
-      program = <<op(:store_imm_u8), 2, 0x00, 0x10, 42>>
-      bitmask = <<1, 0, 0, 0, 0>>
+      # store_imm_u8 addr=0x100FF, value=42
+      program = <<op(:store_imm_u8), 3, 0xFF, 0, 1, 42>>
+      bitmask = <<1, 0, 0, 0, 0, 0>>
 
       p = create_program(program, bitmask)
 
       # Mark page 1 (starting at 4096) as read-only
-      state = %State{memory: Memory.set_access(%State{}.memory, 4096, 2, :read)}
+      state = %State{memory: Memory.set_access(%State{}.memory, 0x10000, 2, :read)}
 
       # Initial register state to verify no changes
       initial_registers = state.registers
@@ -387,13 +387,13 @@ defmodule VMTest do
       {exit_reason, state_} = VM.execute(p, state)
 
       # Should return page-aligned address
-      assert exit_reason == {:fault, 1}
+      assert exit_reason == {:fault, 0x10000}
       # Counter should not advance
       assert state_.counter == 0
       # Registers should be unchanged
       assert state_.registers == initial_registers
       # Memory should be unchanged
-      assert Memory.read(state_.memory, 4096, 1) == {:ok, <<0>>}
+      assert Memory.read(state_.memory, 0x10000, 1) == {:ok, <<0>>}
     end
   end
 
@@ -405,18 +405,18 @@ defmodule VMTest do
       # store_imm_ind_u8 r1, 5, 42    # Store 42 at address r1+5
       # store_imm_ind_u16 r1, 10, 0x1234  # Store 0x1234 at address r1+10
       program = <<
-        op(:load_imm), 1, 100,
+        op(:load_imm), 1, 0,0,1,
         op(:store_imm_ind_u8), 0x11, 5, 42,
         op(:store_imm_ind_u16), 0x11, 10, 0x34, 0x12
       >>
-      bitmask = <<1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0>>
+      bitmask = <<1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0>>
 
       p = create_program(program, bitmask)
       {exit_reason, state_} = VM.execute(p, %State{})
 
       assert exit_reason == :panic
-      assert Memory.read(state_.memory, 105, 1) == {:ok, <<42>>}  # 100 + 5
-      assert Memory.read(state_.memory, 110, 2) == {:ok, <<0x34, 0x12>>}  # 100 + 10
+      assert Memory.read(state_.memory, 0x10005, 1) == {:ok, <<42>>}  # 100 + 5
+      assert Memory.read(state_.memory, 0x1000a, 2) == {:ok, <<0x34, 0x12>>}  # 100 + 10
     end
 
     test "executes two_registers_one_offset branch instructions" do
