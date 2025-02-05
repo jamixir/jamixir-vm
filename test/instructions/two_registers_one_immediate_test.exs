@@ -357,6 +357,18 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
       assert exit_status == :continue
       assert state.registers.r1 == 0x7
     end
+
+    test "shar_r_imm_alt_32 modulo 2^32" do
+      program = <<op(:shar_r_imm_alt_32), 0x21, 0x7_0000_0078>>
+      bitmask = <<1, 0, 0>>
+      state = %State{registers: %Registers{r2: 4}}
+
+      {exit_status, state} =
+        TwoRegistersOneImmediate.execute(:shar_r_imm_alt_32, program, bitmask, state)
+
+      assert exit_status == :continue
+      assert state.registers.r1 == 0x7
+    end
   end
 
   describe "conditional move operations" do

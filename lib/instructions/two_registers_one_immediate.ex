@@ -160,7 +160,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
 
         :shar_r_imm_alt_32 ->
           shift = rem(w_b, 32)
-          div(u2i(v_x, 4), 1 <<< shift) |> i2u(8)
+          div(u2i(rem(v_x, 1 <<< 32), 4), 1 <<< shift) |> i2u(8)
       end
 
     state = %{state | registers: Registers.set(state.registers, r_a, result)}
