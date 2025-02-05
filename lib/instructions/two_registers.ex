@@ -2,6 +2,7 @@ defmodule PVM.Instructions.TwoRegisters do
   alias PVM.Registers
   alias PVM.Memory
   use PVM.Transitions
+  use PVM.{Encoder, Decoder}
   # Section (A.5.9) v0.6.1
 
   def execute(:move_reg, program, state) do
@@ -115,6 +116,32 @@ defmodule PVM.Instructions.TwoRegisters do
     {r_d, r_a} = get_params(program, state.counter)
     sign_extended = Registers.get(state.registers, r_a) |> rem(0x100) |> u2i(1) |> i2u(8)
     {:continue, %{state | registers: Registers.set(state.registers, r_d, sign_extended)}}
+  end
+
+  def execute(:sign_extend_16, program, state) do
+    {r_d, r_a} = get_params(program, state.counter)
+    sign_extended = Registers.get(state.registers, r_a) |> rem(0x10000) |> u2i(2) |> i2u(8)
+    {:continue, %{state | registers: Registers.set(state.registers, r_d, sign_extended)}}
+  end
+
+  def execute(:zero_extend_16, program, state) do
+    {r_d, r_a} = get_params(program, state.counter)
+    zero_extended = Registers.get(state.registers, r_a) |> rem(0x10000)
+    {:continue, %{state | registers: Registers.set(state.registers, r_d, zero_extended)}}
+  end
+
+  def execute(:reverse_bytes, program, state) do
+    {r_d, r_a} = get_params(program, state.counter)
+    value = Registers.get(state.registers, r_a)
+
+    reversed =
+      e_le(value, 8)
+      |> :binary.bin_to_list()
+      |> Enum.reverse()
+      |> :binary.list_to_bin()
+      |> de_le(8)
+
+    {:continue, %{state | registers: Registers.set(state.registers, r_d, reversed)}}
   end
 
   # Formula (A.26) v0.6.1
