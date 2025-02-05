@@ -3,7 +3,7 @@ defmodule PVM.Utils do
   import Bitwise
   alias PVM.Instructions
 
-  # Formula (A.2) v0.5
+  # Formula (A.2) v0.6.1
   def skip(i, bitmask) when is_binary(bitmask) do
     do_skip(i + 1, bitmask, 0)
   end
@@ -24,7 +24,7 @@ defmodule PVM.Utils do
 
   def extend_to_64bit(x, 0), do: x
 
-  # Formula (A.4) v0.5
+  # Formula (A.4) v0.6.1
   def basic_block_starts(<<>>, <<>>), do: [0]
 
   def basic_block_starts(program, bitmask) when is_binary(program) and is_binary(bitmask) do

@@ -1,7 +1,8 @@
 defmodule PVM.Instructions.RegImmediate do
   import Bitwise
   use PVM.{Decoder, Encoder, Utils}
-  alias PVM.{Instructions.Executor, Memory, Registers}
+  alias PVM.{Instructions.Executor, Registers}
+  import PVM.Memory.Util
 
   # Section (A.19) v0.5
   def execute(:jump_ind, program, bitmask, jump_table, state) do
@@ -29,158 +30,112 @@ defmodule PVM.Instructions.RegImmediate do
   def execute(:load_u8, program, bitmask, _jump_table, state) do
     {register_index, addr} = get_params(program, bitmask, state.counter)
 
-    case Memory.read(state.memory, addr, 1) do
-      {:error, {:fault, fault_addr}} ->
-        {{:fault, fault_addr}, state}
-
-      {:ok, value} ->
-        state = %{
-          state
-          | registers: Registers.set(state.registers, register_index, :binary.first(value))
-        }
-
-        {:continue, state}
-    end
+    read_memory(state, addr, 1, &%{
+        state
+        | registers: Registers.set(state.registers, register_index, :binary.first(&1))
+      }
+    )
   end
 
   def execute(:load_i8, program, bitmask, _jump_table, state) do
     {register_index, addr} = get_params(program, bitmask, state.counter)
 
-    case Memory.read(state.memory, addr, 1) do
-      {:error, {:fault, fault_addr}} ->
-        {{:fault, fault_addr}, state}
+    read_memory(state, addr, 1, fn value ->
+      signed_value =
+        :binary.first(value)
+        |> to_64bit(1)
 
-      {:ok, value} ->
-        signed_value =
-          :binary.first(value)
-          |> to_64bit(1)
-
-        state = %{
-          state
-          | registers: Registers.set(state.registers, register_index, signed_value)
-        }
-
-        {:continue, state}
-    end
+      %{
+        state
+        | registers: Registers.set(state.registers, register_index, signed_value)
+      }
+    end)
   end
 
   def execute(:load_u16, program, bitmask, _jump_table, state) do
     {register_index, addr} = get_params(program, bitmask, state.counter)
 
-    case Memory.read(state.memory, addr, 2) do
-      {:error, {:fault, fault_addr}} ->
-        {{:fault, fault_addr}, state}
-
-      {:ok, value} ->
-        state = %{
-          state
-          | registers: Registers.set(state.registers, register_index, de_le(value, 2))
-        }
-
-        {:continue, state}
-    end
+    read_memory(state, addr, 2, &%{
+        state
+        | registers: Registers.set(state.registers, register_index, de_le(&1, 2))
+      }
+    )
   end
 
   def execute(:load_i16, program, bitmask, _jump_table, state) do
     {register_index, addr} = get_params(program, bitmask, state.counter)
 
-    case Memory.read(state.memory, addr, 2) do
-      {:error, {:fault, fault_addr}} ->
-        {{:fault, fault_addr}, state}
+    read_memory(state, addr, 2, fn value ->
+      signed_value =
+        value
+        |> de_le(2)
+        |> to_64bit(2)
 
-      {:ok, value} ->
-        signed_value =
-          value
-          |> de_le(2)
-          |> to_64bit(2)
-
-        state = %{
-          state
-          | registers: Registers.set(state.registers, register_index, signed_value)
-        }
-
-        {:continue, state}
-    end
+      %{
+        state
+        | registers: Registers.set(state.registers, register_index, signed_value)
+      }
+    end)
   end
 
   def execute(:load_u32, program, bitmask, _jump_table, state) do
     {register_index, addr} = get_params(program, bitmask, state.counter)
 
-    case Memory.read(state.memory, addr, 4) do
-      {:error, {:fault, fault_addr}} ->
-        {{:fault, fault_addr}, state}
-
-      {:ok, value} ->
-        state = %{
-          state
-          | registers: Registers.set(state.registers, register_index, de_le(value, 4))
-        }
-
-        {:continue, state}
-    end
+    read_memory(state, addr, 4, &%{
+        state
+        | registers: Registers.set(state.registers, register_index, de_le(&1, 4))
+      }
+    )
   end
 
   def execute(:load_i32, program, bitmask, _jump_table, state) do
     {register_index, addr} = get_params(program, bitmask, state.counter)
 
-    case Memory.read(state.memory, addr, 4) do
-      {:error, {:fault, fault_addr}} ->
-        {{:fault, fault_addr}, state}
+    read_memory(state, addr, 4, fn value ->
+      signed_value =
+        value
+        |> de_le(4)
+        |> to_64bit(4)
 
-      {:ok, value} ->
-        signed_value =
-          value
-          |> de_le(4)
-          |> to_64bit(4)
-
-        state = %{
-          state
-          | registers: Registers.set(state.registers, register_index, signed_value)
-        }
-
-        {:continue, state}
-    end
+      %{
+        state
+        | registers: Registers.set(state.registers, register_index, signed_value)
+      }
+    end)
   end
 
   def execute(:load_u64, program, bitmask, _jump_table, state) do
     {register_index, addr} = get_params(program, bitmask, state.counter)
 
-    case Memory.read(state.memory, addr, 8) do
-      {:error, {:fault, fault_addr}} ->
-        {{:fault, fault_addr}, state}
-
-      {:ok, value} ->
-        state = %{
-          state
-          | registers: Registers.set(state.registers, register_index, de_le(value, 8))
-        }
-
-        {:continue, state}
-    end
+    read_memory(state, addr, 8, &%{
+        state
+        | registers: Registers.set(state.registers, register_index, de_le(&1, 8))
+      }
+    )
   end
 
   def execute(:store_u8, program, bitmask, _jump_table, state) do
     {register_index, addr} = get_params(program, bitmask, state.counter)
     value = Registers.get(state.registers, register_index)
-    Memory.Util.write(state, addr, <<rem(value, 1 <<< 8)>>)
+    write_memory(state, addr, <<rem(value, 1 <<< 8)>>)
   end
 
   def execute(:store_u16, program, bitmask, _jump_table, state) do
     {register_index, addr} = get_params(program, bitmask, state.counter)
     value = Registers.get(state.registers, register_index)
-    Memory.Util.write(state, addr, e_le(rem(value, 1 <<< 16), 2))
+    write_memory(state, addr, e_le(rem(value, 1 <<< 16), 2))
   end
 
   def execute(:store_u32, program, bitmask, _jump_table, state) do
     {register_index, addr} = get_params(program, bitmask, state.counter)
     value = Registers.get(state.registers, register_index)
-    Memory.Util.write(state, addr, e_le(rem(value, 1 <<< 32), 4))
+    write_memory(state, addr, e_le(rem(value, 1 <<< 32), 4))
   end
 
   def execute(:store_u64, program, bitmask, _jump_table, state) do
     {register_index, addr} = get_params(program, bitmask, state.counter)
     value = Registers.get(state.registers, register_index)
-    Memory.Util.write(state, addr, e_le(value, 8))
+    write_memory(state, addr, e_le(value, 8))
   end
 
   def execute(:load_imm_64, program, _bitmask, _jump_table, state) do

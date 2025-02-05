@@ -69,8 +69,8 @@ defmodule SingleStepTest do
 
     test "steps reg_immediate instructions" do
 
-      program = <<op(:load_imm), 1, 42, op(:store_u8), 1, 10, op(:load_u8), 2, 10>>
-      bitmask = <<1, 0, 0, 1, 0, 0, 1, 0, 0>>
+      program = <<op(:load_imm), 1, 42, op(:store_u8), 1, 10, 0, 1, op(:load_u8), 2, 10, 0, 1>>
+      bitmask = <<1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0>>
       jump_table = []
       state = %State{}
 
@@ -80,13 +80,13 @@ defmodule SingleStepTest do
       assert Registers.get(state_.registers, 1) == 42
 
       # Second instruction: store_u8
-      state_ = %{state_ | counter: 3, registers: state_.registers}
+      # state_ = %{state_ | counter: 3, registers: state_.registers}
       {exit_reason, state_} = SingleStep.run(program, bitmask, jump_table, state_)
       assert exit_reason == :continue
-      assert Memory.read(state_.memory, 10, 1) == {:ok,<<42>>}
+      assert Memory.read(state_.memory, 0x1000a, 1) == {:ok,<<42>>}
 
       # Third instruction: load_u8
-      state_ = %{state_ | counter: 6, memory: state_.memory}
+      # state_ = %{state_ | counter: 6, memory: state_.memory}
       {exit_reason, state_} = SingleStep.run(program, bitmask, jump_table, state_)
       assert exit_reason == :continue
       assert Registers.get(state_.registers, 2) == 42
@@ -95,29 +95,28 @@ defmodule SingleStepTest do
     test "steps two_immediates instructions" do
       state = %State{}
       program = <<
-        op(:store_imm_u8),0x01,10,42,
-        op(:store_imm_u16),0x01,20,0x34,0x12,
-        op(:store_imm_u32),0x01,30,0x78,0x56,0x34,0x12
+        op(:store_imm_u8), 3, 10, 0, 1, 42,
+        op(:store_imm_u16), 3, 20, 0, 1, 0x34, 0x12,
+        op(:store_imm_u32), 3, 30, 0, 1, 0x78, 0x56, 0x34, 0x12
        >>
-      bitmask = <<1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0>>
+      bitmask = <<1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0>>
       jump_table = []
 
       # First instruction: store_imm_u8
       {exit_reason, state_} = SingleStep.run(program, bitmask, jump_table, state)
       assert exit_reason == :continue
-      assert Memory.read(state_.memory, 10, 1) == {:ok,<<42>>}
+      assert Memory.read(state_.memory, 0x1000A, 1) == {:ok,<<42>>}
 
       # Second instruction: store_imm_u16
-      state_ = %{state_ | counter: 4, memory: state_.memory}
       {exit_reason, state_} = SingleStep.run(program, bitmask, jump_table, state_)
       assert exit_reason == :continue
-      assert Memory.read(state_.memory, 20, 2) == {:ok,<<0x34, 0x12>>}
+      assert Memory.read(state_.memory, 0x10014, 2) == {:ok,<<0x34, 0x12>>}
 
       # Third instruction: store_imm_u32
-      state_ = %{state_ | counter: 9, memory: state_.memory}
+
       {exit_reason, state_} = SingleStep.run(program, bitmask, jump_table, state_)
       assert exit_reason == :continue
-      assert Memory.read(state_.memory, 30, 4) == {:ok,<<0x78, 0x56, 0x34, 0x12>>}
+      assert Memory.read(state_.memory, 0x1001E, 4) == {:ok,<<0x78, 0x56, 0x34, 0x12>>}
     end
   end
 

@@ -1,7 +1,8 @@
 defmodule PVM.Instructions.TwoRegistersOneImmediate do
   import Bitwise
   use PVM.{Decoder, Encoder, Utils, Transitions}
-  alias PVM.{Memory, Registers}
+  alias PVM.Registers
+  import PVM.Memory.Util
 
   # Store instructions
   def execute(instruction, program, bitmask, state)
@@ -19,7 +20,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
       end
 
     value = if instruction == :store_ind_u64, do: w_a, else: rem(w_a, 1 <<< bits)
-    Memory.Util.write(state, w_b + v_x, e_le(value, size))
+    write_memory(state, w_b + v_x, e_le(value, size))
   end
 
   # Unsigned load instructions
@@ -36,14 +37,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
         :load_ind_u64 -> 8
       end
 
-    case Memory.read(state.memory, w_b + v_x, size) do
-      {:error, {:fault, fault_addr}} ->
-        {{:fault, fault_addr}, state}
-
-      {:ok, value} ->
-        state = %{state | registers: Registers.set(state.registers, r_a, de_le(value, size))}
-        {:continue, state}
-    end
+    read_memory(state, w_b + v_x, size, &%{state | registers: Registers.set(state.registers, r_a, de_le(&1, size))})
   end
 
   # Signed load instructions
@@ -59,20 +53,20 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
         :load_ind_i32 -> 4
       end
 
-    case Memory.read(state.memory, w_b + v_x, size) do
-      {:error, {:fault, fault_addr}} ->
-        {{:fault, fault_addr}, state}
-
-      {:ok, value} ->
+    read_memory(
+      state,
+      w_b + v_x,
+      size,
+      fn v ->
         unsigned_8bit =
-          value
+          v
           |> de_le(size)
           |> u2i(size)
           |> i2u(8)
 
-        state = %{state | registers: Registers.set(state.registers, r_a, unsigned_8bit)}
-        {:continue, state}
-    end
+        %{state | registers: Registers.set(state.registers, r_a, unsigned_8bit)}
+      end
+    )
   end
 
   # Arithmetic operations

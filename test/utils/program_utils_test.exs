@@ -28,7 +28,7 @@ defmodule PVM.Utils.ProgramUtilsTest do
         op(:fallthrough),
         op(:add_imm_32), 0x22, 1,       # i++
         op(:jump), 238,                  # loop
-        op(:store_u32), 1, 3            # store result
+        op(:store_u32), 1, 3, 0, 1            # store result
       >>
 
       base_bitmask = <<
@@ -44,7 +44,7 @@ defmodule PVM.Utils.ProgramUtilsTest do
         1,                 # fallthrough
         1, 0, 0,           # add_imm_32
         1, 0,              # jump
-        1, 0, 0            # store_u32
+        1, 0, 0, 0, 0  # store_u32
       >>
 
       {program, bitmask} = ProgramUtils.append_halt(base_program, base_bitmask)

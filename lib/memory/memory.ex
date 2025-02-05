@@ -1,12 +1,10 @@
 defmodule PVM.Memory do
-  import Bitwise
-
   # 4KB per page
-  @default_page_size 1 <<< 12
+  @default_page_size 0x1000
   # 4GB total memory
-  @memory_size 1 <<< 32
+  @memory_size 0x1_0000_0000
 
-
+  @min_allowed_address 0x1_0000
 
   @type t :: %__MODULE__{
           data: %{non_neg_integer() => byte()},
@@ -39,7 +37,7 @@ defmodule PVM.Memory do
     set_page_size(memory, @default_page_size)
   end
 
-  defp wrap_address(%__MODULE__{size: size} , address) do
+  defp wrap_address(%__MODULE__{size: size}, address) do
     rem(address, size)
   end
 
@@ -50,31 +48,40 @@ defmodule PVM.Memory do
   def read(%__MODULE__{} = memory, address, length) do
     wrapped_address = wrap_address(memory, address)
 
-    {start_page, end_page} = get_page_range(memory, wrapped_address, length)
+    if wrapped_address < @min_allowed_address do
+      {:error, :panic}
+    else
+      {start_page, end_page} = get_page_range(memory, wrapped_address, length)
 
-    case check_permissions(memory, start_page, end_page, :read) do
-      :ok ->
-        data = read_from_sparse(memory, wrapped_address, length)
-        {:ok, data}
+      case check_permissions(memory, start_page, end_page, :read) do
+        :ok ->
+          data = read_from_sparse(memory, wrapped_address, length)
+          {:ok, data}
 
-      {:error, page} ->
-        {:error, {:fault, page}}
+        {:error, page} ->
+          {:error, {:fault, page}}
+      end
     end
   end
 
   def write(%__MODULE__{} = memory, address, value) when is_binary(value) do
     wrapped_address = wrap_address(memory, address)
-    length = byte_size(value)
 
-    {start_page, end_page} = get_page_range(memory, wrapped_address, length)
+    if wrapped_address < @min_allowed_address do
+      {:error, :panic}
+    else
+      length = byte_size(value)
 
-    case check_permissions(memory, start_page, end_page, :write) do
-      :ok ->
-        new_data = write_to_sparse(memory, wrapped_address, value)
-        {:ok, %__MODULE__{memory | data: new_data}}
+      {start_page, end_page} = get_page_range(memory, wrapped_address, length)
 
-      {:error, page} ->
-        {:error, {:fault, page}}
+      case check_permissions(memory, start_page, end_page, :write) do
+        :ok ->
+          new_data = write_to_sparse(memory, wrapped_address, value)
+          {:ok, %__MODULE__{memory | data: new_data}}
+
+        {:error, page} ->
+          {:error, {:fault, page}}
+      end
     end
   end
 
@@ -106,7 +113,7 @@ defmodule PVM.Memory do
       cond do
         required_access == :read and current_access in [:read, :write] -> {:cont, :ok}
         required_access == :write and current_access == :write -> {:cont, :ok}
-        true -> {:halt, {:error, page}}
+        true -> {:halt, {:error, page * memory.page_size}}
       end
     end)
   end
