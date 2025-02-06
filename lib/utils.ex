@@ -20,7 +20,7 @@ defmodule PVM.Utils do
 
   # Formula (A.15) v0.6.1
   def extend_to_64bit(x, n) when n > 0 and n in [0, 1, 2, 3, 4, 8],
-    do: x +  (x >>> (8 * n - 1)) * ((1 <<< 64) - (1 <<< (8 * n)))
+    do: x + (x >>> (8 * n - 1)) * ((1 <<< 64) - (1 <<< (8 * n)))
 
   def extend_to_64bit(x, 0), do: x
 
@@ -86,6 +86,34 @@ defmodule PVM.Utils do
     end
   end
 
+  @doc """
+  Rotates a value by the specified number of bits in the given direction.
+
+  ## Parameters
+    * `value` - The number to rotate
+    * `shift` - The number of positions to rotate by
+    * `bits` - The bit width of the number (e.g., 32 or 64)
+    * `direction` - Either `:left` or `:right`
+
+  ## Examples
+
+      iex> number = 0b10110011
+      iex> PVM.Instructions.ThreeRegisters.rotate(number, 2, 8, :right)
+      0b11001110
+
+      iex> number = 0b10110011
+      iex> PVM.Instructions.ThreeRegisters.rotate(number, 2, 8, :left)
+      0b11101100
+
+  """
+  def rotate(value, shift, bits, direction) do
+    mask = (1 <<< bits) - 1
+    shift = if direction == :right, do: shift, else: bits - shift |> rem(bits)
+    shifted_part = value <<< shift
+    wrapped_part = value >>> (bits - shift)
+    (shifted_part ||| wrapped_part) &&& mask
+  end
+
   defmacro __using__(_) do
     quote do
       def to_64bit(value, num_bytes), do: PVM.Utils.extend_to_64bit(value, num_bytes)
@@ -102,6 +130,8 @@ defmodule PVM.Utils do
         do: PVM.Utils.next_counter(output, prev_counter, bitmask)
 
       def basic_block_starts(program, bitmask), do: PVM.Utils.basic_block_starts(program, bitmask)
+
+      def rotate(value, shift, bits, direction), do: PVM.Utils.rotate(value, shift, bits, direction)
     end
   end
 end

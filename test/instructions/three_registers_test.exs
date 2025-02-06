@@ -1,8 +1,11 @@
 defmodule Instructions.ThreeRegistersTest do
   use ExUnit.Case
-  use PVM.Instructions
+  use PVM.{Instructions, Transitions}
   import Bitwise
   alias PVM.{Instructions.ThreeRegisters, Registers, State}
+  doctest PVM.Instructions.ThreeRegisters
+
+  @max_64 0xFFFFFFFFFFFFFFFF
 
   describe "32-bit arithmetic operations" do
     test "add_32 performs addition" do
@@ -115,6 +118,89 @@ defmodule Instructions.ThreeRegistersTest do
     end
   end
 
+  describe "bitwise AND with inverted second operand" do
+    test "basic case" do
+      program = <<op(:and_inv), 0x21, 3>>
+      state = %State{registers: %Registers{r1: 0b1100, r2: 0b1010}}
+      {_, state} = ThreeRegisters.execute(:and_inv, program, state)
+      assert state.registers.r3 == 0b0100
+    end
+
+    test "with all ones in first operand" do
+      program = <<op(:and_inv), 0x21, 3>>
+      state = %State{registers: %Registers{r1: @max_64, r2: 0b1010}}
+      {_, state} = ThreeRegisters.execute(:and_inv, program, state)
+      assert state.registers.r3 == @max_64 - 0b1010
+    end
+
+    test "with all zeros in first operand" do
+      program = <<op(:and_inv), 0x21, 3>>
+      state = %State{registers: %Registers{r1: 0, r2: 0b1010}}
+      {_, state} = ThreeRegisters.execute(:and_inv, program, state)
+      assert state.registers.r3 == 0
+    end
+
+    test "with all ones in second operand" do
+      program = <<op(:and_inv), 0x21, 3>>
+      state = %State{registers: %Registers{r1: 0b1100, r2: @max_64}}
+      {_, state} = ThreeRegisters.execute(:and_inv, program, state)
+      assert state.registers.r3 == 0
+    end
+  end
+
+  describe "bitwise OR with inverted second operand" do
+    test "basic case" do
+      program = <<op(:or_inv), 0x21, 3>>
+      state = %State{registers: %Registers{r1: 0b0100, r2: 0b1010}}
+      {_, state} = ThreeRegisters.execute(:or_inv, program, state)
+      assert state.registers.r3 == @max_64 - 0b1010
+    end
+
+    test "with all ones in first operand" do
+      program = <<op(:or_inv), 0x21, 3>>
+      state = %State{registers: %Registers{r1: @max_64, r2: 0b1010}}
+      {_, state} = ThreeRegisters.execute(:or_inv, program, state)
+      assert state.registers.r3 == @max_64
+    end
+
+    test "with all ones in second operand" do
+      program = <<op(:or_inv), 0x21, 3>>
+      state = %State{registers: %Registers{r1: 0b1100, r2: @max_64}}
+      {_, state} = ThreeRegisters.execute(:or_inv, program, state)
+      assert state.registers.r3 == 0b1100
+    end
+  end
+
+  describe "bitwise XNOR" do
+    test "basic case" do
+      program = <<op(:xnor), 0x21, 3>>
+      state = %State{registers: %Registers{r1: 0b1100, r2: 0b1010}}
+      {_, state} = ThreeRegisters.execute(:xnor, program, state)
+      assert state.registers.r3 == 0xFFFFFFFFFFFFFFF9
+    end
+
+    test "with all ones in first operand" do
+      program = <<op(:xnor), 0x21, 3>>
+      state = %State{registers: %Registers{r1: @max_64, r2: 0b1010}}
+      {_, state} = ThreeRegisters.execute(:xnor, program, state)
+      assert state.registers.r3 == 0b1010
+    end
+
+    test "with all ones in second operand" do
+      program = <<op(:xnor), 0x21, 3>>
+      state = %State{registers: %Registers{r1: 0b1100, r2: @max_64}}
+      {_, state} = ThreeRegisters.execute(:xnor, program, state)
+      assert state.registers.r3 == 0b1100
+    end
+
+    test "with equal operands" do
+      program = <<op(:xnor), 0x21, 3>>
+      state = %State{registers: %Registers{r1: 0b1010, r2: 0b1010}}
+      {_, state} = ThreeRegisters.execute(:xnor, program, state)
+      assert state.registers.r3 == @max_64
+    end
+  end
+
   describe "comparison operations" do
     test "set_lt_u performs unsigned less than comparison" do
       program = <<op(:set_lt_u), 0x21, 3>>
@@ -147,7 +233,7 @@ defmodule Instructions.ThreeRegistersTest do
 
     test "cmov_nz moves if not zero" do
       program = <<op(:cmov_nz), 0x21, 3>>
-        state = %State{registers: %Registers{r1: 42, r2: 1, r3: 100}}
+      state = %State{registers: %Registers{r1: 42, r2: 1, r3: 100}}
 
       {_, state} = ThreeRegisters.execute(:cmov_nz, program, state)
       # Should move 42 since condition is not zero
@@ -297,6 +383,92 @@ defmodule Instructions.ThreeRegistersTest do
 
       {_, state} = ThreeRegisters.execute(:mul_upper_s_u, program, state)
       assert state.registers.r3 == 0x8000000000000001
+    end
+  end
+
+  describe "min/max operations" do
+    test "max returns larger of two signed values" do
+      program = <<op(:max), 0x21, 3>>
+      # -5 is larger than -10 in signed comparison
+      state = %State{
+        registers: %Registers{
+          r1: i2u(-5, 8),
+          r2: i2u(-10, 8)
+        }
+      }
+
+      {_, state} = ThreeRegisters.execute(:max, program, state)
+      assert u2i(state.registers.r3, 8) == -5
+    end
+
+    test "max_u returns larger of two unsigned values" do
+      program = <<op(:max_u), 0x21, 3>>
+
+      state = %State{
+        registers: %Registers{
+          r1: 11,
+          r2: 10
+        }
+      }
+
+      {_, state} = ThreeRegisters.execute(:max_u, program, state)
+      assert state.registers.r3 == 11
+    end
+
+    test "min returns smaller of two signed values" do
+      program = <<op(:min), 0x21, 3>>
+
+      state = %State{
+        registers: %Registers{
+          r1: i2u(-5, 8),
+          r2: i2u(-10, 8)
+        }
+      }
+
+      {_, state} = ThreeRegisters.execute(:min, program, state)
+      assert u2i(state.registers.r3, 8) == -10
+    end
+
+    test "min_u returns smaller of two unsigned values" do
+      program = <<op(:min_u), 0x21, 3>>
+
+      state = %State{
+        registers: %Registers{
+          # This is a very large unsigned number
+          r1: 11,
+          r2: 10
+        }
+      }
+
+      {_, state} = ThreeRegisters.execute(:min_u, program, state)
+      assert state.registers.r3 == 10
+    end
+
+    test "edge cases for signed comparisons" do
+      program = <<op(:max), 0x21, 3>>
+      # Minimum 64-bit signed integer
+      min_int = i2u(-0x8000_0000_0000_0000, 8)
+      # Maximum 64-bit signed integer
+      max_int = 0x7FFF_FFFF_FFFF_FFFF
+
+      # Test with minimum and maximum signed integers
+      state = %State{registers: %Registers{r1: min_int, r2: max_int}}
+      {_, state} = ThreeRegisters.execute(:max, program, state)
+      assert state.registers.r3 == max_int
+
+      # Test with zero
+      state = %State{registers: %Registers{r1: 0, r2: min_int}}
+      {_, state} = ThreeRegisters.execute(:max, program, state)
+      assert state.registers.r3 == 0
+    end
+
+    test "edge case for unsigned comparisons" do
+      program = <<op(:max_u), 0x21, 3>>
+
+      # equal values
+      state = %State{registers: %Registers{r1: 42, r2: 42}}
+      {_, state} = ThreeRegisters.execute(:max_u, program, state)
+      assert state.registers.r3 == 42
     end
   end
 end
