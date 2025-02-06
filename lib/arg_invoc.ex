@@ -1,7 +1,5 @@
 defmodule PVM.ArgInvoc do
-  @moduledoc """
-  Implements the PVM program-argument invocation function (ΨM) as defined in formula A.36.
-  """
+  # Formula (A.40) v0.6.1
 
   alias PVM.{InitProgram, HostCall, State, Types, Memory}
 
@@ -27,10 +25,10 @@ defmodule PVM.ArgInvoc do
     end
   end
 
-  # Transform results according to R function (A.37)
+  # Formula (A.41) v0.6.1
   defp transform_result(:halt, state, context) do
-    start_addr = state.registers.r10
-    end_addr = state.registers.r11
+    start_addr = state.registers.r7
+    end_addr = state.registers.r8
 
     case Memory.read(state.memory, start_addr, end_addr - start_addr) do
       {:ok, data} -> {state.gas, data, context}
@@ -41,7 +39,6 @@ defmodule PVM.ArgInvoc do
   defp transform_result(:out_of_gas, state, context) do
     {state.gas, :out_of_gas, context}
   end
-
 
   defp transform_result(_reason, state, context) do
     {state.gas, :panic, context}
