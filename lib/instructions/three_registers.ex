@@ -7,6 +7,8 @@ defmodule PVM.Instructions.ThreeRegisters do
   @two_64 0x1_0000_0000_0000_0000
   @max_64 0xFFFF_FFFF_FFFF_FFFF
 
+  # Section A.5.12 v0.6.1
+
   # 32-bit arithmetic operations
   def execute(instruction, program, state)
       when instruction in [:add_32, :sub_32, :mul_32] do
@@ -35,7 +37,7 @@ defmodule PVM.Instructions.ThreeRegisters do
         :div_u_32 ->
           if rem(w_b, @two_32) == 0,
             do: @max_64,
-            else: div(rem(w_a, @two_32), rem(w_b, @two_32))
+            else: div(rem(w_a, @two_32), rem(w_b, @two_32)) |> to_64bit(4)
 
         :div_s_32 ->
           a = u2i(rem(w_a, @two_32), 4)
@@ -163,6 +165,24 @@ defmodule PVM.Instructions.ThreeRegisters do
     {:continue, state}
   end
 
+  # Bitwise operations with inversion
+  def execute(instruction, program, state)
+      when instruction in [:and_inv, :or_inv, :xnor] do
+    {w_a, w_b, r_d} = get_params(program, state)
+
+    operation =
+      case instruction do
+        :and_inv -> fn x, y -> x &&& (1 - y) end
+        :or_inv -> fn x, y -> x ||| (1 - y) end
+        :xnor -> fn x, y -> 1 - bxor(x, y) end  # NOT XOR = 1 - (x XOR y)
+      end
+
+    result = b2u(Enum.zip_with(u2b(w_a, 8), u2b(w_b, 8), operation))
+
+    state = %{state | registers: Registers.set(state.registers, r_d, result)}
+    {:continue, state}
+  end
+
   # Upper multiplication operations
   def execute(instruction, program, state)
       when instruction in [:mul_upper_s_s, :mul_upper_u_u, :mul_upper_s_u] do
@@ -215,7 +235,44 @@ defmodule PVM.Instructions.ThreeRegisters do
     {:continue, state}
   end
 
-  # Formula (A.26)
+  # Rotation operations
+  def execute(instruction, program, state)
+      when instruction in [:rot_l_64, :rot_l_32, :rot_r_64, :rot_r_32] do
+    {w_a, w_b, r_d} = get_params(program, state)
+
+    {bits, direction} =
+      case instruction do
+        :rot_l_64 -> {64, :left}
+        :rot_l_32 -> {32, :left}
+        :rot_r_64 -> {64, :right}
+        :rot_r_32 -> {32, :right}
+      end
+
+    result = rotate(w_a, w_b, bits, direction)
+    result = if bits == 32, do: to_64bit(result, 4), else: result
+
+    state = %{state | registers: Registers.set(state.registers, r_d, result)}
+    {:continue, state}
+  end
+
+  # Min/Max operations
+  def execute(instruction, program, state)
+      when instruction in [:max, :max_u, :min, :min_u] do
+    {w_a, w_b, r_d} = get_params(program, state)
+
+    result =
+      case instruction do
+        :max -> max(u2i(w_a, 8), u2i(w_b, 8)) |> i2u(8)  # signed max
+        :max_u -> max(w_a, w_b)                          # unsigned max
+        :min -> min(u2i(w_a, 8), u2i(w_b, 8)) |> i2u(8)  # signed min
+        :min_u -> min(w_a, w_b)                          # unsigned min
+      end
+
+    state = %{state | registers: Registers.set(state.registers, r_d, result)}
+    {:continue, state}
+  end
+
+  # Formula (A.30) v0.6.1
   defp get_params(program, state) do
     byte1 = binary_part(program, state.counter + 1, 1) |> :binary.first()
     byte2 = binary_part(program, state.counter + 2, 1) |> :binary.first()

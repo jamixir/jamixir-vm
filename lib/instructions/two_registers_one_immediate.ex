@@ -251,7 +251,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
     number = Registers.get(state.registers, r_b)
     shift = rem(v_x, 64)
-    result = rotate_right(number, shift, 64)
+    result = rotate(number, shift, 64, :right)
 
     state = %{state | registers: Registers.set(state.registers, r_a, result)}
     {:continue, state}
@@ -260,7 +260,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
   def execute(:rot_r_64_imm_alt, program, bitmask, state) do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
     w_b = Registers.get(state.registers, r_b)
-    result = rotate_right(v_x, w_b, 64)
+    result = rotate(v_x, w_b, 64, :right)
     state = %{state | registers: Registers.set(state.registers, r_a, result)}
     {:continue, state}
   end
@@ -268,7 +268,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
   def execute(:rot_r_32_imm, program, bitmask, state) do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
     w_b = Registers.get(state.registers, r_b)
-    result = rotate_right(w_b, v_x, 32) |> Utils.extend_to_64bit(4)
+    result = rotate(w_b, v_x, 32, :right) |> Utils.extend_to_64bit(4)
 
     state = %{state | registers: Registers.set(state.registers, r_a, result)}
     {:continue, state}
@@ -277,18 +277,10 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
   def execute(:rot_r_32_imm_alt, program, bitmask, state) do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
     w_b = Registers.get(state.registers, r_b)
-    result = rotate_right(v_x, w_b, 32) |> Utils.extend_to_64bit(4)
+    result = rotate(v_x, w_b, 32, :right) |> Utils.extend_to_64bit(4)
 
     state = %{state | registers: Registers.set(state.registers, r_a, result)}
     {:continue, state}
-  end
-
-  defp rotate_right(number, shift_amount, bits) do
-    shift = rem(shift_amount, bits)
-    mask = (1 <<< bits) - 1
-    left_part = number >>> (bits - shift)
-    right_part = number <<< shift
-    (right_part ||| left_part) &&& mask
   end
 
   # Formula (A.27) v0.6.1

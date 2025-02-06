@@ -156,7 +156,17 @@ defmodule PVM.Instructions do
           | :set_lt_s
           | :cmov_iz
           | :cmov_nz
-
+          | :rot_l_64
+          | :rot_l_32
+          | :rot_r_64
+          | :rot_r_32
+          | :and_inv
+          | :or_inv
+          | :xnor
+          | :max
+          | :max_u
+          | :min
+          | :min_u
   # Define a map for the two-way mapping
   @opcode_map %{
     trap: 0,
@@ -298,7 +308,19 @@ defmodule PVM.Instructions do
     set_lt_u: 216,
     set_lt_s: 217,
     cmov_iz: 218,
-    cmov_nz: 219
+    cmov_nz: 219,
+    rot_l_64: 220,
+    rot_l_32: 221,
+    rot_r_64: 222,
+    rot_r_32: 223,
+    and_inv: 224,
+    or_inv: 225,
+    xnor: 226,
+    max: 227,
+    max_u: 228,
+    min: 229,
+    min_u: 230
+
   }
 
   @gas_cost_map %{
@@ -429,7 +451,18 @@ defmodule PVM.Instructions do
     set_lt_u: 0,
     set_lt_s: 0,
     cmov_iz: 0,
-    cmov_nz: 0
+    cmov_nz: 0,
+    rot_l_64: 0,
+    rot_l_32: 0,
+    rot_r_64: 0,
+    rot_r_32: 0,
+    and_inv: 0,
+    or_inv: 0,
+    xnor: 0,
+    max: 0,
+    max_u: 0,
+    min: 0,
+    min_u: 0
   }
 
   @instruction_categories %{
@@ -570,7 +603,18 @@ defmodule PVM.Instructions do
       :set_lt_u,
       :set_lt_s,
       :cmov_iz,
-      :cmov_nz
+      :cmov_nz,
+      :rot_l_64,
+      :rot_l_32,
+      :rot_r_64,
+      :rot_r_32,
+      :and_inv,
+      :or_inv,
+      :xnor,
+      :max,
+      :max_u,
+      :min,
+      :min_u
     ]
   }
 
