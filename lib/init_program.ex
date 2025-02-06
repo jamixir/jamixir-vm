@@ -1,20 +1,21 @@
 defmodule PVM.InitProgram do
   alias PVM.{Decoder, Memory, Registers}
-  import Bitwise
   require Logger
 
-  # Constants from A.31
-  @zp 4096
-  @zz 0x10000
-  @zi 0x1000000
+  # Formula (4.25) v0.6.1
+  @zp 0x1000
+  # Formula (A.35) v0.6.1
+  @zz 0x1_0000
+  @zi 0x100_0000
   # 2^32
-  @max_addr 0x100000000
+  @max_addr 0x1_0000_0000
 
   def zp, do: @zp
   def zz, do: @zz
   def zi, do: @zi
   def max_addr, do: @max_addr
 
+  # Formula (A.34) v0.6.1
   def parse_program_segments(binary) when byte_size(binary) >= 15 do
     with {:ok, o_size, rest} <- read_size(binary, 3),
          {:ok, w_size, rest} <- read_size(rest, 3),
@@ -34,7 +35,7 @@ defmodule PVM.InitProgram do
 
   def initialize_program(program, a) do
     with {:ok, {o_size, o, w_size, w, z, s, c}} <- parse_program_segments(program) do
-      # Verify condition A.33
+      # Verify condition A.37
       if verify_size_constraint(o_size, w_size, z, s) do
         registers = initialize_registers(a)
         memory = construct_memory(o, w, a, z, s)
@@ -47,7 +48,6 @@ defmodule PVM.InitProgram do
     end
   end
 
-  # Helper functions
   defp read_size(binary, l) do
     case binary do
       <<size_bytes::binary-size(l), rest::binary>> ->
@@ -71,19 +71,21 @@ defmodule PVM.InitProgram do
 
   defp read_final_segment(_, _), do: :error
 
+  # Formula (A.36) v0.6.1
   def z(x), do: ceil(x / @zz) * @zz
   def p(x), do: ceil(x / @zp) * @zp
 
-  # Implements condition A.33: 5Zq + Q(|o|) + Q(|w| + zZp) + Q(s) + Zi ≤ 2^32
+  # Formula (A.37) v0.6.1
   def verify_size_constraint(o_size, w_size, z, s) do
-    z(o_size) + z(w_size + z * @zp) + z(s) <= (1 <<< 32) - 5 * @zz - @zi
+    z(o_size) + z(w_size + z * @zp) + z(s) <= 0x1_0000_0000 - 5 * @zz - @zi
   end
 
+  # Formula (A.39) v0.6.1
   def initialize_registers(a) do
-    # Implements A.35 register initialization
     %Registers{r0: 0xFFFF_0000, r1: 0xFEFE_0000, r7: 0xFEFF_0000, r8: byte_size(a)}
   end
 
+  # Formula (A.38) v0.6.1
   @spec construct_memory(binary(), binary(), binary(), integer(), integer()) :: Memory.t()
   def construct_memory(o, w, a, z, s) do
     o_size = byte_size(o)
@@ -91,22 +93,22 @@ defmodule PVM.InitProgram do
     a_size = byte_size(a)
 
     regions = [
-      # Program text region: [Zq, Zq + |o|] => R
+      # Program text region: [Zz, Zz + |o|] => R
       {@zz, @zz + o_size, o, :read},
-      # Program text padding: [Zq + |o|, Zq + P(|o|)] => R
+      # Program text padding: [Zz + |o|, Zz + P(|o|)] => R
       {@zz + o_size, @zz + p(o_size), nil, :read},
 
-      # Data region: [2Zq + Q(|o|), 2Zq + Q(|o|) + |w|] => W
+      # Data region: [2Zz + Z(|o|), 2Zz + Z(|o|) + |w|] => W
       {2 * @zz + z(o_size), 2 * @zz + z(o_size) + w_size, w, :write},
-      # Data padding: [2Zq + Q(|o|) + |w|, 2Zq + Q(|o|) + P(|w|) + zZp] => W
+      # Data padding: [2Zz + Z(|o|) + |w|, 2Zz + Z(|o|) + P(|w|) + zZp] => W
       {2 * @zz + z(o_size) + w_size, 2 * @zz + z(o_size) + p(w_size) + z * @zp, nil, :write},
 
-      # Stack region: [2^32 - 2Zq - Zi - P(s), 2^32 - 2Zq - Zi] => W
+      # Stack region: [2^32 - 2Zz - Zi - P(s), 2^32 - 2Zz - Zi] => W
       {@max_addr - 2 * @zz - @zi - p(s), @max_addr - 2 * @zz - @zi, nil, :write},
 
-      # Args region: [2^32 - Zq - Zi, 2^32 - Zq - Zi + |a|] => R
+      # Args region: [2^32 - Zz - Zi, 2^32 - Zz - Zi + |a|] => R
       {@max_addr - @zz - @zi, @max_addr - @zz - @zi + a_size, a, :read},
-      # Args padding: [2^32 - Zq - Zi + |a|, 2^32 - Zq - Zi + P(|a|)] => R
+      # Args padding: [2^32 - Zz - Zi + |a|, 2^32 - Zz - Zi + P(|a|)] => R
       {@max_addr - @zz - @zi + a_size, @max_addr - @zz - @zi + p(a_size), nil, :read}
     ]
 
