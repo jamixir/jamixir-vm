@@ -132,14 +132,10 @@ defmodule PVM.Instructions.TwoRegisters do
 
   def execute(:reverse_bytes, program, state) do
     {r_d, r_a} = get_params(program, state.counter)
-    value = Registers.get(state.registers, r_a)
+    value = <<Registers.get(state.registers, r_a)::64-little>>
 
-    reversed =
-      e_le(value, 8)
-      |> :binary.bin_to_list()
-      |> Enum.reverse()
+    <<reversed::64-little>> = value |> :binary.bin_to_list() |> Enum.reverse()
       |> :binary.list_to_bin()
-      |> de_le(8)
 
     {:continue, %{state | registers: Registers.set(state.registers, r_d, reversed)}}
   end

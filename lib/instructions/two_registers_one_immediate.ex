@@ -38,7 +38,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
         :load_ind_u64 -> 8
       end
 
-    read_memory(state, w_b + v_x, size, &%{state | registers: Registers.set(state.registers, r_a, de_le(&1, size))})
+    read_memory(state, w_b + v_x, size, %{state | registers: Registers.set(state.registers, r_a, de_le(&1, size))})
   end
 
   # Signed load instructions

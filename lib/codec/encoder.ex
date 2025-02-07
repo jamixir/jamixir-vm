@@ -32,7 +32,7 @@ defmodule PVM.Encoder do
     if x >= 2 ** 64, do: raise(ArgumentError, "Integer value is too large to encode")
 
     case exists_l_in_n8(x) do
-      nil -> <<2 ** 8 - 1>> <> encode_le(x, 8)
+      nil -> <<2 ** 8 - 1>> <> <<x::64-little>>
       l -> <<2 ** 8 - 2 ** (8 - l) + div(x, 2 ** (8 * l))>> <> encode_le(rem(x, 2 ** (8 * l)), l)
     end
   end
