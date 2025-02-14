@@ -64,6 +64,13 @@ defmodule PVM.Memory do
     end
   end
 
+  def read!(%__MODULE__{} = memory, address, length) do
+    case read(memory, address, length) do
+      {:ok, data} -> data
+      {:error, reason} -> raise PVM.MemoryFaultError, reason: reason
+    end
+  end
+
   def write(%__MODULE__{} = memory, address, value) when is_binary(value) do
     wrapped_address = wrap_address(memory, address)
 
@@ -82,6 +89,13 @@ defmodule PVM.Memory do
         {:error, page} ->
           {:error, {:fault, page}}
       end
+    end
+  end
+
+  def write!(%__MODULE__{} = memory, address, value) do
+    case write(memory, address, value) do
+      {:ok, memory} -> memory
+      {:error, reason} -> raise PVM.MemoryFaultError, reason: reason
     end
   end
 

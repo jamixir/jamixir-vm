@@ -486,4 +486,38 @@ defmodule MemoryTest do
       assert MapSet.member?(readable, 0)
     end
   end
+
+  describe "bang (!) operations" do
+    test "write! and read! work for valid operations" do
+      memory = %Memory{}
+      memory = Memory.write!(memory, @min_memory_addr, <<42>>)
+      assert Memory.read!(memory, @min_memory_addr, 1) == <<42>>
+    end
+
+    test "write! raises error on fault" do
+      memory =
+        %Memory{}
+        |> Memory.set_access(@min_memory_addr, @page_size, :read)
+
+      error = assert_raise(PVM.MemoryFaultError, fn ->
+        Memory.write!(memory, @min_memory_addr, <<42>>)
+      end)
+
+      assert %PVM.MemoryFaultError{reason: {:fault, page}} = error
+      assert page == @min_memory_addr
+    end
+
+    test "read! raises error on fault" do
+      memory =
+        %Memory{}
+        |> Memory.set_access(@min_memory_addr, @page_size, nil)
+
+      error = assert_raise(PVM.MemoryFaultError, fn ->
+        Memory.read!(memory, @min_memory_addr, 1)
+      end)
+
+      assert %PVM.MemoryFaultError{reason: {:fault, page}} = error
+      assert page == @min_memory_addr
+    end
+  end
 end
