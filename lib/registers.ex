@@ -52,22 +52,34 @@ defmodule PVM.Registers do
 
   @spec set(t(), %{atom() => integer()}) :: t()
   def set(%__MODULE__{} = reg, updates) when is_map(updates) do
-    if Enum.all?(Map.keys(updates), &is_atom/1) do
-      struct!(reg, updates)
-    else
-      raise ArgumentError, "All keys must be atoms"
+    case updates do
+      %{} when map_size(updates) == 0 -> reg
+      _ ->
+        {key, _} = Enum.at(updates, 0)
+        cond do
+          is_atom(key) -> do_set_atom_keys(reg, updates)
+          is_integer(key) -> do_set_integer_keys(reg, updates)
+          true -> raise ArgumentError, "Keys must be either all atoms or all integers"
+        end
     end
   end
 
-  @spec set(t(), %{integer() => integer()}) :: t()
-  def set(%__MODULE__{} = reg, updates) when is_map(updates) do
+  defp do_set_atom_keys(%__MODULE__{} = reg, updates) do
+    if Enum.all?(Map.keys(updates), &is_atom/1) do
+      struct!(reg, updates)
+    else
+      raise ArgumentError, "Keys must be either all atoms or all integers"
+    end
+  end
+
+  defp do_set_integer_keys(%__MODULE__{} = reg, updates) do
     if Enum.all?(Map.keys(updates), &is_integer/1) do
       updates
       |> Enum.map(fn {reg_num, value} -> {String.to_atom("r#{reg_num}"), value} end)
       |> Map.new()
       |> then(fn updates -> struct!(reg, updates) end)
     else
-      raise ArgumentError, "All keys must be integers"
+      raise ArgumentError, "Keys must be either all atoms or all integers"
     end
   end
 end
