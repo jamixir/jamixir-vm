@@ -10,7 +10,7 @@ defmodule PVM.Instructions.RegImmediate do
     register_index =
       min(12, rem(binary_part(program, state.counter + 1, 1) |> :binary.first(), 16))
 
-    value = de_le(binary_part(program, state.counter + 2, 8), 8)
+    <<value::64-little>> = binary_part(program, state.counter + 2, 8)
 
     state = %{state | registers: Registers.set(state.registers, register_index, value)}
     {:continue, state}
@@ -67,21 +67,18 @@ defmodule PVM.Instructions.RegImmediate do
   def execute(:load_u16, program, bitmask, _jump_table, state) do
     {register_index, addr} = get_params(program, bitmask, state.counter)
 
-    read_memory(state, addr, 2, &%{
+    read_memory(state, addr, 2, fn <<v::16-little>> -> %{
         state
-        | registers: Registers.set(state.registers, register_index, de_le(&1, 2))
-      }
+        | registers: Registers.set(state.registers, register_index, v)
+      } end
     )
   end
 
   def execute(:load_i16, program, bitmask, _jump_table, state) do
     {register_index, addr} = get_params(program, bitmask, state.counter)
 
-    read_memory(state, addr, 2, fn value ->
-      signed_value =
-        value
-        |> de_le(2)
-        |> to_64bit(2)
+    read_memory(state, addr, 2, fn <<value::16-little>> ->
+      signed_value = to_64bit(value, 2)
 
       %{
         state
@@ -93,21 +90,18 @@ defmodule PVM.Instructions.RegImmediate do
   def execute(:load_u32, program, bitmask, _jump_table, state) do
     {register_index, addr} = get_params(program, bitmask, state.counter)
 
-    read_memory(state, addr, 4, &%{
+    read_memory(state, addr, 4, fn <<v::32-little>> -> %{
         state
-        | registers: Registers.set(state.registers, register_index, de_le(&1, 4))
-      }
+        | registers: Registers.set(state.registers, register_index, v)
+      } end
     )
   end
 
   def execute(:load_i32, program, bitmask, _jump_table, state) do
     {register_index, addr} = get_params(program, bitmask, state.counter)
 
-    read_memory(state, addr, 4, fn value ->
-      signed_value =
-        value
-        |> de_le(4)
-        |> to_64bit(4)
+    read_memory(state, addr, 4, fn <<value::32-little>> ->
+      signed_value = to_64bit(value,4)
 
       %{
         state
@@ -119,10 +113,10 @@ defmodule PVM.Instructions.RegImmediate do
   def execute(:load_u64, program, bitmask, _jump_table, state) do
     {register_index, addr} = get_params(program, bitmask, state.counter)
 
-    read_memory(state, addr, 8, &%{
+    read_memory(state, addr, 8, fn <<v::64-little>> -> %{
         state
-        | registers: Registers.set(state.registers, register_index, de_le(&1, 8))
-      }
+        | registers: Registers.set(state.registers, register_index, v)
+      } end
     )
   end
 
