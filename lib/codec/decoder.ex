@@ -64,10 +64,47 @@ defmodule PVM.Decoder do
     {jump_table, rest} = decode_jump_table(rest, jump_len, z)
 
     # Extract program and bitmask
-    <<program::binary-size(prog_len), bitmask::binary>> = rest
-    bitmask = reverse_each_byte(bitmask)
+    <<program::binary-size(prog_len), bitmask::bitstring>> = rest
+
+    bitmask = reverse_bitmask(bitmask)
 
     {program, bitmask, jump_table}
+  end
+
+  def reverse_bitmask(bitmask) do
+    bytes = byte_size(bitmask)
+    bits = bit_size(bitmask)
+    case bytes do
+      0 -> bitmask
+      1 ->
+        # Single byte - check if it's full or partial
+        case bits do
+          8 ->
+            <<n>> = bitmask
+            <<reverse_bits(n, 8)::bitstring>>
+          bits ->
+            <<n>> = <<0::size(8 - bits), bitmask::bits>>
+            <<reversed::bits>> = reverse_bits(n, 8)
+            <<reversed::bitstring-size(bits)>>
+        end
+
+      n ->
+        # Multiple bytes - check if last byte is full
+        case bits do
+          total_bits when rem(total_bits, 8) == 0 ->
+            # All full bytes - simple case
+            reverse_each_byte(bitmask)
+
+          _total_bits ->
+            # Last byte is partial
+            <<all_but_last::binary-size(n - 1), last::bitstring>> = bitmask
+            reversed_full = reverse_each_byte(all_but_last)
+            bits_in_last = bit_size(last)
+            <<n>> = <<0::size(8 - bits_in_last), last::bits>>
+            <<reversed_last::bits>> = reverse_bits(n, 8)
+            <<reversed_full::binary, reversed_last::bitstring-size(bits_in_last)>>
+        end
+    end
   end
 
   def reverse_each_byte(binary) do
@@ -76,6 +113,7 @@ defmodule PVM.Decoder do
       <<acc::bitstring, reverse_bits(byte, 8)::bitstring>>
     end)
   end
+
   # https://graphics.stanford.edu/~seander/bithacks.html#ReverseParallel
   def reverse_bits(n, bit_size) do
     n = (n >>> 1 &&& 0x55) ||| (n &&& 0x55) <<< 1
@@ -93,24 +131,24 @@ defmodule PVM.Decoder do
   end
 
   # Helper to decode next integer and return remaining binary
-  defp decode_next_integer(<<0, rest::binary>>), do: {0, rest}
+  defp decode_next_integer(<<0, rest::bitstring>>), do: {0, rest}
 
-  defp decode_next_integer(<<byte0, rest::binary>>) when byte0 in 1..127 do
+  defp decode_next_integer(<<byte0, rest::bitstring>>) when byte0 in 1..127 do
     {byte0, rest}
   end
 
-  defp decode_next_integer(<<255, value_bytes::binary-size(8), rest::binary>>) do
+  defp decode_next_integer(<<255, value_bytes::binary-size(8), rest::bitstring>>) do
     {decode_little_endian(value_bytes, 8), rest}
   end
 
-  defp decode_next_integer(<<byte0, rest::binary>>) when byte0 in 128..254 do
+  defp decode_next_integer(<<byte0, rest::bitstring>>) when byte0 in 128..254 do
     {l, _} = determine_l_and_a_l(byte0)
-    <<value::binary-size(l), rest2::binary>> = rest
+    <<value::binary-size(l), rest2::bitstring>> = rest
     {decode_integer(<<byte0, value::binary>>), rest2}
   end
 
   defp decode_next_le(binary, n) do
-    <<value::binary-size(n), rest::binary>> = binary
+    <<value::binary-size(n), rest::bitstring>> = binary
     {decode_le(value, n), rest}
   end
 

@@ -5,7 +5,7 @@ defmodule PVM.Utils do
 
   # Formula (A.2) v0.6.1
   def skip(i, bitmask) do
-    l = byte_size(bitmask)
+    l = bit_size(bitmask)
     do_skip(i + 1, bitmask, 0, l)
   end
 

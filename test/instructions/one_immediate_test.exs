@@ -7,7 +7,7 @@ defmodule Instructions.OneImmediateTest do
   describe "ecalli" do
     test "sets ecall exit status with immediate value" do
       program = <<op(:ecalli), 42>>
-      bitmask = <<1::1, 0>>
+      bitmask = <<2::2>>
       start_set = basic_block_starts(program, bitmask)
       {exit_reason, _} = OneImmediate.execute(:ecalli, program, bitmask, start_set, %State{})
       assert exit_reason == {:ecall, 42}
@@ -15,7 +15,7 @@ defmodule Instructions.OneImmediateTest do
 
     test "handles multi-byte immediate" do
       program = <<op(:ecalli), 0x78, 0x56, 0x34, 0x12>>
-      bitmask = <<1::1, 0, 0, 0, 0>>
+      bitmask = <<16::5>>
       start_set = basic_block_starts(program, bitmask)
       {exit_reason, _} = OneImmediate.execute(:ecalli, program, bitmask, start_set, %State{})
       assert exit_reason == {:ecall, 0x12345678}
@@ -25,7 +25,7 @@ defmodule Instructions.OneImmediateTest do
   describe "jump" do
     test "jumps forward to valid target" do
       program = <<op(:jump), 3, 0, op(:fallthrough)>>
-      bitmask = <<1::1, 0::1, 0::1, 1::1>>
+      bitmask = <<9::4>>
       start_set = basic_block_starts(program, bitmask)
       {exit_reason, state_} = OneImmediate.execute(:jump, program, bitmask, start_set, %State{})
       assert exit_reason == :continue
@@ -34,7 +34,7 @@ defmodule Instructions.OneImmediateTest do
 
     test "jumps backward to valid target" do
       program = <<op(:fallthrough), op(:jump), 255>>
-      bitmask = <<1::1, 1::1, 0>>
+      bitmask = <<6::3>>
       start_set = basic_block_starts(program, bitmask)
       {exit_reason, state_} = OneImmediate.execute(:jump, program, bitmask, start_set, %State{counter: 1})
       assert exit_reason == :continue
@@ -43,7 +43,7 @@ defmodule Instructions.OneImmediateTest do
 
     test "panics on invalid target" do
       program = <<op(:jump), 1>>
-      bitmask = <<1::1, 0>>
+      bitmask = <<2::2>>
       start_set = basic_block_starts(program, bitmask)
       {exit_reason, _} = OneImmediate.execute(:jump, program, bitmask, start_set, %State{})
       assert exit_reason == :panic
