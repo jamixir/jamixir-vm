@@ -8,6 +8,7 @@ defmodule Instructions.OneImmediateTest do
     test "sets ecall exit status with immediate value" do
       program = <<op(:ecalli), 42>>
       bitmask = <<1, 0>>
+      start_set = basic_block_starts(program, bitmask)
       {exit_reason, _} = OneImmediate.execute(:ecalli, program, bitmask, %State{})
       assert exit_reason == {:ecall, 42}
     end

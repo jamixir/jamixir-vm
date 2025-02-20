@@ -4,12 +4,11 @@ defmodule PVM.Instructions.TwoRegistersTwoImmediates do
   use PVM.Transitions
   import Bitwise
 
-  def execute(:load_imm_jump_ind, program, bitmask, jump_table, state) do
+  def execute(:load_imm_jump_ind, program, bitmask, jump_table, start_set, state) do
     {r_a, r_b, v_x, v_y} = get_params(program, bitmask, state.counter)
     w_b = Registers.get(state.registers, r_b)
 
     jump_addr = rem(w_b + v_y, 1 <<< 32)
-    start_set = basic_block_starts(program, bitmask)
 
     {exit_status, counter} = Executor.djump(jump_addr, state.counter, jump_table, start_set)
 

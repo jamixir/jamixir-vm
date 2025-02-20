@@ -14,18 +14,18 @@ defmodule PVM.Instructions.Executor do
     ThreeRegisters
   }
 
-  def execute_instruction(opcode, program, bitmask, jump_table, state) do
+  def execute_instruction(opcode, program, bitmask, jump_table, start_set, state) do
     case Instructions.instruction_category(opcode) do
       :no_args -> NoArgs.execute(opcode, state)
-      :one_immediate -> OneImmediate.execute(opcode, program, bitmask, state)
+      :one_immediate -> OneImmediate.execute(opcode, program, bitmask, start_set, state)
       :two_immediates -> TwoImmediates.execute(opcode, program, bitmask, state)
-      :reg_immediate -> RegImmediate.execute(opcode, program, bitmask, jump_table, state)
+      :reg_immediate -> RegImmediate.execute(opcode, program, bitmask, jump_table, start_set, state)
       :register_two_immediate -> RegTwoImm.execute(opcode, program, bitmask, state)
-      :register_immediate_offset -> RegImmediateOffset.execute(opcode, program, bitmask, state)
+      :register_immediate_offset -> RegImmediateOffset.execute(opcode, program, bitmask, start_set, state)
       :two_registers -> TwoRegisters.execute(opcode, program,  state)
       :two_registers_one_immediate -> TwoRegistersOneImmediate.execute(opcode, program, bitmask, state)
-      :two_registers_one_offset -> TwoRegistersOneOffset.execute(opcode, program, bitmask, state)
-      :two_registers_two_immediates -> TwoRegistersTwoImmediates.execute(opcode, program, bitmask, jump_table, state)
+      :two_registers_one_offset -> TwoRegistersOneOffset.execute(opcode, program, bitmask, start_set, state)
+      :two_registers_two_immediates -> TwoRegistersTwoImmediates.execute(opcode, program, bitmask, jump_table, start_set, state)
       :three_registers -> ThreeRegisters.execute(opcode, program, state)
     end
   end

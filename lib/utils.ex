@@ -4,17 +4,22 @@ defmodule PVM.Utils do
   alias PVM.Instructions
 
   # Formula (A.2) v0.6.1
-  def skip(i, bitmask) when is_binary(bitmask) do
-    do_skip(i + 1, bitmask, 0)
+  def skip(i, bitmask) do
+    l = byte_size(bitmask)
+    do_skip(i + 1, bitmask, 0, l)
   end
 
-  defp do_skip(_current_pos, _bitmask, count) when count >= 24, do: 24
-  defp do_skip(current_pos, bitmask, count) when current_pos >= byte_size(bitmask), do: count
+  # Binary version
+  defp do_skip(_current_pos, _bitmask, count, _l) when count >= 24, do: 24
 
-  defp do_skip(current_pos, bitmask, count) do
-    case binary_part(bitmask, current_pos, 1) do
-      <<1>> -> count
-      <<0>> -> do_skip(current_pos + 1, bitmask, count + 1)
+  defp do_skip(current_pos, _bitmask, count, l) when current_pos >= l, do: count
+
+  defp do_skip(current_pos, bitmask, count, l) do
+    <<_::size(current_pos), bit::1, _::bits>> = bitmask
+
+    case bit do
+      1 -> count
+      0 -> do_skip(current_pos + 1, bitmask, count + 1, l)
     end
   end
 
@@ -28,23 +33,24 @@ defmodule PVM.Utils do
   def basic_block_starts(<<>>, <<>>), do: [0]
 
   def basic_block_starts(program, bitmask) when is_binary(program) and is_binary(bitmask) do
-    [0] ++
-      Enum.reduce(0..(byte_size(bitmask) - 1), [], fn i, acc ->
-        case binary_part(bitmask, i, 1) do
-          <<1>> ->
-            # If it's an opcode, check if it's a termination instruction
-            opcode = program |> binary_part(i, 1) |> :binary.first() |> op()
+    do_basic_block_starts(bitmask, program, 0, [0]) |> Enum.reverse()
+  end
 
-            if Instructions.termination_instruction?(opcode) do
-              acc ++ [i + 1 + skip(i, bitmask)]
-            else
-              acc
-            end
+  defp do_basic_block_starts(<<>>, _program, _bit_index, acc), do: acc
 
-          _ ->
-            acc
-        end
-      end)
+  defp do_basic_block_starts(<<1::1, rest::bitstring>> = bitmask, program, bit_index, acc) do
+    opcode = program |> binary_part(bit_index, 1) |> :binary.first() |> op()
+
+    if Instructions.termination_instruction?(opcode) do
+      next_pos = bit_index + 1 + skip(bit_index, bitmask)
+      do_basic_block_starts(rest, program, bit_index + 1, [next_pos | acc])
+    else
+      do_basic_block_starts(rest, program, bit_index + 1, acc)
+    end
+  end
+
+  defp do_basic_block_starts(<<0::1, rest::bitstring>>, program, bit_index, acc) do
+    do_basic_block_starts(rest, program, bit_index + 1, acc)
   end
 
   @doc """
@@ -108,7 +114,7 @@ defmodule PVM.Utils do
   """
   def rotate(value, shift, bits, direction) do
     mask = (1 <<< bits) - 1
-    shift = if direction == :right, do: shift, else: bits - shift |> rem(bits)
+    shift = if direction == :right, do: shift, else: (bits - shift) |> rem(bits)
     shifted_part = value <<< shift
     wrapped_part = value >>> (bits - shift)
     (shifted_part ||| wrapped_part) &&& mask
@@ -131,7 +137,8 @@ defmodule PVM.Utils do
 
       def basic_block_starts(program, bitmask), do: PVM.Utils.basic_block_starts(program, bitmask)
 
-      def rotate(value, shift, bits, direction), do: PVM.Utils.rotate(value, shift, bits, direction)
+      def rotate(value, shift, bits, direction),
+        do: PVM.Utils.rotate(value, shift, bits, direction)
     end
   end
 end
