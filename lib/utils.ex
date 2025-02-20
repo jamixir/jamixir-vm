@@ -33,24 +33,24 @@ defmodule PVM.Utils do
   def basic_block_starts(<<>>, <<>>), do: [0]
 
   def basic_block_starts(program, bitmask) when is_bitstring(program) and is_bitstring(bitmask) do
-    do_basic_block_starts(bitmask, program, 0, [0]) |> Enum.reverse()
-  end
+    [0] ++
+      Enum.reduce(0..(bit_size(bitmask) - 1), [], fn i, acc ->
+        <<_::size(i), bit::1, _::bits>> = bitmask
 
-  defp do_basic_block_starts(<<>>, _program, _bit_index, acc), do: acc
+        case bit do
+          1 ->
+            opcode = program |> binary_part(i, 1) |> :binary.first() |> op()
 
-  defp do_basic_block_starts(<<1::1, rest::bitstring>> = bitmask, program, bit_index, acc) do
-    opcode = program |> binary_part(bit_index, 1) |> :binary.first() |> op()
+            if Instructions.termination_instruction?(opcode) do
+              acc ++ [i + 1 + skip(i, bitmask)]
+            else
+              acc
+            end
 
-    if Instructions.termination_instruction?(opcode) do
-      next_pos = bit_index + 1 + skip(bit_index, bitmask)
-      do_basic_block_starts(rest, program, bit_index + 1, [next_pos | acc])
-    else
-      do_basic_block_starts(rest, program, bit_index + 1, acc)
-    end
-  end
-
-  defp do_basic_block_starts(<<0::1, rest::bitstring>>, program, bit_index, acc) do
-    do_basic_block_starts(rest, program, bit_index + 1, acc)
+          0 ->
+            acc
+        end
+      end)
   end
 
   @doc """

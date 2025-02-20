@@ -10,9 +10,9 @@ defmodule PVM.Utils.ProgramUtils do
   def append_halt(program, bitmask) do
     halt_sequence = <<op(:jump_ind), 12, 0, 0, 0xFF, 0xFF>>
 
-    halt_bitmask = <<1, 0, 0, 0, 0, 0>>
+    halt_bitmask = <<32::6>>
 
-    {program <> halt_sequence, bitmask <> halt_bitmask}
+    {program <> halt_sequence, <<bitmask::bitstring, halt_bitmask::bitstring>>}
   end
 
   @doc """
