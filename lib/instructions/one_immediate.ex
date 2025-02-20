@@ -4,7 +4,7 @@ defmodule PVM.Instructions.OneImmediate do
   alias PVM.Instructions.Executor
 
   # Section (A.5.2) v0.6.1
-  def execute(:ecalli, program, bitmask, state) do
+  def execute(:ecalli, program, bitmask, _start_set, state) do
     # Formula (A.19) v0.6.1
     l_x = min(4, skip(state.counter, bitmask))
     value = decode_bytes_signed(program, state.counter + 1, l_x)
@@ -12,7 +12,7 @@ defmodule PVM.Instructions.OneImmediate do
   end
 
   # Section (A.5.5) v0.6.1
-  def execute(:jump, program, bitmask, state) do
+  def execute(:jump, program, bitmask, start_set, state) do
     # Formula (A.22) v0.6.1
     l_x = min(4, skip(state.counter, bitmask))
 
@@ -21,7 +21,6 @@ defmodule PVM.Instructions.OneImmediate do
 
     v_x = state.counter + shift_signed
 
-    start_set = basic_block_starts(program, bitmask)
     {exit_reason, counter} = Executor.branch(v_x, true, state.counter, start_set)
     {exit_reason, %{state | counter: counter}}
   end

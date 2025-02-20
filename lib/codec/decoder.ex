@@ -2,6 +2,7 @@ defmodule PVM.Decoder do
   @moduledoc """
   A module for decoding binary data into data structures.
   """
+  import Bitwise
   defp decode_little_endian(<<>>, _), do: 0
 
   defp decode_little_endian(<<byte::size(8), rest::binary>>, l),
@@ -64,8 +65,23 @@ defmodule PVM.Decoder do
 
     # Extract program and bitmask
     <<program::binary-size(prog_len), bitmask::binary>> = rest
+    bitmask = reverse_each_byte(bitmask)
 
     {program, bitmask, jump_table}
+  end
+
+  def reverse_each_byte(binary) do
+    :binary.bin_to_list(binary)
+    |> Enum.reduce(<<>>, fn byte, acc ->
+      <<acc::bitstring, reverse_bits(byte, 8)::bitstring>>
+    end)
+  end
+  # https://graphics.stanford.edu/~seander/bithacks.html#ReverseParallel
+  def reverse_bits(n, bit_size) do
+    n = (n >>> 1 &&& 0x55) ||| (n &&& 0x55) <<< 1
+    n = (n >>> 2 &&& 0x33) ||| (n &&& 0x33) <<< 2
+    n = (n >>> 4 &&& 0x0F) ||| (n &&& 0x0F) <<< 4
+    <<n::size(bit_size)>>
   end
 
   defp decode_jump_table(binary, 0, _z), do: {[], binary}

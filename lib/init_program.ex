@@ -1,5 +1,5 @@
 defmodule PVM.InitProgram do
-  alias PVM.{Decoder, Memory, Registers}
+  alias PVM.{Memory, Registers}
   require Logger
 
   # Formula (4.25) v0.6.1
@@ -17,16 +17,12 @@ defmodule PVM.InitProgram do
 
   # Formula (A.34) v0.6.1
   def parse_program_segments(binary) when byte_size(binary) >= 15 do
-    with {:ok, o_size, rest} <- read_size(binary, 3),
-         {:ok, w_size, rest} <- read_size(rest, 3),
-         {:ok, z, rest} <- read_size(rest, 2),
-         {:ok, s, rest} <- read_size(rest, 3),
-         {:ok, o, rest} <- read_bytes(rest, o_size),
-         {:ok, w, rest} <- read_bytes(rest, w_size),
-         {:ok, c_size, rest} <- read_size(rest, 4),
-         {:ok, c} <- read_final_segment(rest, c_size) do
+    try do
+      <<o_size::24-little, w_size::24-little, z::16-little, s::24-little, o::binary-size(o_size),
+        w::binary-size(w_size), c_size::32-little, c::binary-size(c_size)>> = binary
+
       {:ok, {o_size, o, w_size, w, z, s, c}}
-    else
+    rescue
       _ -> {:error, :invalid_format}
     end
   end
@@ -47,29 +43,6 @@ defmodule PVM.InitProgram do
       _ -> nil
     end
   end
-
-  defp read_size(binary, l) do
-    case binary do
-      <<size_bytes::binary-size(l), rest::binary>> ->
-        {:ok, Decoder.decode_le(size_bytes, l), rest}
-
-      _ ->
-        :error
-    end
-  end
-
-  defp read_bytes(binary, size) do
-    case binary do
-      <<bytes::binary-size(size), rest::binary>> -> {:ok, bytes, rest}
-      _ -> :error
-    end
-  end
-
-  defp read_final_segment(binary, size) when byte_size(binary) == size do
-    {:ok, binary}
-  end
-
-  defp read_final_segment(_, _), do: :error
 
   # Formula (A.36) v0.6.1
   def z(x), do: ceil(x / @zz) * @zz
