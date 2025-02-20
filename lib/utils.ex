@@ -32,7 +32,7 @@ defmodule PVM.Utils do
   # Formula (A.4) v0.6.1
   def basic_block_starts(<<>>, <<>>), do: [0]
 
-  def basic_block_starts(program, bitmask) when is_binary(program) and is_binary(bitmask) do
+  def basic_block_starts(program, bitmask) when is_bitstring(program) and is_bitstring(bitmask) do
     do_basic_block_starts(bitmask, program, 0, [0]) |> Enum.reverse()
   end
 
