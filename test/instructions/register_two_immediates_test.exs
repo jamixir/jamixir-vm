@@ -12,7 +12,7 @@ defmodule Instructions.RegTwoImmTest do
     test "store_imm_ind_u8 writes byte value at register-based address" do
       # Set up register 1 with base address 10
       program = <<op(:store_imm_ind_u8), 17, @offset, 42>>
-      bitmask = <<1, 0, 0, 0>>
+      bitmask = <<8::4>>
       state = %State{registers: %Registers{r1: @init_target_addr}}
 
       {_, state} = RegTwoImm.execute(:store_imm_ind_u8, program, bitmask, state)
@@ -21,7 +21,7 @@ defmodule Instructions.RegTwoImmTest do
 
     test "store_imm_ind_u16 writes 16-bit value at register-based address" do
       program = <<op(:store_imm_ind_u16), 33, @offset, 0, 34, 12>>
-      bitmask = <<1, 0, 0, 0, 0, 0>>
+      bitmask = <<64::6>>
       state = %State{registers: %Registers{r1: @init_target_addr}}
 
       {_, state} = RegTwoImm.execute(:store_imm_ind_u16, program, bitmask, state)
@@ -30,7 +30,7 @@ defmodule Instructions.RegTwoImmTest do
 
     test "store_imm_ind_u32 writes 32-bit value at register-based address" do
       program = <<op(:store_imm_ind_u32), 33, @offset, 0, 78, 56, 34, 12>>
-      bitmask = <<1, 0, 0, 0, 0, 0, 0, 0>>
+      bitmask = <<128>>
       state = %State{registers: %Registers{r1: @init_target_addr}}
 
       {_, state} = RegTwoImm.execute(:store_imm_ind_u32, program, bitmask, state)
@@ -39,7 +39,7 @@ defmodule Instructions.RegTwoImmTest do
 
     test "store_imm_ind_u64 writes 64-bit value at register-based address" do
       program = <<op(:store_imm_ind_u64), 33, @offset, 0, 78, 56, 34, 12, 0, 0, 0, 0>>
-      bitmask = <<1, 0, 0, 0, 0, 0, 0, 0>>
+      bitmask = <<128>>
       state = %State{registers: %Registers{r1: @init_target_addr}}
 
       {_, state} = RegTwoImm.execute(:store_imm_ind_u64, program, bitmask, state)
@@ -50,7 +50,7 @@ defmodule Instructions.RegTwoImmTest do
 
     test "store_imm_ind_u8 handles value wrapping" do
       program = <<op(:store_imm_ind_u8), 0x11, @offset, 300>>
-      bitmask = <<1, 0, 0, 0>>
+      bitmask = <<8::4>>
       state = %State{registers: %Registers{r1: @init_target_addr}}
 
       {_, state} = RegTwoImm.execute(:store_imm_ind_u8, program, bitmask, state)
@@ -59,7 +59,7 @@ defmodule Instructions.RegTwoImmTest do
 
     test "store_imm_ind_u16 handles value wrapping" do
       program = <<op(:store_imm_ind_u16), 0x11, @offset, 0xFF, 0xFF>>
-      bitmask = <<1, 0, 0, 0, 0>>
+      bitmask = <<16::5>>
       state = %State{registers: %Registers{r1: @init_target_addr}}
 
       {_, state} = RegTwoImm.execute(:store_imm_ind_u16, program, bitmask, state)
@@ -70,7 +70,7 @@ defmodule Instructions.RegTwoImmTest do
     test "handles register index bounds" do
       # Test with register index > 12 (should be capped at 12)
       program = <<op(:store_imm_ind_u8), 0x1F, @offset, 42>>
-      bitmask = <<1, 0, 0, 0>>
+      bitmask = <<8::4>>
       state = %State{registers: %Registers{r12: @init_target_addr}}
 
       {_, state} = RegTwoImm.execute(:store_imm_ind_u8, program, bitmask, state)

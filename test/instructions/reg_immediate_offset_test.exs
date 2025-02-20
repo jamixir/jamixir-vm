@@ -1,16 +1,17 @@
 defmodule Instructions.RegImmediateOffsetTest do
   use ExUnit.Case
-  use PVM.Instructions
+  use PVM.{Instructions, Utils}
   alias PVM.{Instructions.RegImmediateOffset, Registers, State}
 
   describe "load_imm_jump" do
     test "loads immediate value and jumps" do
       # Program: load_imm_jump r1, 42, target=10
       program = <<op(:load_imm_jump), 0x11, 42, 4>>
-      bitmask = <<1, 0, 0, 0>>
+      bitmask = <<8::4>>
+      start_set = basic_block_starts(program, bitmask)
 
       {exit_reason, state_} =
-        RegImmediateOffset.execute(:load_imm_jump, program, bitmask, %State{})
+        RegImmediateOffset.execute(:load_imm_jump, program, bitmask, start_set, %State{})
 
       assert state_.registers.r1 == 42
       assert state_.counter == 4
@@ -20,10 +21,11 @@ defmodule Instructions.RegImmediateOffsetTest do
     test "handles invalid jump target" do
       # Jump target not marked as instruction start
       program = <<op(:load_imm_jump), 0x11, 42, 10>>
-      bitmask = <<1, 0, 0>>
+      bitmask = <<9::4>>
+      start_set = basic_block_starts(program, bitmask)
 
       {exit_reason, _} =
-        RegImmediateOffset.execute(:load_imm_jump, program, bitmask, %State{})
+        RegImmediateOffset.execute(:load_imm_jump, program, bitmask, start_set, %State{})
 
       assert exit_reason == :panic
     end
@@ -34,9 +36,10 @@ defmodule Instructions.RegImmediateOffsetTest do
       program =
         <<op(:branch_eq_imm), 0x11, 42, 9, op(:store_imm_u8), 0x01, 10, 5, op(:fallthrough)>>
 
-      bitmask = <<1, 0, 0, 0, 1, 0, 0, 0, 1>>
+      bitmask = <<1::1, 0::1, 0::1, 0::1, 1::1, 0::1, 0::1, 0::1, 1::1>>
+      start_set = basic_block_starts(program, bitmask)
       state = %State{registers: %Registers{r1: 42}}
-      {exit_reason, state_} = RegImmediateOffset.execute(:branch_eq_imm, program, bitmask, state)
+      {exit_reason, state_} = RegImmediateOffset.execute(:branch_eq_imm, program, bitmask, start_set, state)
 
       assert state_.counter == 9
       assert exit_reason == :continue
@@ -47,9 +50,10 @@ defmodule Instructions.RegImmediateOffsetTest do
         <<op(:branch_ne_imm), 0x11, 42, 10, op(:store_imm_u8), 0x01, 10, 5, op(:trap),
           op(:fallthrough)>>
 
-      bitmask = <<1, 0, 0, 0, 1, 0, 0, 0, 1, 1>>
+      bitmask = <<1::1, 0::1, 0::1, 0::1, 1::1, 0::1, 0::1, 0::1, 1::1, 1::1>>
+      start_set = basic_block_starts(program, bitmask)
       state = %State{registers: %Registers{r1: 43}}
-      {exit_reason, state_} = RegImmediateOffset.execute(:branch_ne_imm, program, bitmask, state)
+      {exit_reason, state_} = RegImmediateOffset.execute(:branch_ne_imm, program, bitmask, start_set, state)
 
       assert state_.counter == 10
       assert exit_reason == :continue
@@ -57,11 +61,12 @@ defmodule Instructions.RegImmediateOffsetTest do
 
     test "branch_lt_u_imm compares unsigned values" do
       program = <<op(:branch_lt_u_imm), 0x11, 0xFF, 5, op(:fallthrough)>>
-      bitmask = <<1, 0, 0, 0, 1>>
+      bitmask = <<17::5>>
+      start_set = basic_block_starts(program, bitmask)
       state = %State{registers: %Registers{r1: 0x7F}}
 
       {exit_reason, state_} =
-        RegImmediateOffset.execute(:branch_lt_u_imm, program, bitmask, state)
+        RegImmediateOffset.execute(:branch_lt_u_imm, program, bitmask, start_set, state)
 
       assert state_.counter == 5
       assert exit_reason == :continue
@@ -69,11 +74,12 @@ defmodule Instructions.RegImmediateOffsetTest do
 
     test "branch_le_u_imm handles equal values" do
       program = <<op(:branch_le_u_imm), 0x11, 0x80, 5, op(:fallthrough)>>
-      bitmask = <<1, 0, 0, 0, 1>>
+      bitmask = <<17::5>>
+      start_set = basic_block_starts(program, bitmask)
       state = %State{registers: %Registers{r1: 0x80}}
 
       {exit_reason, state_} =
-        RegImmediateOffset.execute(:branch_le_u_imm, program, bitmask, state)
+        RegImmediateOffset.execute(:branch_le_u_imm, program, bitmask, start_set, state)
 
       assert state_.counter == 5
       assert exit_reason == :continue
@@ -81,11 +87,12 @@ defmodule Instructions.RegImmediateOffsetTest do
 
     test "branch_ge_u_imm handles greater values" do
       program = <<op(:branch_ge_u_imm), 0x11, 0x7F, 5, op(:fallthrough)>>
-      bitmask = <<1, 0, 0, 0, 1>>
+      bitmask = <<17::5>>
+      start_set = basic_block_starts(program, bitmask)
       state = %State{registers: %Registers{r1: 0x80}}
 
       {exit_reason, state_} =
-        RegImmediateOffset.execute(:branch_ge_u_imm, program, bitmask, state)
+        RegImmediateOffset.execute(:branch_ge_u_imm, program, bitmask, start_set, state)
 
       assert state_.counter == 5
       assert exit_reason == :continue
@@ -93,11 +100,12 @@ defmodule Instructions.RegImmediateOffsetTest do
 
     test "branch_gt_u_imm handles strictly greater values" do
       program = <<op(:branch_gt_u_imm), 0x11, 0x7F, 5, op(:fallthrough)>>
-      bitmask = <<1, 0, 0, 0, 1>>
+      bitmask = <<17::5>>
+      start_set = basic_block_starts(program, bitmask)
       state = %State{registers: %Registers{r1: 0x80}}
 
       {exit_reason, state_} =
-        RegImmediateOffset.execute(:branch_gt_u_imm, program, bitmask, state)
+        RegImmediateOffset.execute(:branch_gt_u_imm, program, bitmask, start_set, state)
 
       assert state_.counter == 5
       assert exit_reason == :continue
@@ -107,11 +115,12 @@ defmodule Instructions.RegImmediateOffsetTest do
   describe "signed comparison branches" do
     test "branch_lt_s_imm compares signed values" do
       program = <<op(:branch_lt_s_imm), 0x11, 0x07, 5, op(:fallthrough)>>
-      bitmask = <<1, 0, 0, 0, 1>>
+      bitmask = <<17::5>>
+      start_set = basic_block_starts(program, bitmask)
       state = %State{registers: %Registers{r1: 0x04}}
 
       {exit_reason, state_} =
-        RegImmediateOffset.execute(:branch_lt_s_imm, program, bitmask, state)
+        RegImmediateOffset.execute(:branch_lt_s_imm, program, bitmask, start_set, state)
 
       assert state_.counter == 5
       assert exit_reason == :continue
@@ -119,11 +128,12 @@ defmodule Instructions.RegImmediateOffsetTest do
 
     test "branch_le_s_imm handles equal signed values" do
       program = <<op(:branch_le_s_imm), 0x11, 0x08, 5, op(:fallthrough)>>
-      bitmask = <<1, 0, 0, 0, 1>>
+      bitmask = <<17::5>>
+      start_set = basic_block_starts(program, bitmask)
       state = %State{registers: %Registers{r1: 0x08}}
 
       {exit_reason, state_} =
-        RegImmediateOffset.execute(:branch_le_s_imm, program, bitmask, state)
+        RegImmediateOffset.execute(:branch_le_s_imm, program, bitmask, start_set, state)
 
       assert state_.counter == 5
       assert exit_reason == :continue
@@ -131,11 +141,12 @@ defmodule Instructions.RegImmediateOffsetTest do
 
     test "branch_ge_s_imm handles greater signed values" do
       program = <<op(:branch_ge_s_imm), 0x11, 0x0D, 5, op(:fallthrough)>>
-      bitmask = <<1, 0, 0, 0, 1>>
+      bitmask = <<17::5>>
+      start_set = basic_block_starts(program, bitmask)
       state = %State{registers: %Registers{r1: 0x0F}}
 
       {exit_reason, state_} =
-        RegImmediateOffset.execute(:branch_ge_s_imm, program, bitmask, state)
+        RegImmediateOffset.execute(:branch_ge_s_imm, program, bitmask, start_set, state)
 
       assert state_.counter == 5
       assert exit_reason == :continue
@@ -143,11 +154,12 @@ defmodule Instructions.RegImmediateOffsetTest do
 
     test "branch_gt_s_imm handles strictly greater signed values" do
       program = <<op(:branch_gt_s_imm), 0x11, 0x0C, 5, op(:fallthrough)>>
-      bitmask = <<1, 0, 0, 0, 1>>
+      bitmask = <<17::5>>
+      start_set = basic_block_starts(program, bitmask)
       state = %State{registers: %Registers{r1: 0x0D}}
 
       {exit_reason, state_} =
-        RegImmediateOffset.execute(:branch_gt_s_imm, program, bitmask, state)
+        RegImmediateOffset.execute(:branch_gt_s_imm, program, bitmask, start_set, state)
 
       assert state_.counter == 5
       assert exit_reason == :continue
@@ -157,11 +169,12 @@ defmodule Instructions.RegImmediateOffsetTest do
   describe "parameter extraction" do
     test "handles multi-byte immediate and offset values" do
       program = <<op(:branch_eq_imm), 0x21, 0xFF, 0x0F, 0x05, 0x00, op(:fallthrough)>>
-      bitmask = <<1, 0, 0, 0, 0, 1>>
+      bitmask = <<33::6>>
+      start_set = basic_block_starts(program, bitmask)
       state = %State{registers: %Registers{r1: 0x0FFF}}
 
       {exit_reason, state_} =
-        RegImmediateOffset.execute(:branch_eq_imm, program, bitmask, state)
+        RegImmediateOffset.execute(:branch_eq_imm, program, bitmask, start_set, state)
 
       assert state_.counter == 0x05
       assert exit_reason == :continue
@@ -169,11 +182,12 @@ defmodule Instructions.RegImmediateOffsetTest do
 
     test "caps register index to 12" do
       program = <<op(:branch_eq_imm), 0x5D, 0x2A, 0x00, 0x00, 0x00, 7, op(:fallthrough)>>
-      bitmask = <<1, 0, 0, 0, 0, 0, 0, 1>>
+      bitmask = <<129>>
+      start_set = basic_block_starts(program, bitmask)
       state = %State{registers: %Registers{r12: 42}}
 
       {exit_reason, state_} =
-        RegImmediateOffset.execute(:branch_eq_imm, program, bitmask, state)
+        RegImmediateOffset.execute(:branch_eq_imm, program, bitmask, start_set, state)
 
       assert state_.counter == 7
       assert exit_reason == :continue
