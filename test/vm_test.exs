@@ -3,7 +3,6 @@ defmodule VMTest do
   alias PVM.{State, Memory, VM, Registers}
   use PVM.{Decoder, Utils, Instructions}
 
-
   def create_program(program, bitmask, jump_table \\ [], z \\ 1) do
     PVM.Encoder.encode_program(program, bitmask, jump_table, z)
   end
@@ -345,13 +344,7 @@ defmodule VMTest do
         op(:fallthrough)
       >>
 
-      bitmask = <<
-        1::1, 0::1, 0::1, 0::1,        # load_imm_jump
-        1::1,                 # trap
-        1::1,                 # fallthrough
-        1::1, 0::1, 0::1, 0::1,0::1,0::1,        # store_imm_u8
-        1::1                  # fallthrough
-      >>
+      bitmask = <<142, 1::5>>
 
       p = create_program(program, bitmask)
       {exit_reason, state_} = VM.execute(p, %State{})
@@ -391,28 +384,8 @@ defmodule VMTest do
       >>
 
       bitmask = <<
-        # load_imm
-        1,
-        0,
-        0,
-        # branch_lt_s_imm
-        1,
-        0,
-        0,
-        0,
-        # trap
-        1,
-        # fallthrough
-        1,
-        # store_imm_u8
-        1,
-        0,
-        0,
-        0,
-        0,
-        0,
-        # fallthrough
-        1
+        145,
+        193
       >>
 
       p = create_program(program, bitmask)
@@ -500,19 +473,57 @@ defmodule VMTest do
       >>
 
       bitmask = <<
-        1::1, 0::1, 0::1,           # load_imm sum (0)
-        1::1, 0::1, 0::1,           # load_imm i (3)
-        1::1, 0::1, 0::1,           # load_imm end (6)
-        1::1, 0::1, 0::1,           # load_imm divisor (9)
-        1::1,                 # fallthrough (12)
-        1::1, 0::1, 0::1, 0::1,        # branch_gt_u_imm (13*)
-        1::1, 0::1, 0::1,           # rem_u_32 (17*)
-        1::1, 0::1, 0::1, 0::1,        # branch_ne_imm (20::1)
-        1::1, 0::1, 0::1,          # add_32 (24*)
-        1::1,                 # fallthrough (27)
-        1::1, 0::1, 0::1,           # add_imm_32 (28*)
-        1::1, 0::1,              # jump (31)
-        1::1, 0::1, 0::1,0::1,0::1         # store_u32 (33*)
+        # load_imm sum (0)
+        1::1,
+        0::1,
+        0::1,
+        # load_imm i (3)
+        1::1,
+        0::1,
+        0::1,
+        # load_imm end (6)
+        1::1,
+        0::1,
+        0::1,
+        # load_imm divisor (9)
+        1::1,
+        0::1,
+        0::1,
+        # fallthrough (12)
+        1::1,
+        # branch_gt_u_imm (13*)
+        1::1,
+        0::1,
+        0::1,
+        0::1,
+        # rem_u_32 (17*)
+        1::1,
+        0::1,
+        0::1,
+        # branch_ne_imm (20::1)
+        1::1,
+        0::1,
+        0::1,
+        0::1,
+        # add_32 (24*)
+        1::1,
+        0::1,
+        0::1,
+        # fallthrough (27)
+        1::1,
+        # add_imm_32 (28*)
+        1::1,
+        0::1,
+        0::1,
+        # jump (31)
+        1::1,
+        0::1,
+        # store_u32 (33*)
+        1::1,
+        0::1,
+        0::1,
+        0::1,
+        0::1
       >>
 
       p = create_program(program, bitmask)

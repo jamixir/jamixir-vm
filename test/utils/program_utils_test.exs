@@ -31,21 +31,7 @@ defmodule PVM.Utils.ProgramUtilsTest do
         op(:store_u32), 1, 3, 0, 1            # store result
       >>
 
-      base_bitmask = <<
-        1, 0, 0,           # load_imm sum
-        1, 0, 0,           # load_imm i
-        1, 0, 0,           # load_imm end
-        1, 0, 0,           # load_imm divisor
-        1,                 # fallthrough
-        1, 0, 0, 0,        # branch_gt_u_imm
-        1, 0, 0,           # rem_u_32
-        1, 0, 0, 0,        # branch_ne_imm
-        1, 0, 0,          # add_32
-        1,                 # fallthrough
-        1, 0, 0,           # add_imm_32
-        1, 0,              # jump
-        1, 0, 0, 0, 0  # store_u32
-      >>
+      base_bitmask = <<146, 76, 72, 153, 16::size(6)>>
 
       {program, bitmask} = ProgramUtils.append_halt(base_program, base_bitmask)
       p = PVM.Encoder.encode_program(program, bitmask, [], 1)
