@@ -2,30 +2,22 @@ defmodule UtilsTest do
   use ExUnit.Case
   import PVM.Utils
 
-  # Helper function to convert binary pattern to bitmask binary
-  defp bits_to_binary(pattern) do
-    pattern
-    |> Integer.to_string(2)
-    |> String.pad_leading(8, "0")
-    |> String.graphemes()
-    |> Enum.map(&String.to_integer/1)
-    |> :binary.list_to_bin()
-  end
+
 
   describe "skip/2" do
     test "basic patterns" do
       # Single instruction (1 byte)
-      assert skip(0, bits_to_binary(0b11000000)) == 0
+      assert skip(0, <<192>>) == 0
 
       # Two 1-byte instructions
-      assert skip(0, bits_to_binary(0b10010000)) == 2
+      assert skip(0, <<144>>) == 2
 
       # One 2-byte instruction
-      assert skip(0, bits_to_binary(0b10000000)) == 7
+      assert skip(0, <<128>>) == 7
     end
 
     test "complex instructions" do
-      bitmask = bits_to_binary(0b10010100)
+      bitmask = <<148>>
       # [3-byte inst][1-byte inst][2-byte inst]
       assert skip(0, bitmask) == 2  # First instruction is 3 bytes
       assert skip(3, bitmask) == 1  # Second instruction is 1 byte
@@ -34,10 +26,10 @@ defmodule UtilsTest do
 
     test "boundary conditions" do
       # At end of bitmask
-      assert skip(7, bits_to_binary(0b10000000)) == 0
+      assert skip(7, <<128>>) == 0
 
       # Beyond bitmask length
-      assert skip(8, bits_to_binary(0b10000000)) == 0
+      assert skip(8, <<128>>) == 0
 
       # Empty bitmask
       assert skip(0, <<>>) == 0
@@ -88,7 +80,7 @@ defmodule UtilsTest do
         0x3E,         # store_imm_u8 (not termination)
         0x01, 0x05    # immediates
       >>
-      bitmask = <<1, 1, 1, 0, 0>>
+      bitmask = <<28::5>>
       # skip will be [0,0]
       #  n +1 + skip(n) -> 0+1+0, 1+1+0 = [1,2]
       #  add 0 -> [0,1,2]
@@ -104,7 +96,7 @@ defmodule UtilsTest do
         0x24,         # branch_eq
         0x01, 0x0A    # immediates
       >>
-      bitmask = <<1, 0, 0, 1, 0, 0>>
+      bitmask = <<36::6>>
 
       starts = basic_block_starts(program, bitmask)
       assert starts == [0, 3, 6]  # 0, after jump, after branch_eq (in program order)
@@ -117,7 +109,7 @@ defmodule UtilsTest do
 
     test "no termination instructions only has 0" do
       program = <<0x3E, 0x01, 0x05>>  # just store_imm_u8
-      bitmask = <<1, 0, 0>>
+      bitmask = <<4::3>>
 
       starts = basic_block_starts(program, bitmask)
       assert starts == [0]
@@ -130,7 +122,7 @@ defmodule UtilsTest do
         0x05,         # jump
         0x01, 0x05    # immediates
       >>
-      bitmask = <<1, 1, 1, 0, 0>>
+      bitmask = <<28::5>>
 
       starts = basic_block_starts(program, bitmask)
       assert starts == [0,1, 2, 5]  # Order matches program order

@@ -42,13 +42,17 @@ defmodule PVM.Encoder do
     # Encode jump table - each entry needs to be encoded as an integer
     encoded_jump = Enum.map(jump_table, fn v -> encode_le(v, z) end)
 
+    bitmask = PVM.Decoder.reverse_bitmask(bitmask)
+
     # Concatenate in specified order: |j| ∘ z ∘ |c| ∘ j ∘ c ∘ k
-    encode_integer(length(jump_table)) <>
-      encode_le(z, 1) <>
-      encode_integer(byte_size(program)) <>
-      Enum.into(encoded_jump, <<>>) <>
-      program <>
-      bitmask
+    <<
+      encode_integer(length(jump_table))::binary,
+      encode_le(z, 1)::binary,
+      encode_integer(byte_size(program))::binary,
+      Enum.into(encoded_jump, <<>>)::binary,
+      program::binary,
+      bitmask::bitstring
+    >>
   end
 
   defmacro __using__(_) do

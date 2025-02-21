@@ -1,6 +1,6 @@
 defmodule Instructions.TwoRegistersTwoImmediatesTest do
   use ExUnit.Case
-  use PVM.Instructions
+  use PVM.{Instructions, Utils}
   alias PVM.{Instructions.TwoRegistersTwoImmediates, Registers, State}
 
   describe "load_imm_jump_ind" do
@@ -19,21 +19,15 @@ defmodule Instructions.TwoRegistersTwoImmediatesTest do
       >>
 
       # Mark instruction starts
-      bitmask = <<
-        1,
-        0,
-        0,
-        0,
-        0,
-        1
-      >>
+      bitmask = <<33::6>>
+      start_set = basic_block_starts(program, bitmask)
       jump_table = [2, 4, 6, 8, 10]
 
       # Set up register 2 with base address 8
       state = %State{registers: %Registers{r2: 5}}
 
       {exit_status, state} =
-        TwoRegistersTwoImmediates.execute(:load_imm_jump_ind, program, bitmask, jump_table, state)
+        TwoRegistersTwoImmediates.execute(:load_imm_jump_ind, program, bitmask, jump_table, start_set, state)
 
       # Check immediate value was loaded
       assert state.registers.r1 == 42
@@ -46,14 +40,15 @@ defmodule Instructions.TwoRegistersTwoImmediatesTest do
 
     test "panics on unaligned jump address" do
       program = <<op(:load_imm_jump_ind), 0x21, 1, 42, 1>>
-      bitmask = <<1, 0, 0, 0, 0>>
+      bitmask = <<16::5>>
+      start_set = basic_block_starts(program, bitmask)
       jump_table = [2, 4, 6, 8, 10]
 
       # Set register to create unaligned target (odd number)
       state = %State{registers: %Registers{r2: 2}}
 
       {exit_status, state} =
-        TwoRegistersTwoImmediates.execute(:load_imm_jump_ind, program, bitmask, jump_table, state)
+        TwoRegistersTwoImmediates.execute(:load_imm_jump_ind, program, bitmask, jump_table, start_set, state)
 
       assert state.registers.r1 == 42
       assert exit_status == :panic

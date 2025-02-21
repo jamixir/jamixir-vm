@@ -12,7 +12,7 @@ defmodule PVM.Utils.ProgramUtils do
 
     halt_bitmask = <<128>>
 
-    {program <> halt_sequence, bitmask <> halt_bitmask}
+    {program <> halt_sequence, <<bitmask::bitstring, halt_bitmask::bitstring>>}
   end
 
   @doc """

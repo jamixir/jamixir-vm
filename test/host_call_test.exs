@@ -29,7 +29,7 @@ defmodule PVM.HostCallTest do
     test "handles :panic exit reason" do
       # Program that just executes trap
       program = <<op(:trap)>>
-      bitmask = <<1>>
+      bitmask = <<1::1>>
       p = create_program(program, bitmask)
 
       host_fn = fn _data, _state, _context ->
@@ -47,7 +47,7 @@ defmodule PVM.HostCallTest do
     test "handles :out_of_gas exit reason" do
       # Using a basic program but with zero gas
       program = <<op(:fallthrough)>>
-      bitmask = <<1>>
+      bitmask = <<1::1>>
       p = create_program(program, bitmask)
 
       host_fn = fn _data, _state, _context ->
@@ -66,7 +66,7 @@ defmodule PVM.HostCallTest do
     test "handles fault exit reason" do
       # Program that attempts to write to invalid memory
       program = <<op(:store_imm_u8), 1, 0xFF, 0xFF, 42>>  # Try to write to invalid memory address
-      bitmask = <<1, 0, 0, 0, 0>>
+      bitmask = <<16::5>>
       p = create_program(program, bitmask)
 
       host_fn = fn _data, _state, _context ->

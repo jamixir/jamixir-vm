@@ -7,9 +7,6 @@ defmodule VMTest do
     PVM.Encoder.encode_program(program, bitmask, jump_table, z)
   end
 
-
-
-
   describe "VM.execute program scenarios" do
     test "executes basic control flow with trap and fallthrough" do
       # Program:
@@ -17,7 +14,7 @@ defmodule VMTest do
       # fallthrough (17)
       # trap (0)
       program = <<op(:fallthrough), op(:fallthrough), op(:trap)>>
-      bitmask = <<1, 1, 1>>
+      bitmask = <<7::3>>
 
       p = create_program(program, bitmask)
       {exit_reason, state_} = VM.execute(p, %State{})
@@ -36,38 +33,47 @@ defmodule VMTest do
       # load_imm r2, 55       (4, 2, 55)       # offset 15 (jumped to)
       # fallthrough          (17)              # offset 18
       program = <<
-        op(:load_imm), 1, 10,
-        op(:jump_ind), 1, 0,
-        op(:store_imm_u8), 3, 10, 0, 1, 42,
+        op(:load_imm),
+        1,
+        10,
+        op(:jump_ind),
+        1,
+        0,
+        op(:store_imm_u8),
+        3,
+        10,
+        0,
+        1,
+        42,
         op(:trap),
-        op(:store_imm_u8), 3, 20, 0, 1, 99,
+        op(:store_imm_u8),
+        3,
+        20,
+        0,
+        1,
+        99,
         op(:fallthrough),
-        op(:load_imm), 2, 55,
+        op(:load_imm),
+        2,
+        55,
         op(:fallthrough)
       >>
 
       # Mark instruction starts
-      bitmask = <<
-        1, 0, 0,             # load_imm
-        1, 0, 0,             # jump_ind
-        1, 0, 0, 0,0,0,          # store_imm_u8
-        1,                   # trap
-        1, 0, 0, 0,0,0,          # store_imm_u8
-        1,                   # fallthrough
-        1, 0, 0,             # load_imm
-        1                    # fallthrough
-      >>
+      bitmask = <<146, 12, 25>>
       jump_table = [2, 4, 6, 8, 20, 22]
 
       p = create_program(program, bitmask, jump_table)
       {exit_reason, state_} = VM.execute(p, %State{})
 
       assert exit_reason == :panic
-      assert state_.counter == 0  # Ended after fallthrough
-      assert Registers.get(state_.registers, [1, 2]) == [10, 55]   # From first and jumped-to load_imm
+      # Ended after fallthrough
+      assert state_.counter == 0
+      # From first and jumped-to load_imm
+      assert Registers.get(state_.registers, [1, 2]) == [10, 55]
 
       # Verify skipped store_imm_u8 instructions didn't execute
-      assert Memory.read(state_.memory, 0x1000a, 1) == {:ok, <<0>>}
+      assert Memory.read(state_.memory, 0x1000A, 1) == {:ok, <<0>>}
       assert Memory.read(state_.memory, 0x10014, 1) == {:ok, <<0>>}
     end
 
@@ -79,12 +85,30 @@ defmodule VMTest do
       # load_u8 r2, 20                  (60, 2, 20)
 
       program = <<
-        op(:store_imm_u8), 3, 10, 0, 1, 42,
-        op(:load_u8), 1, 10, 0, 1,
-        op(:store_u8), 1, 20, 0, 1,
-        op(:load_u8), 2, 20, 0, 1
+        op(:store_imm_u8),
+        3,
+        10,
+        0,
+        1,
+        42,
+        op(:load_u8),
+        1,
+        10,
+        0,
+        1,
+        op(:store_u8),
+        1,
+        20,
+        0,
+        1,
+        op(:load_u8),
+        2,
+        20,
+        0,
+        1
       >>
-      bitmask = <<1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0>>
+
+      bitmask = <<130, 16, 16::5>>
 
       p = create_program(program, bitmask)
       {exit_reason, state_} = VM.execute(p, %State{})
@@ -92,7 +116,7 @@ defmodule VMTest do
       assert exit_reason == :panic
       assert state_.counter == 0
       assert Registers.get(state_.registers, [1, 2]) == [42, 42]
-      assert Memory.read(state_.memory, 0x1000a, 1) == {:ok, <<42>>}
+      assert Memory.read(state_.memory, 0x1000A, 1) == {:ok, <<42>>}
       assert Memory.read(state_.memory, 0x10014, 1) == {:ok, <<42>>}
     end
 
@@ -101,18 +125,24 @@ defmodule VMTest do
       # store_imm_u32 addr=10, value=0x12345678 (38, 1, 10, 78, 56, 34, 12)
       # load_u16 r1, 10                         (76, 1, 10)
       # load_u16 r2, 12                         (76, 2, 12)
-      program = <<op(:store_imm_u32), 3, 10,0, 1, 78, 56, 34, 12,
-       op(:load_u16), 1, 10, 0, 1,
-       op(:load_u16), 2, 12, 0, 1>>
-      bitmask = <<1, 0, 0, 0, 0, 0, 0,0,0, 1, 0, 0,0,0, 1, 0, 0,0,0>>
+      program =
+        <<op(:store_imm_u32), 3, 10, 0, 1, 78, 56, 34, 12, op(:load_u16), 1, 10, 0, 1,
+          op(:load_u16), 2, 12, 0, 1>>
+
+      bitmask = <<128, 66, 0::3>>
 
       p = create_program(program, bitmask)
       {exit_reason, state_} = VM.execute(p, %State{})
 
       assert exit_reason == :panic
       assert state_.counter == 0
-      assert Registers.get(state_.registers, [1, 2]) == [de_le(<<78, 56>>, 2), de_le(<<34, 12>>, 2)]  # Lower 16 bits
-      assert Memory.read(state_.memory, 0x1000a, 4) == {:ok, <<78, 56, 34, 12>>}
+      # Lower 16 bits
+      assert Registers.get(state_.registers, [1, 2]) == [
+               de_le(<<78, 56>>, 2),
+               de_le(<<34, 12>>, 2)
+             ]
+
+      assert Memory.read(state_.memory, 0x1000A, 4) == {:ok, <<78, 56, 34, 12>>}
     end
 
     test "executes until trap with register operations" do
@@ -124,13 +154,34 @@ defmodule VMTest do
       # load_imm r3, 0xFFFF0000       (4, 3, 0, 0, 0xFF, 0xFF)  # Value that will cause halt
       # jump_ind r3                   (19, 3, 0)
       program = <<
-        op(:load_imm), 1, 42,
-        op(:load_imm), 2, 24,
-        op(:store_u8), 1, 100, 0, 1,
-        op(:store_u8), 2, 101, 0, 1,
-        op(:load_imm), 3, 0, 0, 0xFF, 0xFF,
-        op(:jump_ind), 3, 0>>
-      bitmask = <<1, 0, 0, 1, 0, 0, 1, 0, 0,0,0, 1, 0, 0,0,0, 1, 0, 0, 0, 0, 0, 1, 0, 0>>
+        op(:load_imm),
+        1,
+        42,
+        op(:load_imm),
+        2,
+        24,
+        op(:store_u8),
+        1,
+        100,
+        0,
+        1,
+        op(:store_u8),
+        2,
+        101,
+        0,
+        1,
+        op(:load_imm),
+        3,
+        0,
+        0,
+        0xFF,
+        0xFF,
+        op(:jump_ind),
+        3,
+        0
+      >>
+
+      bitmask = <<146, 16, 130, 0::1>>
 
       p = create_program(program, bitmask)
       {exit_reason, state_} = VM.execute(p, %State{})
@@ -143,23 +194,40 @@ defmodule VMTest do
       assert Memory.read(state_.memory, 0x10065, 1) == {:ok, <<24>>}
     end
 
-
     test "executes 64-bit load and store operations" do
       # Program:
       # store_imm_u64 addr=16, value=0x12345678 (zero-extended to 64 bits)
       # load_imm_64 r1, 0xDCBA987654321001 (full 64-bit value)
       # store_u64 r1, 24
       program = <<
-        op(:store_imm_u64), 3, 16,0,1, 0x78, 0x56, 0x34, 0x12,  # Only 32-bit immediate
-        op(:load_imm_64), 0x01, 0x01, 0x10, 0x32, 0x54, 0x76, 0x98, 0xBA, 0xDC,
-        op(:store_u64), 1, 0x18,0,1
+        # Only 32-bit immediate
+        op(:store_imm_u64),
+        3,
+        16,
+        0,
+        1,
+        0x78,
+        0x56,
+        0x34,
+        0x12,
+        op(:load_imm_64),
+        0x01,
+        0x01,
+        0x10,
+        0x32,
+        0x54,
+        0x76,
+        0x98,
+        0xBA,
+        0xDC,
+        op(:store_u64),
+        1,
+        0x18,
+        0,
+        1
       >>
 
-      bitmask = <<
-        1, 0, 0, 0, 0, 0,0,0,0,              # store_imm_u64 (4-byte immediate)
-        1, 0, 0, 0, 0, 0, 0, 0, 0, 0,  # load_imm_64 (8-byte immediate)
-        1, 0, 0,0,0                         # store_u64
-      >>
+      bitmask = <<128, 64, 16>>
 
       p = create_program(program, bitmask)
       {exit_reason, state_} = VM.execute(p, %State{})
@@ -170,9 +238,12 @@ defmodule VMTest do
       assert Registers.get(state_.registers, 1) == 0xDCBA987654321001
       # Verify memory contents:
       # First location should have zero-extended 32-bit value
-      assert Memory.read(state_.memory, 0x10010, 8) == {:ok, <<0x78, 0x56, 0x34, 0x12, 0, 0, 0, 0>>}
+      assert Memory.read(state_.memory, 0x10010, 8) ==
+               {:ok, <<0x78, 0x56, 0x34, 0x12, 0, 0, 0, 0>>}
+
       # Second location should have full 64-bit value from register
-      assert Memory.read(state_.memory, 0x10018, 8) == {:ok, <<0x01,0x10, 0x32, 0x54, 0x76, 0x98, 0xBA, 0xDC>>}
+      assert Memory.read(state_.memory, 0x10018, 8) ==
+               {:ok, <<0x01, 0x10, 0x32, 0x54, 0x76, 0x98, 0xBA, 0xDC>>}
     end
 
     test "executes conditional branch sequence" do
@@ -183,58 +254,72 @@ defmodule VMTest do
       # store_imm_u8 20, 99          (target of branch)
       # fallthrough
       program = <<
-        op(:load_imm), 1, 42,
-        op(:branch_eq_imm), 0x11, 42, 5,
+        op(:load_imm),
+        1,
+        42,
+        op(:branch_eq_imm),
+        0x11,
+        42,
+        5,
         op(:trap),
         op(:fallthrough),
-        op(:store_imm_u8), 3, 20, 0, 1, 99,
+        op(:store_imm_u8),
+        3,
+        20,
+        0,
+        1,
+        99,
         op(:fallthrough)
       >>
 
-      bitmask = <<
-        1, 0, 0,           # load_imm
-        1, 0, 0, 0,        # branch_eq_imm
-        1,                 # trap
-        1,                 # fallthrough
-        1, 0, 0, 0,0,0,        # store_imm_u8
-        1                  # fallthrough
-      >>
+      bitmask = <<145, 193>>
 
       p = create_program(program, bitmask)
       {exit_reason, state_} = VM.execute(p, %State{})
 
-      assert exit_reason == :panic  # From final fallthrough
+      # From final fallthrough
+      assert exit_reason == :panic
       assert state_.counter == 0
       assert Registers.get(state_.registers, 1) == 42
-      assert Memory.read(state_.memory, 0x10014, 1) == {:ok, <<99>>}  # Verify branch was taken
+      # Verify branch was taken
+      assert Memory.read(state_.memory, 0x10014, 1) == {:ok, <<99>>}
     end
-    test "not equel - no jump" do
 
+    test "not equel - no jump" do
       program = <<
-        op(:load_imm), 1, 7,
-        op(:branch_eq_imm), 0x11, 42, 5,
+        op(:load_imm),
+        1,
+        7,
+        op(:branch_eq_imm),
+        0x11,
+        42,
+        5,
         op(:trap),
         op(:fallthrough),
-        op(:store_imm_u8), 3, 20, 0, 1, 99,
+        op(:store_imm_u8),
+        3,
+        20,
+        0,
+        1,
+        99,
         op(:fallthrough)
       >>
 
       bitmask = <<
-        1, 0, 0,           # load_imm
-        1, 0, 0, 0,        # branch_eq_imm
-        1,                 # trap
-        1,                 # fallthrough
-        1, 0, 0, 0,0,0,        # store_imm_u8
-        1                  # fallthrough
+        # load_imm
+        145,
+        193
       >>
 
       p = create_program(program, bitmask)
       {exit_reason, state_} = VM.execute(p, %State{})
 
-      assert exit_reason == :panic  # From final fallthrough
+      # From final fallthrough
+      assert exit_reason == :panic
       assert state_.counter == 0
       assert Registers.get(state_.registers, 1) == 7
-      assert Memory.read(state_.memory, 0x10014, 1) == {:ok, <<0>>}  # Verify branch was taken
+      # Verify branch was taken
+      assert Memory.read(state_.memory, 0x10014, 1) == {:ok, <<0>>}
     end
 
     test "executes load_imm_jump sequence" do
@@ -244,28 +329,32 @@ defmodule VMTest do
       # store_imm_u8 10, 99           (target of jump)
       # fallthrough
       program = <<
-        op(:load_imm_jump), 0x11, 42, 6,
+        op(:load_imm_jump),
+        0x11,
+        42,
+        6,
         op(:trap),
         op(:fallthrough),
-        op(:store_imm_u8), 3, 10, 0, 1, 99,
+        op(:store_imm_u8),
+        3,
+        10,
+        0,
+        1,
+        99,
         op(:fallthrough)
       >>
 
-      bitmask = <<
-        1, 0, 0, 0,        # load_imm_jump
-        1,                 # trap
-        1,                 # fallthrough
-        1, 0, 0, 0,0,0,        # store_imm_u8
-        1                  # fallthrough
-      >>
+      bitmask = <<142, 1::5>>
 
       p = create_program(program, bitmask)
       {exit_reason, state_} = VM.execute(p, %State{})
 
-      assert exit_reason == :panic  # From final fallthrough
+      # From final fallthrough
+      assert exit_reason == :panic
       assert state_.counter == 0
       assert Registers.get(state_.registers, 1) == 42
-      assert Memory.read(state_.memory, 0x1000a, 1) == {:ok, <<99>>}  # Verify jump was taken
+      # Verify jump was taken
+      assert Memory.read(state_.memory, 0x1000A, 1) == {:ok, <<99>>}
     end
 
     test "executes signed comparison branch sequence" do
@@ -276,30 +365,38 @@ defmodule VMTest do
       # store_imm_u8 30, 77           (target of branch)
       # fallthrough
       program = <<
-        op(:load_imm), 1, 0xFF,
-        op(:branch_lt_s_imm), 0x11, 0, 6,
+        op(:load_imm),
+        1,
+        0xFF,
+        op(:branch_lt_s_imm),
+        0x11,
+        0,
+        6,
         op(:trap),
         op(:fallthrough),
-        op(:store_imm_u8), 3, 30, 0, 1, 77,
+        op(:store_imm_u8),
+        3,
+        30,
+        0,
+        1,
+        77,
         op(:fallthrough)
       >>
 
       bitmask = <<
-        1, 0, 0,           # load_imm
-        1, 0, 0, 0,        # branch_lt_s_imm
-        1,                 # trap
-        1,                 # fallthrough
-        1, 0, 0, 0,0,0,        # store_imm_u8
-        1                  # fallthrough
+        145,
+        193
       >>
 
       p = create_program(program, bitmask)
       {exit_reason, state_} = VM.execute(p, %State{})
 
-      assert exit_reason == :panic  # From final fallthrough
+      # From final fallthrough
+      assert exit_reason == :panic
       assert state_.counter == 0
-        assert Registers.get(state_.registers, 1) == 0xFFFF_FFFF_FFFF_FFFF
-      assert Memory.read(state_.memory, 0x1001e, 1) == {:ok, <<77>>}  # Verify branch was taken
+      assert Registers.get(state_.registers, 1) == 0xFFFF_FFFF_FFFF_FFFF
+      # Verify branch was taken
+      assert Memory.read(state_.memory, 0x1001E, 1) == {:ok, <<77>>}
     end
 
     test "calculates sum of even numbers from 1 to 10" do
@@ -312,7 +409,6 @@ defmodule VMTest do
       #     i += 1
       # store sum in memory at address 3
 
-
       # r1 = sum (initialized to 0)
       # r2 = i (counter, initialized to 1)
       # r3 = 10 (loop end condition)
@@ -320,53 +416,127 @@ defmodule VMTest do
       # Memory address 100 = final result
       program = <<
         # Initialize registers (offset 0)
-        op(:load_imm), 1, 0,     # sum = 0
-        op(:load_imm), 2, 1,     # i = 1
-        op(:load_imm), 3, 10,    # end condition = 10
-        op(:load_imm), 5, 2,     # divisor = 2 (keep this constant)
+        # sum = 0
+        op(:load_imm),
+        1,
+        0,
+        # i = 1
+        op(:load_imm),
+        2,
+        1,
+        # end condition = 10
+        op(:load_imm),
+        3,
+        10,
+        # divisor = 2 (keep this constant)
+        op(:load_imm),
+        5,
+        2,
         # Check if i <= 10
         op(:fallthrough),
         # Loop start (offset 13):
-        op(:branch_gt_u_imm), 0x12, 10, 20,   # if i > 10, jump to end (offset 33) (13 + 20)
-        op(:rem_u_32), 0x52, 4,           # r4 = i % 2  (r_a=2, r_b=4, r_d=4)
-        #(offset 20)
-        op(:branch_ne_imm), 0x14, 0, 8,     # if remainder != 0, skip to load_imm 1 (offset 29)
-        op(:add_32), 0x12, 1,              # sum += i
+        # if i > 10, jump to end (offset 33) (13 + 20)
+        op(:branch_gt_u_imm),
+        0x12,
+        10,
+        20,
+        # r4 = i % 2  (r_a=2, r_b=4, r_d=4)
+        op(:rem_u_32),
+        0x52,
+        4,
+        # (offset 20)
+        # if remainder != 0, skip to load_imm 1 (offset 29)
+        op(:branch_ne_imm),
+        0x14,
+        0,
+        8,
+        # sum += i
+        op(:add_32),
+        0x12,
+        1,
         op(:fallthrough),
-        #(offset 28)
-        op(:add_imm_32), 0x22, 1,
-        #(offset 31)
-        op(:jump), 238,                    # Jump back to loop start (offset 13) => 31 -18  => 31 + (255 - 17) = 31 + 238
+        # (offset 28)
+        op(:add_imm_32),
+        0x22,
+        1,
+        # (offset 31)
+        # Jump back to loop start (offset 13) => 31 -18  => 31 + (255 - 17) = 31 + 238
+        op(:jump),
+        238,
         # Store result and exit (offset 38):
-        op(:store_u32), 1, 3,0,1           # Store sum at memory address 0x10003
+        # Store sum at memory address 0x10003
+        op(:store_u32),
+        1,
+        3,
+        0,
+        1
       >>
 
       bitmask = <<
-        1, 0, 0,           # load_imm sum (0)
-        1, 0, 0,           # load_imm i (3)
-        1, 0, 0,           # load_imm end (6)
-        1, 0, 0,           # load_imm divisor (9)
-        1,                 # fallthrough (12)
-        1, 0, 0, 0,        # branch_gt_u_imm (13*)
-        1, 0, 0,           # rem_u_32 (17*)
-        1, 0, 0, 0,        # branch_ne_imm (20)
-        1, 0, 0,          # add_32 (24*)
-        1,                 # fallthrough (27)
-        1, 0, 0,           # add_imm_32 (28*)
-        1, 0,              # jump (31)
-        1, 0, 0,0,0         # store_u32 (33*)
+        # load_imm sum (0)
+        1::1,
+        0::1,
+        0::1,
+        # load_imm i (3)
+        1::1,
+        0::1,
+        0::1,
+        # load_imm end (6)
+        1::1,
+        0::1,
+        0::1,
+        # load_imm divisor (9)
+        1::1,
+        0::1,
+        0::1,
+        # fallthrough (12)
+        1::1,
+        # branch_gt_u_imm (13*)
+        1::1,
+        0::1,
+        0::1,
+        0::1,
+        # rem_u_32 (17*)
+        1::1,
+        0::1,
+        0::1,
+        # branch_ne_imm (20::1)
+        1::1,
+        0::1,
+        0::1,
+        0::1,
+        # add_32 (24*)
+        1::1,
+        0::1,
+        0::1,
+        # fallthrough (27)
+        1::1,
+        # add_imm_32 (28*)
+        1::1,
+        0::1,
+        0::1,
+        # jump (31)
+        1::1,
+        0::1,
+        # store_u32 (33*)
+        1::1,
+        0::1,
+        0::1,
+        0::1,
+        0::1
       >>
 
       p = create_program(program, bitmask)
       {exit_reason, state_} = VM.execute(p, %State{})
 
-      assert exit_reason == :panic  # Normal termination after last instruction
+      # Normal termination after last instruction
+      assert exit_reason == :panic
       # Read the result from memory - should be 2 + 4 + 6 + 8 + 10 = 30
       assert Memory.read(state_.memory, 0x10003, 4) == {:ok, <<30, 0, 0, 0>>}
       # Verify final register values
-      assert Registers.get(state_.registers, [1, 2, 3]) == [30, 11, 10]  # sum, final i value, loop end condition
+      # sum, final i value, loop end condition
+      assert Registers.get(state_.registers, [1, 2, 3]) == [30, 11, 10]
     end
-
   end
 
   describe "VM.execute memory faults" do
@@ -374,7 +544,7 @@ defmodule VMTest do
       # Program:
       # store_imm_u8 addr=0x100FF, value=42
       program = <<op(:store_imm_u8), 3, 0xFF, 0, 1, 42>>
-      bitmask = <<1, 0, 0, 0, 0, 0>>
+      bitmask = <<32::6>>
 
       p = create_program(program, bitmask)
 
@@ -397,7 +567,6 @@ defmodule VMTest do
     end
   end
 
-
   describe "VM.execute instruction type coverage" do
     test "executes store_imm_ind instructions" do
       # Program:
@@ -405,18 +574,32 @@ defmodule VMTest do
       # store_imm_ind_u8 r1, 5, 42    # Store 42 at address r1+5
       # store_imm_ind_u16 r1, 10, 0x1234  # Store 0x1234 at address r1+10
       program = <<
-        op(:load_imm), 1, 0,0,1,
-        op(:store_imm_ind_u8), 0x11, 5, 42,
-        op(:store_imm_ind_u16), 0x11, 10, 0x34, 0x12
+        op(:load_imm),
+        1,
+        0,
+        0,
+        1,
+        op(:store_imm_ind_u8),
+        0x11,
+        5,
+        42,
+        op(:store_imm_ind_u16),
+        0x11,
+        10,
+        0x34,
+        0x12
       >>
-      bitmask = <<1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0>>
+
+      bitmask = <<132, 16::6>>
 
       p = create_program(program, bitmask)
       {exit_reason, state_} = VM.execute(p, %State{})
 
       assert exit_reason == :panic
-      assert Memory.read(state_.memory, 0x10005, 1) == {:ok, <<42>>}  # 100 + 5
-      assert Memory.read(state_.memory, 0x1000a, 2) == {:ok, <<0x34, 0x12>>}  # 100 + 10
+      # 100 + 5
+      assert Memory.read(state_.memory, 0x10005, 1) == {:ok, <<42>>}
+      # 100 + 10
+      assert Memory.read(state_.memory, 0x1000A, 2) == {:ok, <<0x34, 0x12>>}
     end
 
     test "executes two_registers_one_offset branch instructions" do
@@ -427,19 +610,29 @@ defmodule VMTest do
       # trap                         # Should be skipped
       # fallthrough                  # Target of branch
       program = <<
-        op(:load_imm), 1, 42,
-        op(:load_imm), 2, 42,
-        op(:branch_eq), 0x21, 11,    # r2 in high bits, r1 in low bits
+        op(:load_imm),
+        1,
+        42,
+        op(:load_imm),
+        2,
+        42,
+        # r2 in high bits, r1 in low bits
+        op(:branch_eq),
+        0x21,
+        11,
         op(:trap),
         op(:fallthrough)
       >>
-      bitmask = <<1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1>>
+
+      bitmask = <<146, 3::3>>
 
       p = create_program(program, bitmask)
       {exit_reason, state_} = VM.execute(p, %State{})
 
-      assert exit_reason == :panic  # From fallthrough
-      assert state_.counter == 0  # Reached end of program
+      # From fallthrough
+      assert exit_reason == :panic
+      # Reached end of program
+      assert state_.counter == 0
     end
 
     test "executes load_imm_jump_ind instruction" do
@@ -449,20 +642,31 @@ defmodule VMTest do
       # trap                     # Should be skipped
       # fallthrough             # Target of jump (offset 10)
       program = <<
-        op(:load_imm), 2, 5,
-        op(:load_imm_jump_ind), 0x21, 1, 42, 1,  # r2 in high bits, r1 in low bits
+        op(:load_imm),
+        2,
+        5,
+        # r2 in high bits, r1 in low bits
+        op(:load_imm_jump_ind),
+        0x21,
+        1,
+        42,
+        1,
         op(:trap),
         op(:fallthrough)
       >>
-      bitmask = <<1, 0, 0, 1, 0, 0, 0,0, 1, 1>>
-      jump_table= [2, 4, 10]
+
+      bitmask = <<144, 3::2>>
+      jump_table = [2, 4, 10]
 
       p = create_program(program, bitmask, jump_table)
       {exit_reason, state_} = VM.execute(p, %State{})
 
-      assert exit_reason == :panic  # From fallthrough
-      assert state_.counter == 0  # Reached fallthrough instruction
-      assert Registers.get(state_.registers, 1) == 42  # Verify immediate was loaded
+      # From fallthrough
+      assert exit_reason == :panic
+      # Reached fallthrough instruction
+      assert state_.counter == 0
+      # Verify immediate was loaded
+      assert Registers.get(state_.registers, 1) == 42
     end
   end
 end

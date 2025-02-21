@@ -5,16 +5,16 @@ defmodule PVM.Instructions.RegImmediateOffset do
   alias PVM.Registers
   @type comparison_op :: :eq | :ne | :lt_u | :le_u | :ge_u | :gt_u | :lt_s | :le_s | :ge_s | :gt_s
   # Section (A.5.8) v0.6.1
-  def execute(:load_imm_jump, program, bitmask,  state) do
-    {r_a, v_x, v_y, start_set} = get_params(program, bitmask, state.counter)
+  def execute(:load_imm_jump, program, bitmask, start_set, state) do
+    {r_a, v_x, v_y} = get_params(program, bitmask, state.counter)
     {exit_reason, counter} = Executor.branch(v_y, true, state.counter, start_set)
 
     {exit_reason,
      %{state | counter: counter, registers: Registers.set(state.registers, r_a, v_x)}}
   end
 
-  def execute(instruction, program, bitmask, state) do
-    {r_a, v_x, v_y, start_set} = get_params(program, bitmask, state.counter)
+  def execute(instruction, program, bitmask, start_set, state) do
+    {r_a, v_x, v_y} = get_params(program, bitmask, state.counter)
     w_a = Registers.get(state.registers, r_a)
 
     comparison_result = compare(instruction_to_op(instruction), w_a, v_x)
@@ -97,8 +97,6 @@ defmodule PVM.Instructions.RegImmediateOffset do
         (decode_bytes(program, counter + 2 + l_x, l_y)
          |> u2i(l_y))
 
-    start_set = basic_block_starts(program, bitmask)
-
-    {r_a, v_x, v_y, start_set}
+    {r_a, v_x, v_y}
   end
 end

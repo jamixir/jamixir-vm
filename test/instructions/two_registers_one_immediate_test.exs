@@ -20,7 +20,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
     # store puts w_a value in memory at address w_b + v_x => mem[100 + 10] = 42
     test "store_ind_u8 writes byte value" do
       program = <<op(:store_ind_u8), @registers, @offset>>
-      bitmask = <<1, 0, 0>>
+      bitmask = <<4::3>>
       state = %State{registers: %Registers{r1: 42, r2: @init_target_addr}}
 
       {exit_status, state} =
@@ -32,7 +32,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
 
     test "store_ind_u16 writes 16-bit value" do
       program = <<op(:store_ind_u16), @registers, @offset>>
-      bitmask = <<1, 0, 0>>
+      bitmask = <<4::3>>
       state = %State{registers: %Registers{r2: @init_target_addr, r1: 0x1234}}
 
       {exit_status, state} =
@@ -44,7 +44,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
 
     test "store_ind_u32 writes 32-bit value" do
       program = <<op(:store_ind_u32), @registers, @offset>>
-      bitmask = <<1, 0, 0>>
+      bitmask = <<4::3>>
       state = %State{registers: %Registers{r2: @init_target_addr, r1: 0x12345678}}
 
       {exit_status, state} =
@@ -56,7 +56,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
 
     test "store_ind_u64 writes 64-bit value" do
       program = <<op(:store_ind_u64), @registers, @offset>>
-      bitmask = <<1, 0, 0>>
+      bitmask = <<4::3>>
       state = %State{registers: %Registers{r2: @init_target_addr, r1: 0x123456789ABCDEF0}}
 
       {exit_status, state} =
@@ -74,7 +74,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
     # load_ind reads mem[w_b + v_x] and puts it in w_a
     test "load_ind_u8 reads byte value" do
       program = <<op(:load_ind_u8), @registers, @offset>>
-      bitmask = <<1, 0, 0>>
+      bitmask = <<4::3>>
       {:ok, memory} = Memory.write(%Memory{}, @final_target_addr, <<42>>)
       state = %State{memory: memory, registers: %Registers{r2: @init_target_addr}}
 
@@ -87,7 +87,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
 
     test "load_ind_u16 reads 16-bit value" do
       program = <<op(:load_ind_u16), @registers, @offset>>
-      bitmask = <<1, 0, 0>>
+      bitmask = <<4::3>>
       {:ok, memory} = Memory.write(%Memory{}, @final_target_addr, <<0x34, 0x12>>)
       state = %State{memory: memory, registers: %Registers{r2: @init_target_addr}}
 
@@ -100,7 +100,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
 
     test "load_ind_u32 reads 32-bit value" do
       program = <<op(:load_ind_u32), @registers, @offset>>
-      bitmask = <<1, 0, 0>>
+      bitmask = <<4::3>>
       {:ok, memory} = Memory.write(%Memory{}, @final_target_addr, <<0x78, 0x56, 0x34, 0x12>>)
       state = %State{memory: memory, registers: %Registers{r2: @init_target_addr}}
 
@@ -113,7 +113,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
 
     test "load_ind_u64 reads 64-bit value" do
       program = <<op(:load_ind_u64), @registers, @offset>>
-      bitmask = <<1, 0, 0>>
+      bitmask = <<4::3>>
 
       {:ok, memory} =
         Memory.write(
@@ -136,7 +136,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
     test "load_ind_i8 reads signed byte value" do
       # -127 signed
       program = <<op(:load_ind_i8), @registers, @offset>>
-      bitmask = <<1, 0, 0>>
+      bitmask = <<4::3>>
       {:ok, memory} = Memory.write(%Memory{}, @final_target_addr, <<0x80>>)
       state = %State{memory: memory, registers: %Registers{r2: @init_target_addr}}
 
@@ -149,7 +149,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
 
     test "load_ind_i16 reads signed 16-bit value" do
       program = <<op(:load_ind_i16), @registers, @offset>>
-      bitmask = <<1, 0, 0>>
+      bitmask = <<4::3>>
       {:ok, memory} = Memory.write(%Memory{}, @final_target_addr, <<0x50, 0x80>>)
       state = %State{memory: memory, registers: %Registers{r2: @init_target_addr}}
 
@@ -162,7 +162,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
 
     test "load_ind_i32 reads signed 32-bit value" do
       program = <<op(:load_ind_i32), @registers, @offset>>
-      bitmask = <<1, 0, 0>>
+      bitmask = <<4::3>>
       {:ok, memory} = Memory.write(%Memory{}, @final_target_addr, <<0x03, 0x02, 0x01, 0x80>>)
       state = %State{memory: memory, registers: %Registers{r2: @init_target_addr}}
 
@@ -178,7 +178,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
     # w_a = w_b (op) v_x
     test "add_imm_32 performs addition" do
       program = <<op(:add_imm_32), @registers, 5>>
-      bitmask = <<1, 0, 0>>
+      bitmask = <<4::3>>
       state = %State{registers: %Registers{r2: 10}}
 
       {exit_status, state} =
@@ -190,7 +190,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
 
     test "mul_imm_32 performs multiplication" do
       program = <<op(:mul_imm_32), @registers, 5>>
-      bitmask = <<1, 0, 0>>
+      bitmask = <<4::3>>
       state = %State{registers: %Registers{r2: 10}}
 
       {exit_status, state} =
@@ -202,7 +202,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
 
     test "neg_add_imm_32 performs negated addition" do
       program = <<op(:neg_add_imm_32), @registers, 5>>
-      bitmask = <<1, 0, 0>>
+      bitmask = <<4::3>>
       state = %State{registers: %Registers{r2: 10}}
 
       {exit_status, state} =
@@ -216,7 +216,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
   describe "bitwise operations" do
     test "and_imm performs bitwise AND" do
       program = <<op(:and_imm), 0x21, 0b0000_1011>>
-      bitmask = <<1, 0, 0>>
+      bitmask = <<4::3>>
       state = %State{registers: %Registers{r2: 0b1011_1101}}
       {exit_status, state} = TwoRegistersOneImmediate.execute(:and_imm, program, bitmask, state)
       assert exit_status == :continue
@@ -225,7 +225,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
 
     test "or_imm performs bitwise OR" do
       program = <<op(:or_imm), 0x21, 0b0000_1011>>
-      bitmask = <<1, 0, 0>>
+      bitmask = <<4::3>>
       state = %State{registers: %Registers{r2: 0b1011_1101}}
       {exit_status, state} = TwoRegistersOneImmediate.execute(:or_imm, program, bitmask, state)
       assert exit_status == :continue
@@ -234,7 +234,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
 
     test "xor_imm performs bitwise XOR" do
       program = <<op(:xor_imm), 0x21, 0b0010_1011>>
-      bitmask = <<1, 0, 0>>
+      bitmask = <<4::3>>
       state = %State{registers: %Registers{r2: 0b1011_1101}}
       {exit_status, state} = TwoRegistersOneImmediate.execute(:xor_imm, program, bitmask, state)
       assert exit_status == :continue
@@ -245,7 +245,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
   describe "comparison operations" do
     test "set_lt_u_imm sets register when unsigned less than" do
       program = <<op(:set_lt_u_imm), 0x21, 0x10>>
-      bitmask = <<1, 0, 0>>
+      bitmask = <<4::3>>
       state = %State{registers: %Registers{r2: 0x0F}}
 
       {exit_status, state} =
@@ -257,7 +257,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
 
     test "set_lt_s_imm sets register when signed less than" do
       program = <<op(:set_lt_s_imm), 0x21, 0x79>>
-      bitmask = <<1, 0, 0>>
+      bitmask = <<4::3>>
       state = %State{registers: %Registers{r2: 0x78}}
 
       {exit_status, state} =
@@ -269,7 +269,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
 
     test "set_gt_u_imm sets register when unsigned greater than" do
       program = <<op(:set_gt_u_imm), 0x21, 0x10>>
-      bitmask = <<1, 0, 0>>
+      bitmask = <<4::3>>
       state = %State{registers: %Registers{r2: 0x11}}
 
       {exit_status, state} =
@@ -281,7 +281,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
 
     test "set_gt_s_imm sets register when signed greater than" do
       program = <<op(:set_gt_s_imm), 0x21, 0xFF>>
-      bitmask = <<1, 0, 0>>
+      bitmask = <<4::3>>
       state = %State{registers: %Registers{r2: 0x7F}}
 
       {exit_status, state} =
@@ -295,7 +295,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
   describe "32-bit shift operations" do
     test "shlo_l_imm shifts left" do
       program = <<op(:shlo_l_imm_32), 0x21, 2>>
-      bitmask = <<1, 0, 0>>
+      bitmask = <<4::3>>
       state = %State{registers: %Registers{r2: 3}}
 
       {exit_status, state} =
@@ -307,7 +307,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
 
     test "shlo_r_imm shifts right" do
       program = <<op(:shlo_r_imm_32), 0x21, 1>>
-      bitmask = <<1, 0, 0>>
+      bitmask = <<4::3>>
       state = %State{registers: %Registers{r2: 4}}
 
       {exit_status, state} =
@@ -319,7 +319,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
 
     test "shar_r_imm performs arithmetic right shift" do
       program = <<op(:shar_r_imm_32), 0x21, 1>>
-      bitmask = <<1, 0, 0>>
+      bitmask = <<4::3>>
       state = %State{registers: %Registers{r2: 0xFFFF_FFFC}}
 
       {exit_status, state} =
@@ -333,7 +333,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
   describe "32-bit alternative shift operations" do
     test "shlo_l_imm_alt_32 performs alternative left shift" do
       program = <<op(:shlo_l_imm_alt_32), 0x21, 0x78>>
-      bitmask = <<1, 0, 0>>
+      bitmask = <<4::3>>
       state = %State{registers: %Registers{r2: 4}}
 
       {exit_status, state} =
@@ -345,7 +345,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
 
     test "shlo_r_imm_alt_32 performs alternative right shift" do
       program = <<op(:shlo_r_imm_alt_32), 0x21, 0x78>>
-      bitmask = <<1, 0, 0>>
+      bitmask = <<4::3>>
       state = %State{registers: %Registers{r2: 4}}
 
       {exit_status, state} =
@@ -357,7 +357,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
 
     test "shar_r_imm_alt_32 performs alternative arithmetic right shift" do
       program = <<op(:shar_r_imm_alt_32), 0x21, 0x78>>
-      bitmask = <<1, 0, 0>>
+      bitmask = <<4::3>>
       state = %State{registers: %Registers{r2: 4}}
 
       {exit_status, state} =
@@ -369,7 +369,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
 
     test "shar_r_imm_alt_32 modulo 2^32" do
       program = <<op(:shar_r_imm_alt_32), 0x21, 0x7_0000_0078>>
-      bitmask = <<1, 0, 0>>
+      bitmask = <<4::3>>
       state = %State{registers: %Registers{r2: 4}}
 
       {exit_status, state} =
@@ -383,7 +383,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
   describe "conditional move operations" do
     test "cmov_iz_imm moves immediate when register is zero" do
       program = <<op(:cmov_iz_imm), 0x21, 42>>
-      bitmask = <<1, 0, 0>>
+      bitmask = <<4::3>>
       state = %State{registers: %Registers{r2: 0}}
 
       {exit_status, state} =
@@ -395,7 +395,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
 
     test "cmov_nz_imm moves immediate when register is non-zero" do
       program = <<op(:cmov_nz_imm), 0x21, 42>>
-      bitmask = <<1, 0, 0>>
+      bitmask = <<4::3>>
       state = %State{registers: %Registers{r2: 1}}
 
       {exit_status, state} =
@@ -409,7 +409,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
   describe "64-bit arithmetic operations" do
     test "add_imm_64 performs 64-bit addition" do
       program = <<op(:add_imm_64), 0x21, 0x01, 0x02>>
-      bitmask = <<1, 0, 0, 0>>
+      bitmask = <<8::4>>
       state = %State{registers: %Registers{r2: 0xFFFF_FFFF_0000_0000}}
 
       {exit_status, state} =
@@ -421,7 +421,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
 
     test "mul_imm_64 performs 64-bit multiplication" do
       program = <<op(:mul_imm_64), 0x21, 2>>
-      bitmask = <<1, 0, 0>>
+      bitmask = <<4::3>>
       state = %State{registers: %Registers{r2: 0x8000_0000_0000_0000}}
 
       {exit_status, state} =
@@ -433,7 +433,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
 
     test "neg_add_imm_64 performs 64-bit negated addition" do
       program = <<op(:neg_add_imm_64), 0x21, 5>>
-      bitmask = <<1, 0, 0>>
+      bitmask = <<4::3>>
       state = %State{registers: %Registers{r2: 10}}
 
       {exit_status, state} =
@@ -447,7 +447,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
   describe "64-bit shift operations" do
     test "shlo_l_imm_64 performs 64-bit left shift" do
       program = <<op(:shlo_l_imm_64), 0x21, 4>>
-      bitmask = <<1, 0, 0>>
+      bitmask = <<4::3>>
       state = %State{registers: %Registers{r2: 0x1234_5678_9ABC_DEF0}}
 
       {exit_status, state} =
@@ -459,7 +459,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
 
     test "shlo_r_imm_64 performs 64-bit logical right shift" do
       program = <<op(:shlo_r_imm_64), 0x21, 4>>
-      bitmask = <<1, 0, 0>>
+      bitmask = <<4::3>>
       state = %State{registers: %Registers{r2: 0x1234_5678_9ABC_DEF0}}
 
       {exit_status, state} =
@@ -471,7 +471,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
 
     test "shar_r_imm_64 performs 64-bit arithmetic right shift" do
       program = <<op(:shar_r_imm_64), 0x21, 4>>
-      bitmask = <<1, 0, 0>>
+      bitmask = <<4::3>>
       state = %State{registers: %Registers{r2: 0xF234_5678_9ABC_DEF0}}
 
       {exit_status, state} =
@@ -483,7 +483,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
 
     test "shift operations handle shift amount modulo 64" do
       program = <<op(:shlo_l_imm_64), 0x21, 68>>
-      bitmask = <<1, 0, 0>>
+      bitmask = <<4::3>>
       state = %State{registers: %Registers{r2: 0x1234_5678_9ABC_DEF0}}
 
       {exit_status, state} =
@@ -535,7 +535,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
   describe "rotation operations" do
     test "rot_r_64_imm performs 64-bit right rotation" do
       program = <<op(:rot_r_64_imm), @registers, 8>>
-      bitmask = <<1, 0, 0>>
+      bitmask = <<4::3>>
       state = %State{registers: %Registers{r2: 0x0000_1001_0000_0210}}
 
       {exit_status, state} =
@@ -559,7 +559,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
 
     test "rot_r_32_imm performs 32-bit right rotation" do
       program = <<op(:rot_r_32_imm), @registers, 12>>
-      bitmask = <<1, 0, 0>>
+      bitmask = <<4::3>>
       state = %State{registers: %Registers{r2: 0xABCD_1234}}
 
       {exit_status, state} =
@@ -584,7 +584,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
 
     test "rotation operations handle rotation amount modulo bit width" do
       program = <<op(:rot_r_64_imm), @registers, 68>>
-      bitmask = <<1, 0, 0>>
+      bitmask = <<4::3>>
       state = %State{registers: %Registers{r2: 0x1234_5678_9ABC_DEF0}}
 
       {exit_status, state} =
