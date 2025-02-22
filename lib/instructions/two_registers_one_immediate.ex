@@ -298,7 +298,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
       |> min(12)
 
     l_x = min(4, max(0, skip(counter, bitmask) - 1))
-    v_x = decode_bytes_signed(program, counter + 2, l_x)
+    v_x = decode_and_extend(program, counter + 2, l_x)
 
     {r_a, r_b, v_x}
   end

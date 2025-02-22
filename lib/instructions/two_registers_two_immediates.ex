@@ -39,8 +39,8 @@ defmodule PVM.Instructions.TwoRegistersTwoImmediates do
     l = skip(counter, bitmask)
     l_y = min(4, max(0, l - l_x - 2))
 
-    v_x = decode_bytes_signed(program, counter + 3, l_x)
-    v_y = decode_bytes_signed(program, counter + 3 + l_x, l_y)
+    v_x = decode_and_extend(program, counter + 3, l_x)
+    v_y = decode_and_extend(program, counter + 3 + l_x, l_y)
 
     {r_a, r_b, v_x, v_y}
   end

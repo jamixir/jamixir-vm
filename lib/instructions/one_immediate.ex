@@ -7,7 +7,7 @@ defmodule PVM.Instructions.OneImmediate do
   def execute(:ecalli, program, bitmask, _start_set, state) do
     # Formula (A.19) v0.6.1
     l_x = min(4, skip(state.counter, bitmask))
-    value = decode_bytes_signed(program, state.counter + 1, l_x)
+    value = decode_and_extend(program, state.counter + 1, l_x)
     {{:ecall, value}, state}
   end
 

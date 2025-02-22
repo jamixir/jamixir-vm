@@ -42,9 +42,9 @@ defmodule PVM.Instructions.RegTwoImm do
 
     l_y = (skip(counter, bitmask) - l_x - 1) |> max(0) |> min(4)
 
-    v_x = decode_bytes_signed(program, counter + 2, l_x)
+    v_x = decode_and_extend(program, counter + 2, l_x)
 
-    v_y = decode_bytes_signed(program, counter + 2 + l_x, l_y)
+    v_y = decode_and_extend(program, counter + 2 + l_x, l_y)
 
     {r_a, v_x, v_y}
   end

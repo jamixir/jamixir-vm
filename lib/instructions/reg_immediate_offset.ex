@@ -90,7 +90,7 @@ defmodule PVM.Instructions.RegImmediateOffset do
       |> max(0)
       |> min(4)
 
-    v_x = decode_bytes_signed(program, counter + 2, l_x)
+    v_x = decode_and_extend(program, counter + 2, l_x)
 
     v_y =
       counter +
