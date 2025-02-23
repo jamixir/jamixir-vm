@@ -16,18 +16,27 @@ defmodule PVM.Trace do
 
   def init_trace_file do
     if enabled?() do
-      # Clear log file
       File.write!(@log_file, "")
       HTML.init()
+      Process.put(:trace_counter, 1)
     end
   end
 
   def write_line(class, message) do
     if enabled?() do
-      # Write plain text to log file
-      File.write!(@log_file, message <> "\n", [:append])
-      # Delegate HTML formatting to HTML module
-      HTML.write_line(class, message)
+      # Only add counter for instruction starts (PC lines)
+      {prefix, new_counter} = if String.contains?(message, "PC:") do
+        counter = Process.get(:trace_counter)
+        {"#{counter}. ", counter + 1}
+      else
+        {"", Process.get(:trace_counter)}
+      end
+
+      line = prefix <> message
+      File.write!(@log_file, line <> "\n", [:append])
+      HTML.write_line(class, line)
+
+      Process.put(:trace_counter, new_counter)
     end
   end
 
