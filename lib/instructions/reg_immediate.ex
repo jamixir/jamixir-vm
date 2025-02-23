@@ -146,7 +146,7 @@ defmodule PVM.Instructions.RegImmediate do
   # Formula (A.23) v0.6.1
   defp get_params(program, bitmask, counter) do
     register_index =
-      min(12, rem(binary_part(program, counter + 1, 1) |> :binary.first(), 16))
+      min(12, rem(binary_part_safe(program, counter + 1, 1) |> :binary.first(), 16))
 
     l_x = min(4, skip(counter, bitmask) - 1)
     addr = decode_and_extend(program, counter + 2, l_x)

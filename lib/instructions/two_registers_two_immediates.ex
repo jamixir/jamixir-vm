@@ -19,19 +19,19 @@ defmodule PVM.Instructions.TwoRegistersTwoImmediates do
   # Formula (A.25) from specification
   defp get_params(program, bitmask, counter) do
     r_a =
-      binary_part(program, counter + 1, 1)
+      binary_part_safe(program, counter + 1, 1)
       |> :binary.first()
       |> rem(16)
       |> min(12)
 
     r_b =
-      binary_part(program, counter + 1, 1)
+      binary_part_safe(program, counter + 1, 1)
       |> :binary.first()
       |> div(16)
       |> min(12)
 
     l_x =
-      binary_part(program, counter + 2, 1)
+      binary_part_safe(program, counter + 2, 1)
       |> :binary.first()
       |> rem(8)
       |> min(4)

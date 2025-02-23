@@ -2,7 +2,7 @@ defmodule PVM.Instructions.TwoRegisters do
   alias PVM.Registers
   alias PVM.Memory
   use PVM.Transitions
-  use PVM.{Encoder, Decoder}
+  use PVM.{Encoder, Decoder, Utils}
   # Section (A.5.9) v0.6.1
 
   def execute(:move_reg, program, state) do
@@ -142,7 +142,7 @@ defmodule PVM.Instructions.TwoRegisters do
 
   # Formula (A.26) v0.6.1
   defp get_params(program, counter) do
-    byte = binary_part(program, counter + 1, 1) |> :binary.first()
+    byte = binary_part_safe(program, counter + 1, 1) |> :binary.first()
     {rem(byte, 16) |> min(12), div(byte, 16) |> min(12)}
   end
 

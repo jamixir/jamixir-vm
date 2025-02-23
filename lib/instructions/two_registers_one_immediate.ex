@@ -286,13 +286,13 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
   # Formula (A.27) v0.6.1
   defp get_params(program, bitmask, counter) do
     r_a =
-      binary_part(program, counter + 1, 1)
+      binary_part_safe(program, counter + 1, 1)
       |> :binary.first()
       |> rem(16)
       |> min(12)
 
     r_b =
-      binary_part(program, counter + 1, 1)
+      binary_part_safe(program, counter + 1, 1)
       |> :binary.first()
       |> div(16)
       |> min(12)

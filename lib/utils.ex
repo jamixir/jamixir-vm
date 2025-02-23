@@ -39,7 +39,7 @@ defmodule PVM.Utils do
 
         case bit do
           1 ->
-            opcode = program |> binary_part(i, 1) |> :binary.first() |> op()
+            opcode = program |> binary_part_safe(i, 1) |> :binary.first() |> op()
 
             if Instructions.termination_instruction?(opcode) do
               acc ++ [i + 1 + skip(i, bitmask)]

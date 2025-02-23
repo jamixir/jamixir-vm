@@ -25,13 +25,13 @@ defmodule PVM.Instructions.TwoRegistersOneOffset do
   # Formula (A.24)
   defp get_params(program, bitmask, state) do
     r_a =
-      binary_part(program, state.counter + 1, 1)
+      binary_part_safe(program, state.counter + 1, 1)
       |> :binary.first()
       |> rem(16)
       |> min(12)
 
     r_b =
-      binary_part(program, state.counter + 1, 1)
+      binary_part_safe(program, state.counter + 1, 1)
       |> :binary.first()
       |> div(16)
       |> min(12)

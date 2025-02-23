@@ -26,7 +26,7 @@ defmodule PVM.Instructions.TwoImmediates do
 
   defp get_params(program, bitmask, counter) do
     l_x =
-      binary_part(program, counter + 1, 1)
+      binary_part_safe(program, counter + 1, 1)
       |> :binary.first()
       |> rem(8)
       |> min(4)

@@ -274,8 +274,8 @@ defmodule PVM.Instructions.ThreeRegisters do
 
   # Formula (A.30) v0.6.1
   defp get_params(program, state) do
-    byte1 = binary_part(program, state.counter + 1, 1) |> :binary.first()
-    byte2 = binary_part(program, state.counter + 2, 1) |> :binary.first()
+    byte1 = binary_part_safe(program, state.counter + 1, 1) |> :binary.first()
+    byte2 = binary_part_safe(program, state.counter + 2, 1) |> :binary.first()
 
     r_a = min(12, rem(byte1, 16))
     w_a = Registers.get(state.registers, r_a)
