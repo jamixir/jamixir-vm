@@ -286,19 +286,19 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
   # Formula (A.27) v0.6.1
   defp get_params(program, bitmask, counter) do
     r_a =
-      binary_part(program, counter + 1, 1)
+      binary_part_safe(program, counter + 1, 1)
       |> :binary.first()
       |> rem(16)
       |> min(12)
 
     r_b =
-      binary_part(program, counter + 1, 1)
+      binary_part_safe(program, counter + 1, 1)
       |> :binary.first()
       |> div(16)
       |> min(12)
 
     l_x = min(4, max(0, skip(counter, bitmask) - 1))
-    v_x = decode_bytes_signed(program, counter + 2, l_x)
+    v_x = decode_and_extend(program, counter + 2, l_x)
 
     {r_a, r_b, v_x}
   end

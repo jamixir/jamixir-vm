@@ -39,7 +39,7 @@ defmodule PVM.Utils do
 
         case bit do
           1 ->
-            opcode = program |> binary_part(i, 1) |> :binary.first() |> op()
+            opcode = program |> binary_part_safe(i, 1) |> :binary.first() |> op()
 
             if Instructions.termination_instruction?(opcode) do
               acc ++ [i + 1 + skip(i, bitmask)]
@@ -58,7 +58,7 @@ defmodule PVM.Utils do
   Returns the decoded number.
   """
   def decode_bytes(program, start_index, count) when is_binary(program) do
-    binary_part(program, start_index, count)
+    binary_part_safe(program, start_index, count)
     |> de_le(count)
   end
 
@@ -67,7 +67,7 @@ defmodule PVM.Utils do
   and applies sign extension.
   Returns the decoded and sign-extended number.
   """
-  def decode_bytes_signed(program, start_index, count) when is_binary(program) do
+  def decode_and_extend(program, start_index, count) when is_binary(program) do
     decode_bytes(program, start_index, count)
     |> extend_to_64bit(count)
   end
@@ -120,6 +120,20 @@ defmodule PVM.Utils do
     (shifted_part ||| wrapped_part) &&& mask
   end
 
+  def binary_part_safe(binary, n, count) when is_integer(n) and is_integer(count) do
+    case binary do
+      <<_prefix::binary-size(n), rest::binary>> = _full ->
+        case byte_size(rest) do
+          size when size >= count -> binary_part(rest, 0, count)
+          remaining ->
+            padding_size = count - remaining
+            rest <> <<0::size(padding_size*8)>>
+        end
+      _ ->
+        <<0::size(count*8)>>
+    end
+  end
+
   defmacro __using__(_) do
     quote do
       def to_64bit(value, num_bytes), do: PVM.Utils.extend_to_64bit(value, num_bytes)
@@ -127,8 +141,8 @@ defmodule PVM.Utils do
       def decode_bytes(program, start_index, count),
         do: PVM.Utils.decode_bytes(program, start_index, count)
 
-      def decode_bytes_signed(program, start_index, count),
-        do: PVM.Utils.decode_bytes_signed(program, start_index, count)
+      def decode_and_extend(program, start_index, count),
+        do: PVM.Utils.decode_and_extend(program, start_index, count)
 
       def skip(counter, bitmask), do: PVM.Utils.skip(counter, bitmask)
 
@@ -139,6 +153,9 @@ defmodule PVM.Utils do
 
       def rotate(value, shift, bits, direction),
         do: PVM.Utils.rotate(value, shift, bits, direction)
+
+      def binary_part_safe(binary, n, count),
+        do: PVM.Utils.binary_part_safe(binary, n, count)
     end
   end
 end

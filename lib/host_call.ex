@@ -3,7 +3,7 @@ defmodule PVM.HostCall do
   Implements the host-call state machine (ΨH) as defined in formula A.27.
   """
 
-  alias PVM.{Decoder, State, Types, VM}
+  alias PVM.{ State, Types, VM}
   use PVM.Utils
 
   @doc """
@@ -19,8 +19,8 @@ defmodule PVM.HostCall do
       {{:fault, page}, state} ->
         {{:fault, page}, state, context}
 
-      {{:ecall, host_data}, state} ->
-        handle_host_call(host_data, state, host_fn, context, program)
+      {{:ecall, call_id}, state} ->
+        handle_host_call(call_id, state, host_fn, context, program)
     end
   end
 
@@ -32,17 +32,15 @@ defmodule PVM.HostCall do
           binary()
         ) ::
           {Types.exit_reason() | Types.fault_result(), State.t(), Types.context()}
-  defp handle_host_call(host_data, state, host_fn, context, program) do
-    case host_fn.(host_data, Map.drop(state, [:counter]), context) do
+  defp handle_host_call(call_id, state, host_fn, context, program) do
+    case host_fn.(call_id, Map.drop(state, [:counter]), context) do
       {:fault, page} ->
         {{:fault, page}, state, context}
 
       {:continue, new_state, new_context} ->
-        {_, bitmask, _} = Decoder.decode_program(program)
-        next_counter = state.counter + 1 + skip(state.counter, bitmask)
-        next_state = struct(State, Map.merge(new_state, %{counter: next_counter}))
+        state_ = struct(State, Map.merge(new_state, %{counter: state.counter}))
 
-        execute(program, next_state, host_fn, new_context)
+        execute(program, state_, host_fn, new_context)
 
       {reason, {final_state, final_context}} when reason in [:halt, :panic, :out_of_gas] ->
         {reason, %{final_state | counter: state.counter}, final_context}

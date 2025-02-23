@@ -15,7 +15,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
     # 0x21 is 37 => r_a = 1, r_b = 2, v_x = 10
     # skip = 2
     # l_x = min(4, 2 - 1) = 1
-    # v_x = decode_bytes_signed(program[2]..program[2 + l_x]) = 10
+    # v_x = decode_and_extend(program[2]..program[2 + l_x]) = 10
 
     # store puts w_a value in memory at address w_b + v_x => mem[100 + 10] = 42
     test "store_ind_u8 writes byte value" do

@@ -14,7 +14,7 @@ defmodule PVM.SingleStep do
       {:panic, state}
     else
       opcode =
-        program |> binary_part(state.counter, 1) |> :binary.first() |> op()
+        program |> binary_part_safe(state.counter, 1) |> :binary.first() |> op()
 
       {exit_reason, state_} =
         Executor.execute_instruction(opcode, program, bitmask, jump_table, start_set, state)

@@ -26,7 +26,7 @@ defmodule PVM.Instructions.TwoImmediates do
 
   defp get_params(program, bitmask, counter) do
     l_x =
-      binary_part(program, counter + 1, 1)
+      binary_part_safe(program, counter + 1, 1)
       |> :binary.first()
       |> rem(8)
       |> min(4)
@@ -34,8 +34,8 @@ defmodule PVM.Instructions.TwoImmediates do
     l = skip(counter, bitmask)
     l_y = min(4, max(0, l - l_x - 1))
 
-    v_x = decode_bytes_signed(program, counter + 2, l_x)
-    v_y = decode_bytes_signed(program, counter + 2 + l_x, l_y)
+    v_x = decode_and_extend(program, counter + 2, l_x)
+    v_y = decode_and_extend(program, counter + 2 + l_x, l_y)
 
     {v_x, v_y}
   end

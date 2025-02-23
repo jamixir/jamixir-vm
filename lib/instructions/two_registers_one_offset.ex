@@ -25,19 +25,19 @@ defmodule PVM.Instructions.TwoRegistersOneOffset do
   # Formula (A.24)
   defp get_params(program, bitmask, state) do
     r_a =
-      binary_part(program, state.counter + 1, 1)
+      binary_part_safe(program, state.counter + 1, 1)
       |> :binary.first()
       |> rem(16)
       |> min(12)
 
     r_b =
-      binary_part(program, state.counter + 1, 1)
+      binary_part_safe(program, state.counter + 1, 1)
       |> :binary.first()
       |> div(16)
       |> min(12)
 
     l_x = min(4, max(0, skip(state.counter, bitmask) - 1))
-    v_x = decode_bytes_signed(program, state.counter + 2, l_x)
+    v_x = state.counter + decode_bytes(program, state.counter + 2, l_x) |> u2i(l_x)
     w_a = Registers.get(state.registers, r_a)
     w_b = Registers.get(state.registers, r_b)
 

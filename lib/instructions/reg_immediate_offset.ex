@@ -73,13 +73,13 @@ defmodule PVM.Instructions.RegImmediateOffset do
   # Formula (A.25) v0.6.1
   defp get_params(program, bitmask, counter) do
     r_a =
-      binary_part(program, counter + 1, 1)
+      binary_part_safe(program, counter + 1, 1)
       |> :binary.first()
       |> rem(16)
       |> min(12)
 
     l_x =
-      binary_part(program, counter + 1, 1)
+      binary_part_safe(program, counter + 1, 1)
       |> :binary.first()
       |> div(16)
       |> rem(8)
@@ -90,7 +90,7 @@ defmodule PVM.Instructions.RegImmediateOffset do
       |> max(0)
       |> min(4)
 
-    v_x = decode_bytes_signed(program, counter + 2, l_x)
+    v_x = decode_and_extend(program, counter + 2, l_x)
 
     v_y =
       counter +
