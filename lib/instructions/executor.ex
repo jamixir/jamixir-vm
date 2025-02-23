@@ -1,5 +1,6 @@
 defmodule PVM.Instructions.Executor do
   alias PVM.Instructions
+  alias PVM.Trace
   alias PVM.Instructions.{
     NoArgs,
     OneImmediate,
@@ -33,8 +34,15 @@ defmodule PVM.Instructions.Executor do
   # Formula (A.16) v0.6.1
   def branch(_value, false, counter, _start_set), do: {:continue, counter}
 
-  def branch(value, true, counter, start_set),
-    do: if(value in start_set, do: {:continue, value}, else: {:panic, counter})
+  def branch(value, true, counter, start_set) do
+    Trace.branch(counter, value)
+    if value in start_set do
+      {:continue, value}
+    else
+      Trace.write_line("exit", "panic: Invalid branch target #{value} at PC #{counter}")
+      {:panic, counter}
+    end
+  end
 
   # Formula (A.17) v0.6.1
   def djump(a, counter, jump_table, start_set) do
@@ -45,21 +53,27 @@ defmodule PVM.Instructions.Executor do
     case a do
       # 2^32 - 2^16
       0xFFFF0000 ->
+        Trace.write_line("exit", "halt: Program halted at PC #{counter}")
         {:halt, counter}
 
       0 ->
+        Trace.write_line("exit", "panic: Invalid jump target 0 at PC #{counter}")
         {:panic, counter}
 
       a when a > length(jump_table) * alignment_factor ->
+        Trace.write_line("exit", "panic: Jump target #{a} exceeds jump table size at PC #{counter}")
         {:panic, counter}
 
       _ when remainder != 0 ->
+        Trace.write_line("exit", "panic: Unaligned jump target #{a} at PC #{counter}")
         {:panic, counter}
 
       _ ->
+        Trace.djump(counter, jump_to)
         if jump_to in start_set do
           {:continue, jump_to}
         else
+          Trace.write_line("exit", "panic: Invalid jump target #{jump_to} at PC #{counter}")
           {:panic, counter}
         end
     end
