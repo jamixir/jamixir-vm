@@ -55,7 +55,8 @@ defmodule PVM.Instructions.TwoRegistersOneOffset do
       |> min(12)
 
     l_x = min(4, max(0, skip(state.counter, bitmask) - 1))
-    v_x = state.counter + decode_bytes(program, state.counter + 2, l_x) |> u2i(l_x)
+    signed_immediate = decode_bytes(program, state.counter + 2, l_x) |> u2i(l_x)
+    v_x = state.counter + signed_immediate
     w_a = Registers.get(state.registers, r_a)
     w_b = Registers.get(state.registers, r_b)
 
