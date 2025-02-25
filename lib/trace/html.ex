@@ -62,16 +62,12 @@ defmodule PVM.Trace.HTML do
       border-radius: 4px;
       cursor: pointer;
     }
+    .hex-num { display: none; }
+    .dec-num { display: inline; }
+    body.hex .hex-num { display: inline; }
+    body.hex .dec-num { display: none; }
     </style>
     <script>
-    function toHex(n) {
-      // Determine minimum width based on value range
-      let width = 2;  // Default for small numbers
-      if (n > 0xFFFF) width = 8;  // For 32-bit numbers
-      else if (n > 0xFF) width = 4;  // For 16-bit numbers
-      return '0x' + n.toString(16).padStart(width, '0');
-    }
-
     function toggleFormat() {
       const isHex = document.body.classList.toggle('hex');
       const btn = document.getElementById('toggleBtn');
@@ -79,13 +75,13 @@ defmodule PVM.Trace.HTML do
 
       const pres = document.getElementsByTagName('pre');
       for (const pre of pres) {
-        pre.innerHTML = pre.innerHTML.replace(/\\b(0x[0-9a-f]+|\\d+)\\b/gi, match => {
+        pre.innerHTML = pre.innerHTML.replace(/\b(0x[0-9a-f]+|[0-9]+)\b/gi, match => {
           if (match.startsWith('0x')) {
-            // Convert hex to decimal
-            return parseInt(match.slice(2), 16).toString();
+            // Convert hex to decimal using BigInt
+            return BigInt(match).toString();
           } else {
             // Convert decimal to hex with appropriate padding
-            return toHex(parseInt(match));
+            return toHex(match);
           }
         });
       }
@@ -99,9 +95,26 @@ defmodule PVM.Trace.HTML do
   end
 
   def write_line(class, message) do
-    escaped_message = String.replace(message, "<", "&lt;")
-    |> String.replace(">", "&gt;")
-    html_line = "<pre class='#{class}'>#{escaped_message}</pre>\n"
+    # First escape any < or > characters
+    escaped_message = String.replace(message, ~r/[<>]/, fn
+      "<" -> "&lt;"
+      ">" -> "&gt;"
+    end)
+
+    # Format numbers in both hex and decimal
+    formatted_message = Regex.replace(~r/\b(\d+|0x[0-9a-fA-F]+)\b/, escaped_message, fn match ->
+      number = if String.starts_with?(match, "0x") do
+        {num, _} = Integer.parse(String.slice(match, 2..-1), 16)
+        num
+      else
+        String.to_integer(match)
+      end
+
+      hex = "0x#{Integer.to_string(number, 16)}"
+      "<span class='dec-num'>#{number}</span><span class='hex-num'>#{hex}</span>"
+    end)
+
+    html_line = "<pre class='#{class}'>#{formatted_message}</pre>\n"
     File.write!(@html_file, html_line, [:append, :utf8])
   end
 
