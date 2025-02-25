@@ -5,6 +5,12 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
   import PVM.Memory.Util
   # Section (A.5.10) v0.6.1
 
+  # Add this helper function at the top of the module
+  defp format_bytes(bytes) do
+    bytes_list = :binary.bin_to_list(bytes)
+    "<<#{Enum.join(bytes_list, ", ")}>>"
+  end
+
   # Store instructions
   def execute(instruction, program, bitmask, state)
       when instruction in [:store_ind_u8, :store_ind_u16, :store_ind_u32, :store_ind_u64] do
@@ -23,8 +29,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     value = if instruction == :store_ind_u64, do: w_a, else: rem(w_a, 1 <<< bits)
     addr = w_b + v_x
     bytes = e_le(value, size)
-    bytes_list = :binary.bin_to_list(bytes)
-    bytes_string = "<<#{Enum.join(bytes_list, ", ")}>>"
+    bytes_string = format_bytes(bytes)
 
     Trace.instruction(state.counter, "#{instruction}",
       "bytes=#{bytes_string}\nstore w#{r_a}(#{value}) to [w#{r_b}(#{w_b}) + #{v_x}] = #{addr}")
@@ -46,11 +51,12 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
         :load_ind_u64 -> 8
       end
 
-    Trace.instruction(state.counter, "#{instruction}", "bytes=#{inspect(raw_bytes)}\nload into w#{r_a} from [w#{r_b}(#{w_b}) + #{v_x}] = #{addr}")
+    Trace.instruction(state.counter, "#{instruction}",
+      "bytes=#{format_bytes(raw_bytes)}\nload into w#{r_a} from [w#{r_b}(#{w_b}) + #{v_x}] = #{addr}")
+
     read_memory(state, addr, size, fn bytes ->
-      bytes_list = :binary.bin_to_list(bytes)
-      bytes_string = "<<#{Enum.join(bytes_list, ", ")}>>"
-      Trace.instruction(state.counter, "memory_read", "address=#{addr}, contents=[#{bytes_string}]")
+      Trace.instruction(state.counter, "memory_read",
+        "address=#{addr}, contents=[#{format_bytes(bytes)}]")
       %{state | registers: Registers.set(state.registers, r_a, de_le(bytes, size))}
     end)
   end
@@ -69,15 +75,16 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
         :load_ind_i32 -> 4
       end
 
-    Trace.instruction(state.counter, "#{instruction}", "bytes=#{inspect(raw_bytes)}\nload signed into w#{r_a} from [w#{r_b}(#{w_b}) + #{v_x}] = #{addr}")
+    Trace.instruction(state.counter, "#{instruction}",
+      "bytes=#{format_bytes(raw_bytes)}\nload signed into w#{r_a} from [w#{r_b}(#{w_b}) + #{v_x}] = #{addr}")
+
     read_memory(
       state,
       addr,
       size,
       fn bytes ->
-        bytes_list = :binary.bin_to_list(bytes)
-        bytes_string = "<<#{Enum.join(bytes_list, ", ")}>>"
-        Trace.instruction(state.counter, "memory_read", "address=#{addr}, contents=[#{bytes_string}]")
+        Trace.instruction(state.counter, "memory_read",
+          "address=#{addr}, contents=[#{format_bytes(bytes)}]")
         unsigned_8bit =
           bytes
           |> de_le(size)
@@ -111,7 +118,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
 
     expr = if instruction == :neg_add_imm_32, do: "#{v_x} - w#{r_b}(#{w_b})", else: "w#{r_b}(#{w_b}) #{op_symbol} #{v_x}"
     bytes_list = :binary.bin_to_list(raw_bytes)
-    bytes_string = "<<#{Enum.join(bytes_list, ", ")}>>"
+    bytes_string = format_bytes(raw_bytes)
 
     Trace.instruction(state.counter, "#{instruction}",
       "bytes=#{bytes_string}\n#{expr} = #{result}")
@@ -139,7 +146,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
       end
 
     result = b2u(Enum.zip_with(u2b(w_b, 8), u2b(v_x, 8), operation))
-    Trace.instruction(state.counter, "#{instruction}", "bytes=#{inspect(raw_bytes)}\nw#{r_a} = w#{r_b}(#{w_b}) #{op_symbol} #{v_x} = #{result}")
+    Trace.instruction(state.counter, "#{instruction}", "bytes=#{format_bytes(raw_bytes)}\nw#{r_a} = w#{r_b}(#{w_b}) #{op_symbol} #{v_x} = #{result}")
     state = %{state | registers: Registers.set(state.registers, r_a, result)}
     {:continue, state}
   end
@@ -165,7 +172,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
         :set_gt_s_imm -> if u2i(w_b, 8) > u2i(v_x, 8), do: 1, else: 0
       end
 
-    Trace.instruction(state.counter, "#{instruction}", "bytes=#{inspect(raw_bytes)}\nw#{r_a} = w#{r_b}(#{w_b}) #{op_symbol} #{v_x} = #{result}")
+    Trace.instruction(state.counter, "#{instruction}", "bytes=#{format_bytes(raw_bytes)}\nw#{r_a} = w#{r_b}(#{w_b}) #{op_symbol} #{v_x} = #{result}")
     state = %{state | registers: Registers.set(state.registers, r_a, result)}
     {:continue, state}
   end
@@ -220,7 +227,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
       end
 
     shift = rem(shift_amt, 32)
-    Trace.instruction(state.counter, "#{instruction}", "bytes=#{inspect(raw_bytes)}\nw#{r_a} = #{shift_val} #{op_symbol} #{shift} = #{result}")
+    Trace.instruction(state.counter, "#{instruction}", "bytes=#{format_bytes(raw_bytes)}\nw#{r_a} = #{shift_val} #{op_symbol} #{shift} = #{result}")
     state = %{state | registers: Registers.set(state.registers, r_a, result)}
     {:continue, state}
   end
@@ -243,7 +250,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
         :cmov_nz_imm -> if w_b != 0, do: v_x, else: w_a
       end
 
-    Trace.instruction(state.counter, "#{instruction}", "bytes=#{inspect(raw_bytes)}\n#{cond_desc} ? #{v_x} : #{w_a} = #{result}")
+    Trace.instruction(state.counter, "#{instruction}", "bytes=#{format_bytes(raw_bytes)}\n#{cond_desc} ? #{v_x} : #{w_a} = #{result}")
     state = %{state | registers: Registers.set(state.registers, r_a, result)}
     {:continue, state}
   end
@@ -269,7 +276,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
 
     expr = if instruction == :neg_add_imm_64, do: "#{v_x} - w#{r_b}(#{w_b})", else: "w#{r_b}(#{w_b}) #{op_symbol} #{v_x}"
     bytes_list = :binary.bin_to_list(raw_bytes)
-    bytes_string = "<<#{Enum.join(bytes_list, ", ")}>>"
+    bytes_string = format_bytes(raw_bytes)
 
     Trace.instruction(state.counter, "#{instruction}",
       "bytes=#{bytes_string}\n#{expr} = #{result}")
@@ -327,7 +334,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
       end
 
     shift = rem(shift_amt, 64)
-    Trace.instruction(state.counter, "#{instruction}", "bytes=#{inspect(raw_bytes)}\nw#{r_a} = #{shift_val} #{op_symbol} #{shift} = #{result}")
+    Trace.instruction(state.counter, "#{instruction}", "bytes=#{format_bytes(raw_bytes)}\nw#{r_a} = #{shift_val} #{op_symbol} #{shift} = #{result}")
     state = %{state | registers: Registers.set(state.registers, r_a, result)}
     {:continue, state}
   end
@@ -339,7 +346,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     shift = rem(v_x, 64)
     result = rotate(number, shift, 64, :right)
 
-    Trace.instruction(state.counter, "rot_r_64_imm", "bytes=#{inspect(raw_bytes)}\nw#{r_a} = w#{r_b}(#{number}) ror #{shift} = #{result}")
+    Trace.instruction(state.counter, "rot_r_64_imm", "bytes=#{format_bytes(raw_bytes)}\nw#{r_a} = w#{r_b}(#{number}) ror #{shift} = #{result}")
     state = %{state | registers: Registers.set(state.registers, r_a, result)}
     {:continue, state}
   end
@@ -350,7 +357,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     shift = rem(w_b, 64)
     result = rotate(v_x, shift, 64, :right)
 
-    Trace.instruction(state.counter, "rot_r_64_imm_alt", "bytes=#{inspect(raw_bytes)}\nw#{r_a} = #{v_x} ror #{shift} = #{result}")
+    Trace.instruction(state.counter, "rot_r_64_imm_alt", "bytes=#{format_bytes(raw_bytes)}\nw#{r_a} = #{v_x} ror #{shift} = #{result}")
     state = %{state | registers: Registers.set(state.registers, r_a, result)}
     {:continue, state}
   end
@@ -361,7 +368,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     shift = rem(v_x, 32)
     result = rotate(w_b, shift, 32, :right) |> Utils.extend_to_64bit(4)
 
-    Trace.instruction(state.counter, "rot_r_32_imm", "bytes=#{inspect(raw_bytes)}\nw#{r_a} = w#{r_b}(#{w_b}) ror #{shift} = #{result}")
+    Trace.instruction(state.counter, "rot_r_32_imm", "bytes=#{format_bytes(raw_bytes)}\nw#{r_a} = w#{r_b}(#{w_b}) ror #{shift} = #{result}")
     state = %{state | registers: Registers.set(state.registers, r_a, result)}
     {:continue, state}
   end
@@ -372,7 +379,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     shift = rem(w_b, 32)
     result = rotate(v_x, shift, 32, :right) |> Utils.extend_to_64bit(4)
 
-    Trace.instruction(state.counter, "rot_r_32_imm_alt", "bytes=#{inspect(raw_bytes)}\nw#{r_a} = #{v_x} ror #{shift} = #{result}")
+    Trace.instruction(state.counter, "rot_r_32_imm_alt", "bytes=#{format_bytes(raw_bytes)}\nw#{r_a} = #{v_x} ror #{shift} = #{result}")
     state = %{state | registers: Registers.set(state.registers, r_a, result)}
     {:continue, state}
   end

@@ -25,8 +25,11 @@ defmodule PVM.Instructions.RegImmediateOffset do
     comparison_result = compare(instruction_to_op(instruction), w_a, v_x)
 
     Trace.instruction_start(state.counter, "#{instruction}")
+    bytes_list = :binary.bin_to_list(raw_bytes)
+    bytes_string = "<<#{Enum.join(bytes_list, ", ")}>>"
+
     Trace.instruction_data("#{instruction}", [
-      "bytes=#{inspect(raw_bytes)}",
+      "bytes=#{bytes_string}",
       "decoded: reg=#{r_a}, imm=#{v_x}, target=#{v_y}",
       "action: compare w#{r_a}=#{w_a} #{format_comparison(instruction)} #{v_x} (#{comparison_result}), branch to #{v_y}"
     ])
