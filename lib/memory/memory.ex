@@ -38,7 +38,7 @@ defmodule PVM.Memory do
   end
 
   defp wrap_address(%__MODULE__{size: size}, address) do
-    rem(address, size)
+    rem(rem(address, size) + size, size)
   end
 
   def number_of_pages(%__MODULE__{} = memory) do
