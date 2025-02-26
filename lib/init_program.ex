@@ -55,7 +55,7 @@ defmodule PVM.InitProgram do
 
   # Formula (A.39) v0.6.1
   def initialize_registers(a) do
-    %Registers{r0: 0xFFFF_0000, r1: 0xFEFE_0000, r7: 0xFEFF_0000, r8: byte_size(a)}
+    %Registers{r0: 0xFFFF_FFFF_FFFF_0000, r1: 0xFFFF_FFFF_FEFE_0000, r7: 0xFFFF_FFFF_FEFF_0000, r8: byte_size(a)}
   end
 
   # Formula (A.38) v0.6.1

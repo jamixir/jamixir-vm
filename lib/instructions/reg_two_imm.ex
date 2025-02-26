@@ -1,31 +1,54 @@
 defmodule PVM.Instructions.RegTwoImm do
   use PVM.{Decoder, Encoder, Utils}
-  alias PVM.Registers
+  alias PVM.{Registers, Trace}
   import PVM.Memory.Util
   # Section (A.5.7) v0.6.1
 
-  def execute(:store_imm_ind_u8, program, bitmask, state) do
+  def execute(store_type = :store_imm_ind_u8, program, bitmask, state) do
     {r_a, v_x, v_y} = get_params(program, bitmask, state.counter)
     w_a = Registers.get(state.registers, r_a)
-    write_memory(state, w_a + v_x, <<rem(v_y, 0x100)>>)
+    stored_value = rem(v_y, 0x100)
+    target_addr = w_a + v_x
+
+    Trace.instruction(state.counter, "#{store_type}",
+      "store #{stored_value} to address w#{r_a}(#{w_a}) + #{v_x} = #{target_addr}")
+
+    write_memory(state, target_addr, <<stored_value>>)
   end
 
-  def execute(:store_imm_ind_u16, program, bitmask, state) do
+  def execute(store_type = :store_imm_ind_u16, program, bitmask, state) do
     {r_a, v_x, v_y} = get_params(program, bitmask, state.counter)
     w_a = Registers.get(state.registers, r_a)
-    write_memory(state, w_a + v_x, e_le(rem(v_y, 0x1_0000), 2))
+    stored_value = rem(v_y, 0x1_0000)
+    target_addr = w_a + v_x
+
+    Trace.instruction(state.counter, "#{store_type}",
+      "store #{stored_value} to address w#{r_a}(#{w_a}) + #{v_x} = #{target_addr}")
+
+    write_memory(state, target_addr, e_le(stored_value, 2))
   end
 
-  def execute(:store_imm_ind_u32, program, bitmask, state) do
+  def execute(store_type = :store_imm_ind_u32, program, bitmask, state) do
     {r_a, v_x, v_y} = get_params(program, bitmask, state.counter)
     w_a = Registers.get(state.registers, r_a)
-    write_memory(state, w_a + v_x, e_le(rem(v_y, 0x1_0000_0000), 4))
+    stored_value = rem(v_y, 0x1_0000_0000)
+    target_addr = w_a + v_x
+
+    Trace.instruction(state.counter, "#{store_type}",
+      "store #{stored_value} to address w#{r_a}(#{w_a}) + #{v_x} = #{target_addr}")
+
+    write_memory(state, target_addr, e_le(stored_value, 4))
   end
 
-  def execute(:store_imm_ind_u64, program, bitmask, state) do
+  def execute(store_type = :store_imm_ind_u64, program, bitmask, state) do
     {r_a, v_x, v_y} = get_params(program, bitmask, state.counter)
     w_a = Registers.get(state.registers, r_a)
-    write_memory(state, w_a + v_x, e_le(v_y, 8))
+    target_addr = w_a + v_x
+
+    Trace.instruction(state.counter, "#{store_type}",
+      "store #{v_y} to address w#{r_a}(#{w_a}) + #{v_x} = #{target_addr}")
+
+    write_memory(state, target_addr, e_le(v_y, 8))
   end
 
   # Formula (A.24) v0.6.1

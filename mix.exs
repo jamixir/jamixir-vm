@@ -36,5 +36,12 @@ defmodule JamixirVM.MixProject do
     ]
   end
 
+  def cli do
+    [
+      preferred_envs: [
+        "test.pvm": :test
+      ]
+    ]
+  end
 
 end
