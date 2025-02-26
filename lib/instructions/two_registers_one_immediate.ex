@@ -8,7 +8,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
   # Store instructions
   def execute(instruction, program, bitmask, state)
       when instruction in [:store_ind_u8, :store_ind_u16, :store_ind_u32, :store_ind_u64] do
-    {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
+    {r_a, r_b, v_x, _raw_bytes} = get_params(program, bitmask, state.counter)
     w_a = Registers.get(state.registers, r_a)
     w_b = Registers.get(state.registers, r_b)
 
@@ -84,6 +84,11 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
       end
       |> to_64bit(4)
 
+    expr = if instruction == :neg_add_imm_32, do: "#{v_x} - w#{r_b}(#{w_b})", else: "w#{r_b}(#{w_b}) #{op_symbol} #{v_x}"
+    bytes_string = format_bytes(raw_bytes)
+
+    Trace.instruction(state.counter, "#{instruction}",
+      "bytes=#{bytes_string}\n#{expr} = #{result}")
     state = %{state | registers: Registers.set(state.registers, r_a, result)}
     {:continue, state}
   end
@@ -198,6 +203,11 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
         :neg_add_imm_64 -> rem(v_x + (1 <<< 64) - w_b, 1 <<< 64)
       end
 
+    expr = if instruction == :neg_add_imm_64, do: "#{v_x} - w#{r_b}(#{w_b})", else: "w#{r_b}(#{w_b}) #{op_symbol} #{v_x}"
+    bytes_string = format_bytes(raw_bytes)
+
+    Trace.instruction(state.counter, "#{instruction}",
+      "bytes=#{bytes_string}\n#{expr} = #{result}")
     state = %{state | registers: Registers.set(state.registers, r_a, result)}
     {:continue, state}
   end

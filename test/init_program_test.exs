@@ -235,7 +235,7 @@ defmodule PVM.InitProgramTest do
       registers = InitProgram.initialize_registers(<<1,2,3,4>>)
 
       # Check specific registers that should have predefined values (A.35)
-      assert Registers.get(registers, [0, 1, 7, 8]) == [0xFFFF_0000, 0xFEFE_0000, 0xFEFF_0000, 4]
+      assert Registers.get(registers, [0, 1, 7, 8]) == [0xFFFF_FFFF_FFFF_0000, 0xFFFF_FFFF_FEFE_0000, 0xFFFF_FFFFFEFF_0000, 4]
 
       # Check that other registers are initialized to 0
       assert Registers.get(registers, [2, 3, 4, 5, 6, 9, 10, 11, 12]) == [0, 0, 0, 0, 0, 0, 0, 0, 0]
