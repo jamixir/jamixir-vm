@@ -3,11 +3,23 @@ defmodule PVM.ArgInvoc do
 
   alias PVM.{InitProgram, HostCall, State, Types, Memory}
 
-
-
-  @spec execute(binary(), non_neg_integer(), non_neg_integer(), binary(), Types.host_fn(), Types.context()) ::
+  @spec execute(
+          binary(),
+          non_neg_integer(),
+          non_neg_integer(),
+          binary(),
+          Types.host_fn(),
+          Types.context(),
+          keyword()
+        ) ::
           {non_neg_integer(), binary() | :panic | :out_of_gas, Types.context()}
-  def execute(program, counter, gas, args, host_fn, context) do
+  def execute(program, counter, gas, args, host_fn, context, opts \\ []) do
+    # If trace is enabled in opts, set it in config
+    if opts[:trace] do
+      Application.put_env(:pvm, :trace, true)
+      PVM.Trace.init_trace_file()
+    end
+
     case InitProgram.initialize_program(program, args) do
       nil ->
         {gas, :panic, context}
@@ -21,6 +33,7 @@ defmodule PVM.ArgInvoc do
         }
 
         {reason, final_state, final_context} = HostCall.execute(code, state, host_fn, context)
+        PVM.Trace.close_trace_file()
         transform_result(reason, final_state, final_context)
     end
   end
