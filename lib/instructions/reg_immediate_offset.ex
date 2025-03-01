@@ -1,7 +1,7 @@
 defmodule PVM.Instructions.RegImmediateOffset do
   use PVM.Utils
   alias PVM.{Instructions.Executor, Registers, Trace}
-  use PVM.Transitions
+  use PVM.Math
   alias PVM.Registers
   @type comparison_op :: :eq | :ne | :lt_u | :le_u | :ge_u | :gt_u | :lt_s | :le_s | :ge_s | :gt_s
   # Section (A.5.8) v0.6.1

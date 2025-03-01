@@ -1,6 +1,6 @@
 defmodule Instructions.ThreeRegistersTest do
   use ExUnit.Case
-  use PVM.{Instructions, Transitions}
+  use PVM.{Instructions, Math}
   import Bitwise
   alias PVM.{Instructions.ThreeRegisters, Registers, State}
   doctest PVM.Instructions.ThreeRegisters

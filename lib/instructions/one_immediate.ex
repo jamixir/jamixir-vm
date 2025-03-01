@@ -1,5 +1,5 @@
 defmodule PVM.Instructions.OneImmediate do
-  use PVM.Transitions
+  use PVM.Math
   use PVM.Utils
   alias PVM.Instructions.Executor
   alias PVM.Trace
