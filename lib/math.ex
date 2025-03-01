@@ -54,6 +54,11 @@ defmodule PVM.Math do
     end)
   end
 
+  # Formula (A.32) v0.6.2
+  @spec signed_remainder(integer(), integer()) :: integer()
+  def signed_remainder(a, 0), do: a
+  def signed_remainder(a, b), do: rem(a, b)
+
   defmacro __using__(_) do
     quote do
       def u2i(value, num_bytes), do: PVM.Math.unsigned_to_signed(value, num_bytes)
@@ -62,6 +67,7 @@ defmodule PVM.Math do
       def b2u(bits), do: PVM.Math.bits_to_int(bits)
       def u2b_be(value, num_bytes), do: PVM.Math.int_to_bits_be(value, num_bytes)
       def b2u_be(bits), do: PVM.Math.bits_to_int_be(bits)
+      def srem(a, b), do: PVM.Math.signed_remainder(a, b)
     end
   end
 end
