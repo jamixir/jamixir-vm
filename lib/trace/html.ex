@@ -104,7 +104,7 @@ defmodule PVM.Trace.HTML do
     # Format numbers in both hex and decimal
     formatted_message = Regex.replace(~r/\b(\d+|0x[0-9a-fA-F]+)\b/, escaped_message, fn match ->
       number = if String.starts_with?(match, "0x") do
-        {num, _} = Integer.parse(String.slice(match, 2..-1), 16)
+        {num, _} = Integer.parse(String.slice(match, 2..-1//1), 16)
         num
       else
         String.to_integer(match)
