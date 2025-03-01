@@ -5,9 +5,14 @@ defmodule PVM.VM do
   # Formula (A.1) v0.6.1
   @spec execute(binary(), State.t()) :: State.t()
   def execute(program, state) do
-    {program, bitmask, jump_table} = Decoder.decode_program(program)
-    start_set = basic_block_starts(program, bitmask)
-    do_execute(program, bitmask, jump_table, start_set, state)
+    case Decoder.decode_program(program) do
+      {:ok, {program, bitmask, jump_table}} ->
+        start_set = basic_block_starts(program, bitmask)
+        do_execute(program, bitmask, jump_table, start_set, state)
+
+      {:error, _error} ->
+        {:panic, state}
+    end
   end
 
   @spec do_execute(binary(), String.t(), list(), list(), State.t()) ::
