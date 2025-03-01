@@ -95,7 +95,7 @@ defmodule PVM.Instructions.ThreeRegisters do
 
         :rem_u_32 ->
           if rem(w_b, @two_32) == 0,
-            do: to_64bit(w_a, 4),
+            do:  rem(w_a, @two_32) |> to_64bit(4),
             else: rem(rem(w_a, @two_32), rem(w_b, @two_32)) |> to_64bit(4)
 
         :rem_s_32 ->
