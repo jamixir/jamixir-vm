@@ -56,17 +56,24 @@ defmodule PVM.Decoder do
     end
   end
 
-  # Decode program blob into components
+  # Formula (A.2) v0.6.2
   def decode_program(bin) do
-    # Decode lengths sequentially
+    try do
+      {program, bitmask, jump_table} = decode_program!(bin)
+      {:ok, {program, bitmask, jump_table}}
+    rescue
+      error ->
+        {:error, error}
+    end
+  end
+
+  def decode_program!(bin) do
     {jump_len, rest} = decode_next_integer(bin)
     {z, rest} = decode_next_le(rest, 1)
     {prog_len, rest} = decode_next_integer(rest)
 
-    # Decode jump table entries
     {jump_table, rest} = decode_jump_table(rest, jump_len, z)
 
-    # Extract program and bitmask
     <<program::binary-size(prog_len), bitmask::bitstring>> = rest
 
     bitmask = reverse_bitmask(bitmask)

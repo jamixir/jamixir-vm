@@ -10,7 +10,7 @@ defmodule PVM.CodecTest do
       z = 1
 
       encoded = Encoder.encode_program(program, bitmask, jump_table, z)
-      {decoded_program, decoded_bitmask, decoded_jumps} = Decoder.decode_program(encoded)
+      {decoded_program, decoded_bitmask, decoded_jumps} = Decoder.decode_program!(encoded)
 
       assert decoded_program == program
       assert decoded_bitmask == bitmask
@@ -24,7 +24,7 @@ defmodule PVM.CodecTest do
       z = 1
 
       encoded = Encoder.encode_program(program, bitmask, jump_table, z)
-      {decoded_program, decoded_bitmask, decoded_jumps} = Decoder.decode_program(encoded)
+      {decoded_program, decoded_bitmask, decoded_jumps} = Decoder.decode_program!(encoded)
 
       assert decoded_program == program
       assert decoded_bitmask == bitmask
@@ -39,7 +39,7 @@ defmodule PVM.CodecTest do
       z = 2
 
       encoded = Encoder.encode_program(program, bitmask, jump_table, z)
-      {decoded_program, decoded_bitmask, decoded_jumps} = Decoder.decode_program(encoded)
+      {decoded_program, decoded_bitmask, decoded_jumps} = Decoder.decode_program!(encoded)
 
       assert decoded_program == program
       assert decoded_bitmask == bitmask
@@ -56,7 +56,7 @@ defmodule PVM.CodecTest do
       z = 1
 
       encoded = Encoder.encode_program(program, bitmask, jump_table, z)
-      {decoded_program, decoded_bitmask, decoded_jumps} = Decoder.decode_program(encoded)
+      {decoded_program, decoded_bitmask, decoded_jumps} = Decoder.decode_program!(encoded)
 
       assert decoded_program == program
       assert decoded_bitmask == bitmask
@@ -72,7 +72,7 @@ defmodule PVM.CodecTest do
       z = 1
 
       encoded = Encoder.encode_program(program, bitmask, jump_table, z)
-      {decoded_program, decoded_bitmask, decoded_jumps} = Decoder.decode_program(encoded)
+      {decoded_program, decoded_bitmask, decoded_jumps} = Decoder.decode_program!(encoded)
 
       assert decoded_program == program
       assert decoded_bitmask == bitmask
@@ -91,7 +91,7 @@ defmodule PVM.CodecTest do
         z = 1
 
         encoded = Encoder.encode_program(program, bitmask, jump_table, z)
-        {decoded_program, decoded_bitmask, decoded_jumps} = Decoder.decode_program(encoded)
+        {decoded_program, decoded_bitmask, decoded_jumps} = Decoder.decode_program!(encoded)
 
         assert decoded_program == program
         assert decoded_bitmask == bitmask
@@ -107,7 +107,7 @@ defmodule PVM.CodecTest do
       z = 1
 
       encoded = Encoder.encode_program(program, bitmask, jump_table, z)
-      {decoded_program, decoded_bitmask, decoded_jumps} = Decoder.decode_program(encoded)
+      {decoded_program, decoded_bitmask, decoded_jumps} = Decoder.decode_program!(encoded)
 
       assert decoded_program == program
       assert decoded_bitmask == bitmask
