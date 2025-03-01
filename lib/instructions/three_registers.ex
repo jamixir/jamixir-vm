@@ -1,6 +1,6 @@
 defmodule PVM.Instructions.ThreeRegisters do
   use PVM.Utils
-  use PVM.Transitions
+  use PVM.Math
   alias PVM.{Registers, Trace}
   import Bitwise
   @two_32 0x1_0000_0000

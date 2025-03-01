@@ -1,7 +1,7 @@
 defmodule PVM.Instructions.TwoRegistersTwoImmediates do
   use PVM.Utils
   alias PVM.{Instructions.Executor, Registers, Trace}
-  use PVM.Transitions
+  use PVM.Math
   import Bitwise
 
   def execute(:load_imm_jump_ind, program, bitmask, jump_table, start_set, state) do

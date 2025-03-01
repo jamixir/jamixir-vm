@@ -1,6 +1,6 @@
 defmodule PVM.Instructions.TwoRegisters do
   alias PVM.{Registers, Memory, Trace}
-  use PVM.Transitions
+  use PVM.Math
   use PVM.{Encoder, Decoder, Utils}
   # Section (A.5.9) v0.6.1
 

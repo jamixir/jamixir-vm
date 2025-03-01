@@ -1,6 +1,6 @@
 defmodule PVM.Instructions.TwoRegistersOneImmediate do
   import Bitwise
-  use PVM.{Decoder, Encoder, Utils, Transitions}
+  use PVM.{Decoder, Encoder, Utils, Math}
   alias PVM.{Registers, Utils, Trace}
   import PVM.Memory.Util
   # Section (A.5.10) v0.6.1

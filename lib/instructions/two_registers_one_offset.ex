@@ -1,7 +1,7 @@
 defmodule PVM.Instructions.TwoRegistersOneOffset do
   use PVM.Utils
   alias PVM.{Instructions.Executor, Registers, Trace}
-  use PVM.Transitions
+  use PVM.Math
 
   def execute(instruction, program, bitmask, start_set, state) do
     {w_a, w_b, v_x, r_a, r_b} = get_params(program, bitmask, state)
