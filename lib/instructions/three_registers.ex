@@ -95,16 +95,14 @@ defmodule PVM.Instructions.ThreeRegisters do
 
         :rem_u_32 ->
           if rem(w_b, @two_32) == 0,
-            do:  rem(w_a, @two_32) |> to_64bit(4),
+            do: rem(w_a, @two_32) |> to_64bit(4),
             else: rem(rem(w_a, @two_32), rem(w_b, @two_32)) |> to_64bit(4)
 
         :rem_s_32 ->
           a = u2i(rem(w_a, @two_32), 4)
           b = u2i(rem(w_b, @two_32), 4)
 
-          if b == 0, do: i2u(a, 8)
-          if b == -1 and a == -1 * (1 <<< 31), do: 0
-          i2u(rem(a, b), 8)
+          if b == -1 and a == -1 * (1 <<< 31), do: 0, else: i2u(srem(a, b), 8)
       end
 
     trace_op(state, instruction, r_a, w_a, r_b, w_b, r_d, result, raw_bytes)
@@ -170,9 +168,9 @@ defmodule PVM.Instructions.ThreeRegisters do
           rem(w_a, w_b)
 
         :rem_s_64 ->
-          if w_b == 0, do: w_a
-          if u2i(w_b, 8) == -1 and u2i(w_a, 8) == -1 * (1 <<< 63), do: 0
-          i2u(rem(u2i(w_a, 8), u2i(w_b, 8)), 8)
+          if u2i(w_b, 8) == -1 and u2i(w_a, 8) == -1 * (1 <<< 63),
+            do: 0,
+            else: (srem(u2i(w_a, 8), u2i(w_b, 8))) |> i2u(8)
       end
 
     trace_op(state, instruction, r_a, w_a, r_b, w_b, r_d, result, raw_bytes)
@@ -337,7 +335,6 @@ defmodule PVM.Instructions.ThreeRegisters do
 
   # Formula (A.30) v0.6.1
   defp get_params(program, state) do
-
     byte1 = binary_part_safe(program, state.counter + 1, 1)
     byte2 = binary_part_safe(program, state.counter + 2, 1)
     raw_bytes = byte1 <> byte2
