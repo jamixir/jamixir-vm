@@ -3,7 +3,7 @@ defmodule PVM.HostCall do
   Implements the host-call state machine (ΨH) as defined in formula A.27.
   """
 
-  alias PVM.{ State, Types, VM}
+  alias PVM.{ State, Types, VM, Decoder}
   use PVM.Utils
 
   @doc """
@@ -12,7 +12,20 @@ defmodule PVM.HostCall do
   @spec execute(binary(), State.t(), Types.host_fn(), Types.context()) ::
           {Types.exit_reason() | Types.fault_result(), State.t(), Types.context()}
   def execute(program, state, host_fn, context) do
-    case VM.execute(program, state) do
+    case Decoder.decode_program(program) do
+      {:ok, {program, bitmask, jump_table}} ->
+        start_set = PVM.Utils.basic_block_starts(program, bitmask)
+        do_execute(program, bitmask, jump_table, start_set, state, host_fn, context)
+
+      {:error, _error} ->
+        {:panic, state, context}
+    end
+  end
+
+  @spec do_execute(binary(), String.t(), list(), list(), State.t(), Types.host_fn(), Types.context()) ::
+          {Types.exit_reason() | Types.fault_result(), State.t(), Types.context()}
+  defp do_execute(program, bitmask, jump_table, start_set, state, host_fn, context) do
+    case VM.do_execute(program, bitmask, jump_table, start_set, state) do
       {reason, state} when reason in [:panic, :halt, :out_of_gas] ->
         {reason, state, context}
 
@@ -20,7 +33,7 @@ defmodule PVM.HostCall do
         {{:fault, page}, state, context}
 
       {{:ecall, call_id}, state} ->
-        handle_host_call(call_id, state, host_fn, context, program)
+        handle_host_call(call_id, state, host_fn, context, program, bitmask, jump_table, start_set)
     end
   end
 
@@ -29,10 +42,13 @@ defmodule PVM.HostCall do
           State.t(),
           Types.host_fn(),
           Types.context(),
-          binary()
+          binary(),
+          String.t(),
+          list(),
+          list()
         ) ::
           {Types.exit_reason() | Types.fault_result(), State.t(), Types.context()}
-  defp handle_host_call(call_id, state, host_fn, context, program) do
+  defp handle_host_call(call_id, state, host_fn, context, program, bitmask, jump_table, start_set) do
     case host_fn.(call_id, Map.drop(state, [:counter]), context) do
       {:fault, page} ->
         {{:fault, page}, state, context}
@@ -40,7 +56,8 @@ defmodule PVM.HostCall do
       {:continue, new_state, new_context} ->
         state_ = struct(State, Map.merge(new_state, %{counter: state.counter}))
 
-        execute(program, state_, host_fn, new_context)
+        # Call do_execute instead of execute to avoid recalculating
+        do_execute(program, bitmask, jump_table, start_set, state_, host_fn, new_context)
 
       {reason, {final_state, final_context}} when reason in [:halt, :panic, :out_of_gas] ->
         {reason, %{final_state | counter: state.counter}, final_context}
