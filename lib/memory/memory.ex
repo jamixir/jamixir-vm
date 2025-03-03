@@ -4,14 +4,12 @@ defmodule PVM.Memory do
   @type t :: %__MODULE__{
           data: %{non_neg_integer() => byte()},
           access_ranges: [{non_neg_integer(), non_neg_integer(), atom()}],
-          default_access: atom(),
           page_size: pos_integer(),
           size: pos_integer()
         }
 
   defstruct data: %{},
             access_ranges: [],
-            default_access: :write,
             page_size: page_size(),
             size: memory_size()
 
@@ -103,10 +101,6 @@ defmodule PVM.Memory do
     %__MODULE__{memory | access_ranges: new_ranges}
   end
 
-  def set_default_access(%__MODULE__{} = memory, access_type) do
-    %__MODULE__{memory | default_access: access_type}
-  end
-
   ## Check Access functions
   def check_range_access?(%__MODULE__{} = memory, address, length, required_access) do
     wrapped_address = wrap_address(memory, address)
@@ -165,7 +159,7 @@ defmodule PVM.Memory do
 
     # Find the first page that doesn't have the required access
     Enum.find_value(page_range, :ok, fn page ->
-      case find_access_for_page(memory.access_ranges, page, memory.default_access) do
+      case find_access_for_page(memory.access_ranges, page) do
         access when required_access == :read and access in [:read, :write] -> nil
         access when required_access == :write and access == :write -> nil
         _ -> {:error, page * memory.page_size}
@@ -173,18 +167,11 @@ defmodule PVM.Memory do
     end)
   end
 
-  defp find_access_for_page([], _page, default_access), do: default_access
-
-  defp find_access_for_page(access_ranges, page, default_access) do
+  defp find_access_for_page(access_ranges, page) do
     sorted_ranges = Enum.sort_by(access_ranges, fn {start, _, _} -> start end)
-
-    case binary_search_range(sorted_ranges, page, 0, length(sorted_ranges) - 1) do
-      nil -> default_access
-      {_, _, access} -> access
-    end
+    {_, _, access} = binary_search_range(sorted_ranges, page, 0, length(sorted_ranges) - 1)
+    access
   end
-
-  defp binary_search_range(_ranges, _page, low, high) when low > high, do: nil
 
   defp binary_search_range(ranges, page, low, high) do
     mid = div(low + high, 2)

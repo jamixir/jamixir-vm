@@ -1,15 +1,25 @@
 defmodule Instructions.TwoRegistersOneImmediateTest do
   use ExUnit.Case
   use PVM.Instructions
-  alias PVM.{Instructions.TwoRegistersOneImmediate, Memory, Registers, State}
+  alias PVM.{Instructions.TwoRegistersOneImmediate, Memory, Registers, State, InitProgram}
 
-  @min_memory_addr 0x10000
-  @init_target_addr @min_memory_addr + 100
   @offset 10
-  @final_target_addr @init_target_addr + @offset
 
   # register 1 and 2
   @registers 2 * 0x10 + 1
+
+  setup_all do
+    o = "code"
+    w = "data"
+    c = "args"
+    z = 1
+    s = 1
+
+    memory = InitProgram.construct_memory(o, w, c, z, s)
+    stack_addr = InitProgram.boundaries(4, 4, 4, 1, 1).stack_start
+    state = %State{memory: memory, registers: %Registers{r2: stack_addr}}
+    {:ok, %{memory: memory, stack_addr: stack_addr, state: state}}
+  end
 
   describe "store operations" do
     # 0x21 is 37 => r_a = 1, r_b = 2, v_x = 10
@@ -18,53 +28,54 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
     # v_x = decode_and_extend(program[2]..program[2 + l_x]) = 10
 
     # store puts w_a value in memory at address w_b + v_x => mem[100 + 10] = 42
-    test "store_ind_u8 writes byte value" do
+    test "store_ind_u8 writes byte value", %{state: state, stack_addr: stack_addr} do
       program = <<op(:store_ind_u8), @registers, @offset>>
       bitmask = <<4::3>>
-      state = %State{registers: %Registers{r1: 42, r2: @init_target_addr}}
+      state = %{state | registers: %{state.registers | r1: 42}}
 
       {exit_status, state} =
         TwoRegistersOneImmediate.execute(:store_ind_u8, program, bitmask, state)
 
       assert exit_status == :continue
-      assert Memory.read(state.memory, @final_target_addr, 1) == {:ok, <<42>>}
+      assert Memory.read(state.memory, stack_addr + @offset, 1) == {:ok, <<42>>}
     end
 
-    test "store_ind_u16 writes 16-bit value" do
+    test "store_ind_u16 writes 16-bit value", %{state: state, stack_addr: stack_addr} do
       program = <<op(:store_ind_u16), @registers, @offset>>
       bitmask = <<4::3>>
-      state = %State{registers: %Registers{r2: @init_target_addr, r1: 0x1234}}
+      state = %{state | registers: %{state.registers | r1: 0x1234}}
 
       {exit_status, state} =
         TwoRegistersOneImmediate.execute(:store_ind_u16, program, bitmask, state)
 
       assert exit_status == :continue
-      assert Memory.read(state.memory, @final_target_addr, 2) == {:ok, <<0x34, 0x12>>}
+      assert Memory.read(state.memory, stack_addr + @offset, 2) == {:ok, <<0x34, 0x12>>}
     end
 
-    test "store_ind_u32 writes 32-bit value" do
+    test "store_ind_u32 writes 32-bit value", %{state: state, stack_addr: stack_addr} do
       program = <<op(:store_ind_u32), @registers, @offset>>
       bitmask = <<4::3>>
-      state = %State{registers: %Registers{r2: @init_target_addr, r1: 0x12345678}}
+      state = %{state | registers: %{state.registers | r1: 0x12345678}}
 
       {exit_status, state} =
         TwoRegistersOneImmediate.execute(:store_ind_u32, program, bitmask, state)
 
       assert exit_status == :continue
-      assert Memory.read(state.memory, @final_target_addr, 4) == {:ok, <<0x78, 0x56, 0x34, 0x12>>}
+      assert Memory.read(state.memory, stack_addr + @offset, 4) ==
+               {:ok, <<0x78, 0x56, 0x34, 0x12>>}
     end
 
-    test "store_ind_u64 writes 64-bit value" do
+    test "store_ind_u64 writes 64-bit value", %{state: state, stack_addr: stack_addr} do
       program = <<op(:store_ind_u64), @registers, @offset>>
       bitmask = <<4::3>>
-      state = %State{registers: %Registers{r2: @init_target_addr, r1: 0x123456789ABCDEF0}}
+      state = %{state | registers: %{state.registers | r1: 0x123456789ABCDEF0}}
 
       {exit_status, state} =
         TwoRegistersOneImmediate.execute(:store_ind_u64, program, bitmask, state)
 
       assert exit_status == :continue
 
-      assert Memory.read(state.memory, @final_target_addr, 8) ==
+      assert Memory.read(state.memory, stack_addr + @offset, 8) ==
                {:ok, <<0xF0, 0xDE, 0xBC, 0x9A, 0x78, 0x56, 0x34, 0x12>>}
     end
   end
@@ -72,11 +83,11 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
   describe "unsigned load operations" do
     # r_a = 1, r_b = 2, v_x = 10
     # load_ind reads mem[w_b + v_x] and puts it in w_a
-    test "load_ind_u8 reads byte value" do
+    test "load_ind_u8 reads byte value", %{state: state, stack_addr: stack_addr} do
       program = <<op(:load_ind_u8), @registers, @offset>>
       bitmask = <<4::3>>
-      {:ok, memory} = Memory.write(%Memory{}, @final_target_addr, <<42>>)
-      state = %State{memory: memory, registers: %Registers{r2: @init_target_addr}}
+      {:ok, memory} = Memory.write(state.memory, stack_addr + @offset, <<42>>)
+      state = %{state | memory: memory}
 
       {exit_status, state} =
         TwoRegistersOneImmediate.execute(:load_ind_u8, program, bitmask, state)
@@ -85,11 +96,11 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
       assert state.registers.r1 == 42
     end
 
-    test "load_ind_u16 reads 16-bit value" do
+    test "load_ind_u16 reads 16-bit value", %{state: state, stack_addr: stack_addr} do
       program = <<op(:load_ind_u16), @registers, @offset>>
       bitmask = <<4::3>>
-      {:ok, memory} = Memory.write(%Memory{}, @final_target_addr, <<0x34, 0x12>>)
-      state = %State{memory: memory, registers: %Registers{r2: @init_target_addr}}
+      {:ok, memory} = Memory.write(state.memory, stack_addr + @offset, <<0x34, 0x12>>)
+      state = %{state | memory: memory}
 
       {exit_status, state} =
         TwoRegistersOneImmediate.execute(:load_ind_u16, program, bitmask, state)
@@ -98,11 +109,11 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
       assert state.registers.r1 == 0x1234
     end
 
-    test "load_ind_u32 reads 32-bit value" do
+    test "load_ind_u32 reads 32-bit value", %{state: state, stack_addr: stack_addr} do
       program = <<op(:load_ind_u32), @registers, @offset>>
       bitmask = <<4::3>>
-      {:ok, memory} = Memory.write(%Memory{}, @final_target_addr, <<0x78, 0x56, 0x34, 0x12>>)
-      state = %State{memory: memory, registers: %Registers{r2: @init_target_addr}}
+      {:ok, memory} = Memory.write(state.memory, stack_addr + @offset, <<0x78, 0x56, 0x34, 0x12>>)
+      state = %{state | memory: memory}
 
       {exit_status, state} =
         TwoRegistersOneImmediate.execute(:load_ind_u32, program, bitmask, state)
@@ -111,18 +122,18 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
       assert state.registers.r1 == 0x12345678
     end
 
-    test "load_ind_u64 reads 64-bit value" do
+    test "load_ind_u64 reads 64-bit value", %{state: state, stack_addr: stack_addr} do
       program = <<op(:load_ind_u64), @registers, @offset>>
       bitmask = <<4::3>>
 
       {:ok, memory} =
         Memory.write(
-          %Memory{},
-          @final_target_addr,
+          state.memory,
+          stack_addr + @offset,
           <<0xF0, 0xDE, 0xBC, 0x9A, 0x78, 0x56, 0x34, 0x12>>
         )
 
-      state = %State{memory: memory, registers: %Registers{r2: @init_target_addr}}
+      state = %{state | memory: memory}
 
       {exit_status, state} =
         TwoRegistersOneImmediate.execute(:load_ind_u64, program, bitmask, state)
@@ -133,12 +144,12 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
   end
 
   describe "signed load operations" do
-    test "load_ind_i8 reads signed byte value" do
+    test "load_ind_i8 reads signed byte value", %{state: state, stack_addr: stack_addr} do
       # -127 signed
       program = <<op(:load_ind_i8), @registers, @offset>>
       bitmask = <<4::3>>
-      {:ok, memory} = Memory.write(%Memory{}, @final_target_addr, <<0x80>>)
-      state = %State{memory: memory, registers: %Registers{r2: @init_target_addr}}
+      {:ok, memory} = Memory.write(state.memory, stack_addr + @offset, <<0x80>>)
+      state = %{state | memory: memory}
 
       {exit_status, state} =
         TwoRegistersOneImmediate.execute(:load_ind_i8, program, bitmask, state)
@@ -147,11 +158,11 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
       assert state.registers.r1 == 0xFFFF_FFFF_FFFF_FF80
     end
 
-    test "load_ind_i16 reads signed 16-bit value" do
+    test "load_ind_i16 reads signed 16-bit value", %{state: state, stack_addr: stack_addr} do
       program = <<op(:load_ind_i16), @registers, @offset>>
       bitmask = <<4::3>>
-      {:ok, memory} = Memory.write(%Memory{}, @final_target_addr, <<0x50, 0x80>>)
-      state = %State{memory: memory, registers: %Registers{r2: @init_target_addr}}
+      {:ok, memory} = Memory.write(state.memory, stack_addr + @offset, <<0x50, 0x80>>)
+      state = %{state | memory: memory}
 
       {exit_status, state} =
         TwoRegistersOneImmediate.execute(:load_ind_i16, program, bitmask, state)
@@ -160,11 +171,11 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
       assert state.registers.r1 == 0xFFFF_FFFF_FFFF_8050
     end
 
-    test "load_ind_i32 reads signed 32-bit value" do
+    test "load_ind_i32 reads signed 32-bit value", %{state: state, stack_addr: stack_addr} do
       program = <<op(:load_ind_i32), @registers, @offset>>
       bitmask = <<4::3>>
-      {:ok, memory} = Memory.write(%Memory{}, @final_target_addr, <<0x03, 0x02, 0x01, 0x80>>)
-      state = %State{memory: memory, registers: %Registers{r2: @init_target_addr}}
+      {:ok, memory} = Memory.write(state.memory, stack_addr + @offset, <<0x03, 0x02, 0x01, 0x80>>)
+      state = %{state | memory: memory}
 
       {exit_status, state} =
         TwoRegistersOneImmediate.execute(:load_ind_i32, program, bitmask, state)
@@ -546,7 +557,8 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
     end
 
     test "rot_r_64_imm_alt performs alternative 64-bit right rotation" do
-      program = <<op(:rot_r_64_imm_alt), @registers, 0x03, 0x02, 0, 0x01>> #0x0100_0203
+      # 0x0100_0203
+      program = <<op(:rot_r_64_imm_alt), @registers, 0x03, 0x02, 0, 0x01>>
       bitmask = <<1, 0, 0, 0, 0, 0>>
       state = %State{registers: %Registers{r2: 48}}
 
@@ -567,7 +579,6 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
 
       assert exit_status == :continue
       assert state.registers.r1 == 0xFFFF_FFFF_D123_4ABC
-
     end
 
     test "rot_r_32_imm_alt performs alternative 32-bit right rotation" do
