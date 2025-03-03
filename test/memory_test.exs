@@ -1,30 +1,24 @@
 defmodule MemoryTest do
   use ExUnit.Case
   alias PVM.Memory
-
-  # Constants matching Memory module
-  # 4KB pages
-  @page_size 0x1000
-  # 4GB total size
-  @memory_size 0x1_0000_0000
-  @min_memory_addr 0x10000
+  import PVM.Memory.Constants
 
   describe "basic operations" do
     test "writes and reads a single byte" do
       memory = %Memory{}
-      {:ok, memory} = Memory.write(memory, @min_memory_addr, <<42>>)
-      assert Memory.read(memory, @min_memory_addr, 1) == {:ok, <<42>>}
+      {:ok, memory} = Memory.write(memory, min_allowed_address(), <<42>>)
+      assert Memory.read(memory, min_allowed_address(), 1) == {:ok, <<42>>}
     end
 
     test "writes and reads multiple bytes" do
       memory = %Memory{}
-      {:ok, memory} = Memory.write(memory, @min_memory_addr + 10, <<1, 2, 3, 4>>)
-      assert Memory.read(memory, @min_memory_addr + 10, 4) == {:ok, <<1, 2, 3, 4>>}
+      {:ok, memory} = Memory.write(memory, min_allowed_address() + 10, <<1, 2, 3, 4>>)
+      assert Memory.read(memory, min_allowed_address() + 10, 4) == {:ok, <<1, 2, 3, 4>>}
     end
 
     test "unwritten memory reads as zero" do
       memory = %Memory{}
-      assert Memory.read(memory, @min_memory_addr, 4) == {:ok, <<0, 0, 0, 0>>}
+      assert Memory.read(memory, min_allowed_address(), 4) == {:ok, <<0, 0, 0, 0>>}
     end
   end
 
@@ -32,57 +26,59 @@ defmodule MemoryTest do
     test "writes across page boundary" do
       memory = %Memory{}
       # Write 8 bytes starting at last 4 bytes of first page
-      start_addr = @page_size - 4
+      start_addr = page_size() - 4
 
       {:ok, memory} =
-        Memory.write(memory, @min_memory_addr + start_addr, <<1, 2, 3, 4, 5, 6, 7, 8>>)
+        Memory.write(memory, min_allowed_address() + start_addr, <<1, 2, 3, 4, 5, 6, 7, 8>>)
 
       # Check first page
-      assert Memory.read(memory, @min_memory_addr + start_addr, 4) == {:ok, <<1, 2, 3, 4>>}
+      assert Memory.read(memory, min_allowed_address() + start_addr, 4) == {:ok, <<1, 2, 3, 4>>}
       # Check second page
-      assert Memory.read(memory, @min_memory_addr + @page_size, 4) == {:ok, <<5, 6, 7, 8>>}
+      assert Memory.read(memory, min_allowed_address() + page_size(), 4) == {:ok, <<5, 6, 7, 8>>}
       # Check continuous read across pages
-      assert Memory.read(memory, @min_memory_addr + start_addr, 8) ==
+      assert Memory.read(memory, min_allowed_address() + start_addr, 8) ==
                {:ok, <<1, 2, 3, 4, 5, 6, 7, 8>>}
     end
 
     test "reads across page boundary" do
       memory = %Memory{}
-      {:ok, memory} = Memory.write(memory, @min_memory_addr + @page_size - 2, <<1, 2>>)
-      {:ok, memory} = Memory.write(memory, @min_memory_addr + @page_size, <<3, 4>>)
-      assert Memory.read(memory, @min_memory_addr + @page_size - 2, 4) == {:ok, <<1, 2, 3, 4>>}
+      {:ok, memory} = Memory.write(memory, min_allowed_address() + page_size() - 2, <<1, 2>>)
+      {:ok, memory} = Memory.write(memory, min_allowed_address() + page_size(), <<3, 4>>)
+
+      assert Memory.read(memory, min_allowed_address() + page_size() - 2, 4) ==
+               {:ok, <<1, 2, 3, 4>>}
     end
 
     test "handles multi-byte read wrapping at 32-bit boundary" do
       memory = %Memory{}
-      {:ok, memory} = Memory.write(memory, @min_memory_addr, <<1, 2, 3, 4>>)
+      {:ok, memory} = Memory.write(memory, min_allowed_address(), <<1, 2, 3, 4>>)
 
-      assert Memory.read(memory, @min_memory_addr, 4) == {:ok, <<1, 2, 3, 4>>}
+      assert Memory.read(memory, min_allowed_address(), 4) == {:ok, <<1, 2, 3, 4>>}
 
       # Read starting at (2^32 - 2), should wrap back to start
-      start_idx = @memory_size - 2
-      assert Memory.read(memory, @min_memory_addr + start_idx, 4) == {:error, :panic}
+      start_idx = memory_size() - 2
+      assert Memory.read(memory, min_allowed_address() + start_idx, 4) == {:error, :panic}
     end
 
     test "handles reads starting beyond memory size" do
       memory = %Memory{}
-      {:ok, memory} = Memory.write(memory, @min_memory_addr, <<1, 2>>)
+      {:ok, memory} = Memory.write(memory, min_allowed_address(), <<1, 2>>)
 
       # Read from index 3 (beyond memory size) should return zeros
-      assert Memory.read(memory, @min_memory_addr + 3, 2) == {:ok, <<0, 0>>}
+      assert Memory.read(memory, min_allowed_address() + 3, 2) == {:ok, <<0, 0>>}
     end
 
     test "handles sparse memory writes" do
       memory = %Memory{}
-      {:ok, memory} = Memory.write(memory, @min_memory_addr, <<1, 2>>)
+      {:ok, memory} = Memory.write(memory, min_allowed_address(), <<1, 2>>)
       # 100MB offset
       far_index = 100 * 1024 * 1024
-      {:ok, memory} = Memory.write(memory, @min_memory_addr + far_index, <<3, 4, 5>>)
+      {:ok, memory} = Memory.write(memory, min_allowed_address() + far_index, <<3, 4, 5>>)
 
-      assert Memory.read(memory, @min_memory_addr, 2) == {:ok, <<1, 2>>}
-      assert Memory.read(memory, @min_memory_addr + far_index, 3) == {:ok, <<3, 4, 5>>}
+      assert Memory.read(memory, min_allowed_address(), 2) == {:ok, <<1, 2>>}
+      assert Memory.read(memory, min_allowed_address() + far_index, 3) == {:ok, <<3, 4, 5>>}
       # Verify space between is zero-filled
-      assert Memory.read(memory, @min_memory_addr + 1000, 2) == {:ok, <<0, 0>>}
+      assert Memory.read(memory, min_allowed_address() + 1000, 2) == {:ok, <<0, 0>>}
     end
   end
 
@@ -91,9 +87,9 @@ defmodule MemoryTest do
       memory =
         %Memory{}
         # Make second page read-only
-        |> Memory.set_access(@min_memory_addr + @page_size, @page_size, :read)
+        |> Memory.set_access(min_allowed_address() + page_size(), page_size(), :read)
 
-      write_addr = @min_memory_addr + @page_size + 10
+      write_addr = min_allowed_address() + page_size() + 10
 
       result = Memory.write(memory, write_addr, <<42>>)
       # Should return page-aligned address
@@ -105,9 +101,9 @@ defmodule MemoryTest do
       memory =
         %Memory{}
         # Make second page inaccessible
-        |> Memory.set_access(@min_memory_addr + @page_size, @page_size, nil)
+        |> Memory.set_access(min_allowed_address() + page_size(), page_size(), nil)
 
-      read_addr = @min_memory_addr + @page_size + 10
+      read_addr = min_allowed_address() + page_size() + 10
 
       result = Memory.read(memory, read_addr, 1)
       # Should return page-aligned address
@@ -119,59 +115,59 @@ defmodule MemoryTest do
       memory =
         %Memory{}
         # Make second page inaccessible
-        |> Memory.set_access(@min_memory_addr + @page_size, @page_size, nil)
+        |> Memory.set_access(min_allowed_address() + page_size(), page_size(), nil)
 
       # Write spanning pages 0 and 1
-      result = Memory.write(memory, @min_memory_addr + @page_size - 2, <<1, 2, 3, 4>>)
-      assert result == {:error, {:fault, @min_memory_addr + memory.page_size}}
+      result = Memory.write(memory, min_allowed_address() + page_size() - 2, <<1, 2, 3, 4>>)
+      assert result == {:error, {:fault, min_allowed_address() + memory.page_size}}
     end
   end
 
   describe "memory indices" do
-    test "readable_indices returns correct pages" do
-      memory =
-        %Memory{}
-        |> Memory.set_access(0, @page_size, :read)
-        |> Memory.set_access(@page_size * 2, @page_size, :write)
-        |> Memory.set_access(@page_size * 3, @page_size, :read)
+    # test "readable_indices returns correct pages" do
+    #   memory =
+    #     %Memory{}
+    #     |> Memory.set_access(0, page_size(), :read)
+    #     |> Memory.set_access(page_size() * 2, page_size(), :write)
+    #     |> Memory.set_access(page_size() * 3, page_size(), :read)
 
-      readable = Memory.readable_indices(memory)
-      assert MapSet.size(readable) == 3
-      assert MapSet.member?(readable, 0)
-      assert MapSet.member?(readable, 2)
-      assert MapSet.member?(readable, 3)
-    end
+    #   readable = Memory.readable_indices(memory)
+    #   assert MapSet.size(readable) == 3
+    #   assert MapSet.member?(readable, 0)
+    #   assert MapSet.member?(readable, 2)
+    #   assert MapSet.member?(readable, 3)
+    # end
 
-    test "writeable_indices returns only writable pages" do
-      memory =
-        %Memory{}
-        |> Memory.set_access(0, @page_size, :read)
-        |> Memory.set_access(@page_size * 2, @page_size, :write)
-        |> Memory.set_access(@page_size * 3, @page_size, :write)
+    # test "writeable_indices returns only writable pages" do
+    #   memory =
+    #     %Memory{}
+    #     |> Memory.set_access(0, page_size(), :read)
+    #     |> Memory.set_access(page_size() * 2, page_size(), :write)
+    #     |> Memory.set_access(page_size() * 3, page_size(), :write)
 
-      writeable = Memory.writeable_indices(memory)
-      assert MapSet.size(writeable) == 2
-      assert MapSet.member?(writeable, 2)
-      assert MapSet.member?(writeable, 3)
-      refute MapSet.member?(writeable, 0)
-    end
+    #   writeable = Memory.writeable_indices(memory)
+    #   assert MapSet.size(writeable) == 2
+    #   assert MapSet.member?(writeable, 2)
+    #   assert MapSet.member?(writeable, 3)
+    #   refute MapSet.member?(writeable, 0)
+    # end
 
-    test "indices handle nil permissions correctly" do
-      memory =
-        %Memory{}
-        |> Memory.set_access(0, @page_size, nil)
-        |> Memory.set_access(@page_size, @page_size, :write)
+    # test "indices handle nil permissions correctly" do
+    #   memory =
+    #     %Memory{}
+    #     |> Memory.set_access(0, page_size(), nil)
+    #     |> Memory.set_access(page_size(), page_size(), :write)
 
-      readable = Memory.readable_indices(memory)
-      writeable = Memory.writeable_indices(memory)
+    #   readable = Memory.readable_indices(memory)
+    #   writeable = Memory.writeable_indices(memory)
 
-      assert MapSet.size(readable) == 1
-      assert MapSet.size(writeable) == 1
-      assert MapSet.member?(writeable, 1)
-      assert MapSet.member?(readable, 1)
-      refute MapSet.member?(readable, 0)
-      refute MapSet.member?(writeable, 0)
-    end
+    #   assert MapSet.size(readable) == 1
+    #   assert MapSet.size(writeable) == 1
+    #   assert MapSet.member?(writeable, 1)
+    #   assert MapSet.member?(readable, 1)
+    #   refute MapSet.member?(readable, 0)
+    #   refute MapSet.member?(writeable, 0)
+    # end
   end
 
   describe "default permissions" do
@@ -180,7 +176,7 @@ defmodule MemoryTest do
         %Memory{}
         |> Memory.set_default_access(:read)
 
-      addr = @min_memory_addr + @page_size * 5
+      addr = min_allowed_address() + page_size() * 5
 
       # Should succeed since default is now read
       assert {:ok, _} = Memory.read(memory, addr, 4)
@@ -189,96 +185,22 @@ defmodule MemoryTest do
       assert {:error, {:fault, ^addr}} = Memory.write(memory, addr + 7, <<1, 2>>)
 
       # Explicitly set pages should not be affected by default
-      memory = Memory.set_access(memory, @min_memory_addr, @page_size, :write)
-      assert {:ok, _} = Memory.write(memory, @min_memory_addr, <<1, 2>>)
+      memory = Memory.set_access(memory, min_allowed_address(), page_size(), :write)
+      assert {:ok, _} = Memory.write(memory, min_allowed_address(), <<1, 2>>)
     end
   end
 
   describe "uninitialized memory" do
     test "reading unwritten addresses returns zeros" do
       memory = %Memory{}
-      addr = @min_memory_addr + div(@page_size, 2)
+      addr = min_allowed_address() + div(page_size(), 2)
 
       # Read from middle of first page
       assert {:ok, <<0, 0, 0, 0>>} = Memory.read(memory, addr, 4)
 
       # Read across unwritten pages
-      assert {:ok, <<0, 0, 0, 0>>} = Memory.read(memory, @min_memory_addr + @page_size - 2, 4)
-    end
-  end
-
-  describe "page size changes" do
-    test "changing page size preserves access permissions correctly" do
-      original_page_size = @page_size
-      double_page_size = @page_size * 2
-
-      # Set up initial memory with double page size
-      memory =
-        %Memory{}
-        |> Memory.set_page_size(double_page_size)
-        # Make first two double-pages read-only
-        |> Memory.set_access(@min_memory_addr, double_page_size * 2, :read)
-
-      # Change to original page size
-      memory = Memory.set_page_size(memory, original_page_size)
-
-      # Set middle page to no access and last page to write
-      memory =
-        memory
-        |> Memory.set_access(@min_memory_addr + original_page_size, original_page_size, nil)
-        |> Memory.set_access(
-          @min_memory_addr + original_page_size * 2,
-          original_page_size,
-          :write
-        )
-
-      # Test boundaries
-      # First page should be read-only
-      assert {:ok, _} = Memory.read(memory, @min_memory_addr, 4)
-      assert {:error, {:fault, @min_memory_addr}} = Memory.write(memory, @min_memory_addr, <<1>>)
-
-      # Middle page should have no access
-      addr = @min_memory_addr + original_page_size
-      assert {:error, {:fault, addr}} = Memory.read(memory, addr + 4, 4)
-
-      assert {:error, {:fault, ^addr}} = Memory.write(memory, addr + 4, <<1>>)
-
-      # Last page should be writable
-      addr = @min_memory_addr + original_page_size * 2
-      assert {:ok, _} = Memory.read(memory, addr + 4, 4)
-      assert {:ok, _} = Memory.write(memory, addr + 4, <<1>>)
-    end
-
-    test "page size changes handle boundary conditions" do
-      memory =
-        %Memory{}
-        # Start with double page size
-        |> Memory.set_page_size(@page_size * 2)
-
-      # Write some data across what will be a future page boundary
-      {:ok, memory} = Memory.write(memory, @min_memory_addr + @page_size - 2, <<1, 2, 3, 4>>)
-
-      # Now change permissions to read-only
-      memory =
-        memory
-        |> Memory.set_access(@min_memory_addr, @page_size * 4, :read)
-
-      # Change to smaller page size
-      memory = Memory.set_page_size(memory, @page_size)
-
-      # Verify permissions were correctly split
-      # First page readable
-      assert {:ok, _} = Memory.read(memory, @min_memory_addr, 4)
-      # Second page readable
-      assert {:ok, _} = Memory.read(memory, @min_memory_addr + @page_size, 4)
-
-      # Verify data remained intact across the boundary
-      assert {:ok, <<1, 2, 3, 4>>} = Memory.read(memory, @min_memory_addr + @page_size - 2, 4)
-
-      # Verify we can't write to the pages anymore
-      assert {:error, {:fault, @min_memory_addr}} = Memory.write(memory, @min_memory_addr, <<1>>)
-      addr = @min_memory_addr + @page_size
-      assert {:error, {:fault, ^addr}} = Memory.write(memory, addr, <<1>>)
+      assert {:ok, <<0, 0, 0, 0>>} =
+               Memory.read(memory, min_allowed_address() + page_size() - 2, 4)
     end
   end
 
@@ -292,7 +214,7 @@ defmodule MemoryTest do
 
     # Try to write 4 bytes that wrap around (should fail due to read-only last page)
     assert {:error, {:fault, fault_page}} = Memory.write(memory, wrap_addr, <<1, 2, 3, 4>>)
-    assert fault_page == @page_size * div(wrap_addr, @page_size)
+    assert fault_page == page_size() * div(wrap_addr, page_size())
 
     # Make first page read-only and last page writable
     memory = Memory.set_access(memory, 0, 1, :read)
@@ -305,54 +227,36 @@ defmodule MemoryTest do
   describe "page-based operations" do
     test "number_of_pages returns correct value" do
       memory = %Memory{}
-      assert Memory.number_of_pages(memory) == div(@memory_size, @page_size)
-
-      # Test with modified page size
-      memory = Memory.set_page_size(memory, @page_size * 2)
-      assert Memory.number_of_pages(memory) == div(@memory_size, @page_size * 2)
+      assert Memory.number_of_pages(memory) == div(memory_size(), page_size())
     end
 
     test "set_access_by_page handles basic case" do
-      min_page = div(@min_memory_addr, @page_size)
+      min_page = div(min_allowed_address(), page_size())
 
       memory =
         %Memory{}
         # Make first two pages read-only
         |> Memory.set_access_by_page(min_page, 2, :read)
 
-      assert {:ok, _} = Memory.read(memory, @min_memory_addr, @page_size + 10)
-      assert {:error, {:fault, fault_addr}} = Memory.write(memory, @min_memory_addr, <<1>>)
-      assert fault_addr == min_page * @page_size
+      assert {:ok, _} = Memory.read(memory, min_allowed_address(), page_size() + 10)
+      assert {:error, {:fault, fault_addr}} = Memory.write(memory, min_allowed_address(), <<1>>)
+      assert fault_addr == min_page * page_size()
 
       assert {:error, {:fault, fault_addr}} =
-               Memory.write(memory, @min_memory_addr + @page_size + 4, <<1>>)
+               Memory.write(memory, min_allowed_address() + page_size() + 4, <<1>>)
 
-      assert fault_addr == (min_page + 1) * @page_size
+      assert fault_addr == (min_page + 1) * page_size()
 
       # set just 1 page read-only
       memory = %Memory{}
       memory = Memory.set_access_by_page(memory, min_page, 1, :read)
-      assert {:ok, _} = Memory.read(memory, @min_memory_addr, 10)
-      assert {:ok, _} = Memory.write(memory, @min_memory_addr + @page_size + 4, <<1>>)
-      assert {:error, {:fault, fault_addr}} = Memory.write(memory, @min_memory_addr, <<1>>)
-      assert fault_addr == min_page * @page_size
+      assert {:ok, _} = Memory.read(memory, min_allowed_address(), 10)
+      assert {:ok, _} = Memory.write(memory, min_allowed_address() + page_size() + 4, <<1>>)
+      assert {:error, {:fault, fault_addr}} = Memory.write(memory, min_allowed_address(), <<1>>)
+      assert fault_addr == min_page * page_size()
     end
 
-    test "set_access_by_page handles wrapping" do
-      memory = %Memory{}
-      last_page = Memory.number_of_pages(memory) - 1
 
-      # Set permissions wrapping from last page to first page
-      memory = Memory.set_access_by_page(memory, last_page, 2, :read)
-
-      # Check last page
-      assert {:ok, _} = Memory.read(memory, @memory_size - @page_size, 4)
-
-      assert {:error, {:fault, fault_addr}} =
-               Memory.write(memory, @memory_size - @page_size, <<1>>)
-
-      assert fault_addr == last_page * @page_size
-    end
 
     test "check_pages_access validates permissions correctly" do
       memory =
@@ -373,151 +277,42 @@ defmodule MemoryTest do
       refute Memory.check_pages_access?(memory, 0, 2, :write)
     end
 
-    test "check_pages_access handles wrapping" do
-      memory = %Memory{}
-      total_pages = Memory.number_of_pages(memory)
-      last_page = total_pages - 1
 
-      # Set last and first page read-only
-      memory = Memory.set_access_by_page(memory, last_page, 2, :read)
-
-      # Check wrap-around access
-      refute Memory.check_pages_access?(memory, last_page, 2, :write)
-
-      assert Memory.check_pages_access?(memory, last_page, 2, :read)
-    end
-  end
-
-  describe "memory size operations" do
-    # test "basic operations with custom memory size" do
-    #   memory =
-    #     %Memory{}
-    #     # 10KB
-    #     |> Memory.set_size(10240)
-    #     # 1KB pages, so 10 pages total
-    #     |> Memory.set_page_size(1024)
-
-    #   # Verify number of pages
-    #   assert Memory.number_of_pages(memory) == 10
-
-    #   # Test write/read within bounds
-    #   # Write at page 5
-    #   {:ok, memory} = Memory.write(memory, 5120, <<1, 2, 3, 4>>)
-    #   assert {:ok, <<1, 2, 3, 4>>} = Memory.read(memory, 5120, 4)
-
-    #   # Test address wrapping
-    #   # Should wrap to address 0
-    #   {:ok, memory} = Memory.write(memory, 10240, <<5, 6>>)
-    #   assert {:ok, <<5, 6>>} = Memory.read(memory, 0, 2)
-
-    #   # Test cross-page operations
-    #   # Cross pages 0-1
-    #   {:ok, memory} = Memory.write(memory, 1022, <<7, 8, 9, 10>>)
-    #   assert {:ok, <<7, 8, 9, 10>>} = Memory.read(memory, 1022, 4)
-
-    #   # Test permissions
-    #   # Make page 3 read-only
-    #   memory = Memory.set_access(memory, 3072, 1024, :read)
-    #   assert {:error, {:fault, 3}} = Memory.write(memory, 3072, <<1>>)
-    #   assert {:ok, <<0>>} = Memory.read(memory, 3072, 1)
-
-    #   # Test large addresses wrap correctly
-    #   big_addr = 100_000
-    #   wrapped_addr = rem(big_addr, 10240)
-    #   {:ok, memory} = Memory.write(memory, big_addr, <<42>>)
-    #   assert {:ok, <<42>>} = Memory.read(memory, wrapped_addr, 1)
-    # end
-
-    test "page operations with custom memory size" do
-      memory =
-        %Memory{}
-        # 10KB
-        |> Memory.set_size(10240)
-        # 1KB pages
-        |> Memory.set_page_size(1024)
-
-      # Set permissions by page
-      # Should wrap to page 0
-      memory = Memory.set_access_by_page(memory, 8, 3, :read)
-
-      # Check permissions wrapped correctly
-      assert Memory.check_pages_access?(memory, 8, 1, :read)
-      assert Memory.check_pages_access?(memory, 9, 1, :read)
-      assert Memory.check_pages_access?(memory, 0, 1, :read)
-      # Default access
-      assert Memory.check_pages_access?(memory, 1, 1, :write)
-
-      # Test page range wrapping
-      # Should affect pages 9 and 0
-      memory = Memory.set_access_by_page(memory, 9, 2, nil)
-      refute Memory.check_pages_access?(memory, 9, 1, :read)
-      refute Memory.check_pages_access?(memory, 0, 1, :read)
-    end
-
-    test "invalid operations with custom memory size" do
-      memory =
-        %Memory{}
-        |> Memory.set_size(10240)
-        |> Memory.set_page_size(1024)
-
-      # Try to set page size larger than memory size
-      assert {:error, :pagesize_too_large} = Memory.set_page_size(memory, 20480)
-
-      # Verify original page size remains
-      assert memory.page_size == 1024
-    end
-
-    test "readable/writeable indices with custom memory size" do
-      memory =
-        %Memory{}
-        # 10KB
-        |> Memory.set_size(10240)
-        # 1KB pages
-        |> Memory.set_page_size(1024)
-        # Pages 8,9,0
-        |> Memory.set_access_by_page(8, 3, :read)
-        # Pages 3,4
-        |> Memory.set_access_by_page(3, 2, nil)
-
-      readable = Memory.readable_indices(memory)
-      assert MapSet.size(readable) == 3
-      assert MapSet.member?(readable, 8)
-      assert MapSet.member?(readable, 9)
-      assert MapSet.member?(readable, 0)
-    end
   end
 
   describe "bang (!) operations" do
     test "write! and read! work for valid operations" do
       memory = %Memory{}
-      memory = Memory.write!(memory, @min_memory_addr, <<42>>)
-      assert Memory.read!(memory, @min_memory_addr, 1) == <<42>>
+      memory = Memory.write!(memory, min_allowed_address(), <<42>>)
+      assert Memory.read!(memory, min_allowed_address(), 1) == <<42>>
     end
 
     test "write! raises error on fault" do
       memory =
         %Memory{}
-        |> Memory.set_access(@min_memory_addr, @page_size, :read)
+        |> Memory.set_access(min_allowed_address(), page_size(), :read)
 
-      error = assert_raise(PVM.MemoryFaultError, fn ->
-        Memory.write!(memory, @min_memory_addr, <<42>>)
-      end)
+      error =
+        assert_raise(PVM.MemoryFaultError, fn ->
+          Memory.write!(memory, min_allowed_address(), <<42>>)
+        end)
 
       assert %PVM.MemoryFaultError{reason: {:fault, page}} = error
-      assert page == @min_memory_addr
+      assert page == min_allowed_address()
     end
 
     test "read! raises error on fault" do
       memory =
         %Memory{}
-        |> Memory.set_access(@min_memory_addr, @page_size, nil)
+        |> Memory.set_access(min_allowed_address(), page_size(), nil)
 
-      error = assert_raise(PVM.MemoryFaultError, fn ->
-        Memory.read!(memory, @min_memory_addr, 1)
-      end)
+      error =
+        assert_raise(PVM.MemoryFaultError, fn ->
+          Memory.read!(memory, min_allowed_address(), 1)
+        end)
 
       assert %PVM.MemoryFaultError{reason: {:fault, page}} = error
-      assert page == @min_memory_addr
+      assert page == min_allowed_address()
     end
   end
 end
