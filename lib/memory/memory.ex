@@ -1,54 +1,31 @@
 defmodule PVM.Memory do
-  # 4KB per page
-  @default_page_size 0x1000
-  # 4GB total memory
-  @memory_size 0x1_0000_0000
-
-  @min_allowed_address 0x1_0000
+  import PVM.Memory.Constants
 
   @type t :: %__MODULE__{
           data: %{non_neg_integer() => byte()},
-          access: %{non_neg_integer() => atom()},
+          access_ranges: [{non_neg_integer(), non_neg_integer(), atom()}],
           default_access: atom(),
           page_size: pos_integer(),
           size: pos_integer()
         }
 
   defstruct data: %{},
-            access: %{},
+            access_ranges: [],
             default_access: :write,
-            page_size: @default_page_size,
-            size: @memory_size
+            page_size: page_size(),
+            size: memory_size()
 
-  def set_page_size(%__MODULE__{} = memory, size) do
-    if size <= memory.size do
-      new_access = recompute_access_permissions(memory, size)
-      %__MODULE__{memory | page_size: size, access: new_access}
-    else
-      {:error, :pagesize_too_large}
-    end
-  end
-
-  def set_size(%__MODULE__{} = memory, size) do
-    %__MODULE__{memory | size: size}
-  end
-
-  def reset_page_size(%__MODULE__{} = memory) do
-    set_page_size(memory, @default_page_size)
-  end
-
-  defp wrap_address(%__MODULE__{size: size}, address) do
-    rem(rem(address, size) + size, size)
-  end
-
+  # PUBLIC FUNCTIONS
   def number_of_pages(%__MODULE__{} = memory) do
     div(memory.size, memory.page_size)
   end
 
+  ## Read/Write functions
+
   def read(%__MODULE__{} = memory, address, length) do
     wrapped_address = wrap_address(memory, address)
 
-    if wrapped_address < @min_allowed_address do
+    if wrapped_address < min_allowed_address() do
       {:error, :panic}
     else
       {start_page, end_page} = get_page_range(memory, wrapped_address, length)
@@ -74,7 +51,7 @@ defmodule PVM.Memory do
   def write(%__MODULE__{} = memory, address, value) when is_binary(value) do
     wrapped_address = wrap_address(memory, address)
 
-    if wrapped_address < @min_allowed_address do
+    if wrapped_address < min_allowed_address() do
       {:error, :panic}
     else
       length = byte_size(value)
@@ -99,6 +76,71 @@ defmodule PVM.Memory do
     end
   end
 
+  ## SET Access functions
+
+  def set_access(%__MODULE__{} = memory, address, length, access_type) do
+    {start_page, end_page} = get_page_range(memory, address, length)
+
+    num_pages =
+      if end_page >= start_page do
+        end_page - start_page + 1
+      else
+        # wrapping around memory
+        number_of_pages(memory) - start_page + end_page + 1
+      end
+
+    set_access_by_page(memory, start_page, num_pages, access_type)
+  end
+
+  def set_access_by_page(%__MODULE__{} = memory, start_page, num_pages, access_type) do
+    total_pages = number_of_pages(memory)
+    start_page = rem(start_page, total_pages)
+    end_page = max(start_page, rem(start_page - 1 + num_pages, total_pages))
+
+    new_ranges =
+      add_range_to_access_ranges(memory.access_ranges, start_page, end_page, access_type)
+
+    %__MODULE__{memory | access_ranges: new_ranges}
+  end
+
+  def set_default_access(%__MODULE__{} = memory, access_type) do
+    %__MODULE__{memory | default_access: access_type}
+  end
+
+  ## Check Access functions
+
+  def check_range_access?(%__MODULE__{} = memory, address, length, required_access) do
+    wrapped_address = wrap_address(memory, address)
+    {start_page, end_page} = get_page_range(memory, wrapped_address, length)
+    check_permissions(memory, start_page, end_page, required_access) == :ok
+  end
+
+  def check_pages_access?(%__MODULE__{} = memory, start_page, num_pages, required_access) do
+    total_pages = number_of_pages(memory)
+    start_page = rem(start_page, total_pages)
+    end_page = rem(start_page - 1 + num_pages, total_pages)
+
+    check_permissions(memory, start_page, end_page, required_access) == :ok
+  end
+
+  def find_free_memory(%__MODULE__{} = memory, pages_needed) do
+    min_page = div(min_allowed_address(), memory.page_size)
+    max_page = number_of_pages(memory) - 1
+
+    occupied_ranges =
+      memory.access_ranges
+      |> Enum.filter(fn {_, _, access} -> access != nil end)
+      |> Enum.map(fn {start, end_, _} -> {start, end_} end)
+      |> Enum.sort_by(fn {start, _} -> start end)
+
+    find_free_space_in_ranges(occupied_ranges, min_page, max_page, pages_needed)
+  end
+
+  ## Helper functions
+  defp wrap_address(%__MODULE__{size: size}, address) do
+    rem(rem(address, size) + size, size)
+  end
+
   defp read_from_sparse(%__MODULE__{data: data} = memory, address, length) do
     0..(length - 1)
     |> Enum.map(fn offset ->
@@ -119,17 +161,50 @@ defmodule PVM.Memory do
   end
 
   defp check_permissions(memory, start_page, end_page, required_access) do
+    # Get all pages in the range
     page_range = get_sequential_pages(start_page, end_page, number_of_pages(memory))
 
-    Enum.reduce_while(page_range, :ok, fn page, _acc ->
-      current_access = Map.get(memory.access, page, memory.default_access)
-
-      cond do
-        required_access == :read and current_access in [:read, :write] -> {:cont, :ok}
-        required_access == :write and current_access == :write -> {:cont, :ok}
-        true -> {:halt, {:error, page * memory.page_size}}
+    # Find the first page that doesn't have the required access
+    Enum.find_value(page_range, :ok, fn page ->
+      case find_access_for_page(memory.access_ranges, page, memory.default_access) do
+        access when required_access == :read and access in [:read, :write] -> nil
+        access when required_access == :write and access == :write -> nil
+        _ -> {:error, page * memory.page_size}
       end
     end)
+  end
+
+  defp find_access_for_page([], _page, default_access), do: default_access
+
+  defp find_access_for_page(access_ranges, page, default_access) do
+    sorted_ranges = Enum.sort_by(access_ranges, fn {start, _, _} -> start end)
+
+    case binary_search_range(sorted_ranges, page, 0, length(sorted_ranges) - 1) do
+      nil -> default_access
+      {_, _, access} -> access
+    end
+  end
+
+  defp binary_search_range(_ranges, _page, low, high) when low > high, do: nil
+
+  defp binary_search_range(ranges, page, low, high) do
+    mid = div(low + high, 2)
+
+    {start, end_, _} = Enum.at(ranges, mid)
+
+    cond do
+      page >= start and page <= end_ ->
+        # Found a range containing the page
+        Enum.at(ranges, mid)
+
+      page < start ->
+        # Search in the lower half
+        binary_search_range(ranges, page, low, mid - 1)
+
+      true ->
+        # Search in the upper half
+        binary_search_range(ranges, page, mid + 1, high)
+    end
   end
 
   defp get_page_range(%__MODULE__{page_size: page_size} = memory, start_address, length) do
@@ -148,82 +223,79 @@ defmodule PVM.Memory do
     end
   end
 
-  defp recompute_access_permissions(memory, new_page_size) do
-    old_page_size = memory.page_size
+  # Helper function to add a new range to the access_ranges list
+  defp add_range_to_access_ranges(ranges, start_page, end_page, access_type) do
+    # Always add the new range, regardless of access type
+    new_range = {start_page, end_page, access_type}
 
-    Enum.map(memory.access, fn {page, access} ->
-      start_addr = page * old_page_size
-      {start_addr, start_addr + old_page_size - 1, access}
+    # Add the new range and merge overlapping ranges with the same access type
+    [new_range | ranges]
+    |> merge_overlapping_ranges()
+  end
+
+  # Check if two ranges overlap
+  # defp ranges_overlap?(start1, end1, start2, end2) do
+  #   start1 <= end2 && start2 <= end1
+  # end
+
+  # Merge overlapping ranges with the same access type
+  defp merge_overlapping_ranges(ranges) do
+    # Sort by start page
+    sorted = Enum.sort_by(ranges, fn {start, _, _} -> start end)
+
+    # Merge adjacent or overlapping ranges with the same access type
+    Enum.reduce(sorted, [], fn
+      range, [] ->
+        [range]
+
+      {start, end_, type}, [{prev_start, prev_end, prev_type} | rest] = acc ->
+        if type == prev_type and start <= prev_end + 1 do
+          # Merge overlapping or adjacent ranges with same type
+          [{prev_start, max(end_, prev_end), type} | rest]
+        else
+          # Add as separate range
+          [{start, end_, type} | acc]
+        end
     end)
-    |> Enum.reduce(%{}, fn {start_addr, end_addr, access}, acc ->
-      start_page = div(start_addr, new_page_size)
-      end_page = div(end_addr, new_page_size)
+    |> Enum.reverse()
+  end
 
-      Enum.reduce(start_page..end_page, acc, fn page, inner_acc ->
-        Map.put(inner_acc, page, access)
-      end)
+  defp find_free_space_in_ranges([], min_page, max_page, pages_needed) do
+    # No occupied ranges - entire memory is available
+    if max_page - min_page + 1 >= pages_needed do
+      min_page
+    else
+      nil
+    end
+  end
+
+  defp find_free_space_in_ranges(occupied_ranges, min_page, max_page, pages_needed) do
+    # Check for gap at beginning
+    [{first_start, _} | _] = occupied_ranges
+
+    if first_start > min_page && first_start - min_page >= pages_needed do
+      min_page
+    else
+      # Check for gaps between ranges
+      find_gap_between_ranges(occupied_ranges, pages_needed, max_page)
+    end
+  end
+
+  defp find_gap_between_ranges(ranges, pages_needed, max_page) do
+    # Pair consecutive ranges to find gaps
+    Enum.chunk_every(ranges, 2, 1, :discard)
+    |> Enum.find_value(nil, fn [{_, prev_end}, {next_start, _}] ->
+      gap_size = next_start - (prev_end + 1)
+      if gap_size >= pages_needed, do: prev_end + 1, else: nil
     end)
-  end
+    |> case do
+      nil ->
+        # Check for gap after last range
+        {_, last_end} = List.last(ranges)
+        if max_page - last_end >= pages_needed, do: last_end + 1, else: nil
 
-  def set_access(%__MODULE__{} = memory, address, length, access_type) do
-    {start_page, end_page} = get_page_range(memory, address, length)
-
-    new_access =
-      get_sequential_pages(start_page, end_page, number_of_pages(memory))
-      |> Enum.reduce(memory.access, fn page, acc ->
-        Map.put(acc, page, access_type)
-      end)
-
-    %__MODULE__{memory | access: new_access}
-  end
-
-  def set_access_by_page(%__MODULE__{} = memory, start_page, num_pages, access_type) do
-    total_pages = number_of_pages(memory)
-    start_page = rem(start_page, total_pages)
-    end_page = rem(start_page - 1 + num_pages, total_pages)
-    page_range = get_sequential_pages(start_page, end_page, total_pages)
-
-    new_access =
-      page_range
-      |> Enum.reduce(memory.access, fn page, acc ->
-        Map.put(acc, page, access_type)
-      end)
-
-    %__MODULE__{memory | access: new_access}
-  end
-
-  def set_default_access(%__MODULE__{} = memory, access_type) do
-    %__MODULE__{memory | default_access: access_type}
-  end
-
-  def readable_indices(%__MODULE__{} = memory) do
-    Map.keys(memory.access)
-    |> Enum.filter(fn page ->
-      access = Map.get(memory.access, page, memory.default_access)
-      access != nil
-    end)
-    |> MapSet.new()
-  end
-
-  def writeable_indices(%__MODULE__{} = memory) do
-    Map.keys(memory.access)
-    |> Enum.filter(fn page ->
-      Map.get(memory.access, page, memory.default_access) == :write
-    end)
-    |> MapSet.new()
-  end
-
-  def check_range_access?(%__MODULE__{} = memory, address, length, required_access) do
-    wrapped_address = wrap_address(memory, address)
-    {start_page, end_page} = get_page_range(memory, wrapped_address, length)
-    check_permissions(memory, start_page, end_page, required_access) == :ok
-  end
-
-  def check_pages_access?(%__MODULE__{} = memory, start_page, num_pages, required_access) do
-    total_pages = number_of_pages(memory)
-    start_page = rem(start_page, total_pages)
-    end_page = rem(start_page - 1 + num_pages, total_pages)
-
-    check_permissions(memory, start_page, end_page, required_access) == :ok
+      result ->
+        result
+    end
   end
 end
