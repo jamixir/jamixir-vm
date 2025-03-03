@@ -108,7 +108,6 @@ defmodule PVM.Memory do
   end
 
   ## Check Access functions
-
   def check_range_access?(%__MODULE__{} = memory, address, length, required_access) do
     wrapped_address = wrap_address(memory, address)
     {start_page, end_page} = get_page_range(memory, wrapped_address, length)
@@ -136,7 +135,7 @@ defmodule PVM.Memory do
     find_free_space_in_ranges(occupied_ranges, min_page, max_page, pages_needed)
   end
 
-  ## Helper functions
+  ## Private functions
   defp wrap_address(%__MODULE__{size: size}, address) do
     rem(rem(address, size) + size, size)
   end
@@ -223,24 +222,14 @@ defmodule PVM.Memory do
     end
   end
 
-  # Helper function to add a new range to the access_ranges list
   defp add_range_to_access_ranges(ranges, start_page, end_page, access_type) do
-    # Always add the new range, regardless of access type
     new_range = {start_page, end_page, access_type}
 
-    # Add the new range and merge overlapping ranges with the same access type
     [new_range | ranges]
     |> merge_overlapping_ranges()
   end
 
-  # Check if two ranges overlap
-  # defp ranges_overlap?(start1, end1, start2, end2) do
-  #   start1 <= end2 && start2 <= end1
-  # end
-
-  # Merge overlapping ranges with the same access type
   defp merge_overlapping_ranges(ranges) do
-    # Sort by start page
     sorted = Enum.sort_by(ranges, fn {start, _, _} -> start end)
 
     # Merge adjacent or overlapping ranges with the same access type
@@ -250,10 +239,8 @@ defmodule PVM.Memory do
 
       {start, end_, type}, [{prev_start, prev_end, prev_type} | rest] = acc ->
         if type == prev_type and start <= prev_end + 1 do
-          # Merge overlapping or adjacent ranges with same type
           [{prev_start, max(end_, prev_end), type} | rest]
         else
-          # Add as separate range
           [{start, end_, type} | acc]
         end
     end)
