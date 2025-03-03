@@ -85,10 +85,8 @@ defmodule PVM.InitProgram do
       {@max_addr - @zz - @zi + a_size, @max_addr - @zz - @zi + p(a_size), nil, :read}
     ]
 
-    memory = Memory.set_page_size(%Memory{}, @zp)
-
     memory =
-      Enum.reduce(regions, memory, fn
+      Enum.reduce(regions, %Memory{}, fn
         {start, end_, nil, access}, mem ->
           Memory.set_access(mem, start, end_ - start, access)
 
@@ -97,9 +95,6 @@ defmodule PVM.InitProgram do
           Memory.set_access(mem, start, byte_size(data), access)
       end)
 
-    memory
-    |> Memory.reset_page_size()
-    # Set remaining memory as inaccessible
-    |> Memory.set_default_access(nil)
+    Memory.set_default_access(memory, nil)
   end
 end
