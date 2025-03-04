@@ -57,7 +57,7 @@ defmodule PVM.Memory.RangeManager do
 
   def find_free_space_in_ranges(occupied_ranges, min_page, max_page, pages_needed) do
     # Check for gap at beginning
-    [{first_start, _} | _] = occupied_ranges
+    [{first_start, _, _} | _] = occupied_ranges
 
     if first_start > min_page && first_start - min_page >= pages_needed do
       min_page
@@ -70,7 +70,7 @@ defmodule PVM.Memory.RangeManager do
   def find_gap_between_ranges(ranges, pages_needed, max_page) do
     # Pair consecutive ranges to find gaps
     Enum.chunk_every(ranges, 2, 1, :discard)
-    |> Enum.find_value(nil, fn [{_, prev_end}, {next_start, _}] ->
+    |> Enum.find_value(nil, fn [{_, prev_end, _}, {next_start, _, _}] ->
       # With exclusive end, the gap is directly next_start - prev_end
       gap_size = next_start - prev_end
       if gap_size >= pages_needed, do: prev_end, else: nil
@@ -78,7 +78,7 @@ defmodule PVM.Memory.RangeManager do
     |> case do
       nil ->
         # Check for gap after last range
-        {_, last_end} = List.last(ranges)
+        {_, last_end, _} = List.last(ranges)
         if max_page - last_end + 1 >= pages_needed, do: last_end, else: nil
 
       result ->

@@ -122,10 +122,7 @@ defmodule PVM.Memory do
     max_page = number_of_pages(memory) - 1
 
     occupied_ranges =
-      memory.access_ranges
-      |> Enum.filter(fn {_, _, access} -> access != nil end)
-      |> Enum.map(fn {start, end_, _} -> {start, end_} end)
-      |> Enum.sort_by(fn {start, _} -> start end)
+      Enum.filter(memory.access_ranges, fn {_, _, access} -> access != nil end)
 
     RangeManager.find_free_space_in_ranges(occupied_ranges, min_page, max_page, pages_needed)
   end
