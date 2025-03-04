@@ -8,13 +8,7 @@ defmodule VMTest do
   end
 
   setup_all do
-    o = "code"
-    w = "data"
-    c = "args"
-    z = 1
-    s = 1
-
-    memory = InitProgram.construct_memory(o, w, c, z, s)
+    memory = InitProgram.construct_memory("code", "data", "args", 1, 1)
     stack_addr = InitProgram.boundaries(4, 4, 4, 1, 1).stack_start
     state = %State{memory: memory, registers: %Registers{r2: stack_addr}}
     {:ok, %{memory: memory, stack_addr: stack_addr, state: state}}
@@ -36,7 +30,10 @@ defmodule VMTest do
       assert state_.counter == 0
     end
 
-    test "executes jump and jump_ind sequence skipping instructions", %{state: state, stack_addr: stack_addr} do
+    test "executes jump and jump_ind sequence skipping instructions", %{
+      state: state,
+      stack_addr: stack_addr
+    } do
       # Program:
       # load_imm r1, 14        (4, 1, 14)      # offset 0
       # jump_ind r1           (19, 1, 0)       # offset 3
@@ -59,7 +56,7 @@ defmodule VMTest do
         op(:trap),
         op(:store_imm_u8),
         4,
-        (stack_addr + 10)::little-size(32),
+        stack_addr + 10::little-size(32),
         0,
         1,
         99,
@@ -71,7 +68,8 @@ defmodule VMTest do
       >>
 
       # Mark instruction starts
-      bitmask = <<146, 6, 1, 9::4>> #10010010_00000110_00000001_1001
+      # 10010010_00000110_00000001_1001
+      bitmask = <<146, 6, 1, 9::4>>
       jump_table = [2, 4, 6, 8, 24, 1]
 
       p = create_program(program, bitmask, jump_table)
@@ -103,16 +101,16 @@ defmodule VMTest do
         op(:load_u8),
         1,
         stack_addr::little-size(32),
-
         op(:store_u8),
         1,
-        (stack_addr + 10)::little-size(32),
+        stack_addr + 10::little-size(32),
         op(:load_u8),
         2,
-        (stack_addr + 10)::little-size(32)
+        stack_addr + 10::little-size(32)
       >>
 
-      bitmask = <<129, 4, 16 ,0::1 >> #10000001_00000100_00010000_0
+      # 10000001_00000100_00010000_0
+      bitmask = <<129, 4, 16, 0::1>>
 
       p = create_program(program, bitmask)
       {exit_reason, state_} = VM.execute(p, state)
@@ -124,261 +122,152 @@ defmodule VMTest do
       assert Memory.read(state_.memory, stack_addr + 10, 1) == {:ok, <<42>>}
     end
 
+    test "executes conditional branch sequence", %{state: state, stack_addr: stack_addr} do
+      # Program:
+      # load_imm r1, 42                (4, 1, 42)
+      # branch_eq_imm r1, 42, target=9 (branch if r1 == 42)
+      # trap                          (will be skipped)
+      # store_imm_u8 20, 99          (target of branch)
+      # fallthrough
+      program = <<
+        op(:load_imm),
+        1,
+        42,
+        op(:branch_eq_imm),
+        0x11,
+        42,
+        5,
+        op(:trap),
+        op(:fallthrough),
+        op(:store_imm_u8),
+        4,
+        stack_addr::little-size(32),
+        99,
+        op(:fallthrough)
+      >>
 
+      bitmask = <<145, 192, 1::1>>
 
-    # test "executes until trap with register operations" do
-    #   # Program:
-    #   # load_imm r1, 42                (4, 1, 42)
-    #   # load_imm r2, 24                (4, 2, 24)
-    #   # store_u8 r1, 100              (71, 1, 100)
-    #   # store_u8 r2, 101              (71, 2, 101)
-    #   # load_imm r3, 0xFFFF0000       (4, 3, 0, 0, 0xFF, 0xFF)  # Value that will cause halt
-    #   # jump_ind r3                   (19, 3, 0)
-    #   program = <<
-    #     op(:load_imm),
-    #     1,
-    #     42,
-    #     op(:load_imm),
-    #     2,
-    #     24,
-    #     op(:store_u8),
-    #     1,
-    #     100,
-    #     0,
-    #     1,
-    #     op(:store_u8),
-    #     2,
-    #     101,
-    #     0,
-    #     1,
-    #     op(:load_imm),
-    #     3,
-    #     0,
-    #     0,
-    #     0xFF,
-    #     0xFF,
-    #     op(:jump_ind),
-    #     3,
-    #     0
-    #   >>
+      p = create_program(program, bitmask)
+      {exit_reason, state_} = VM.execute(p, state)
 
-    #   bitmask = <<146, 16, 130, 0::1>>
+      # From final fallthrough
+      assert exit_reason == :panic
+      assert state_.counter == 0
+      assert Registers.get(state_.registers, 1) == 42
+      # Verify branch was taken
+      assert Memory.read(state_.memory, stack_addr , 1) == {:ok, <<99>>}
+    end
 
-    #   p = create_program(program, bitmask)
-    #   {exit_reason, state_} = VM.execute(p, %State{})
+    test "not equel - no jump", %{state: state, stack_addr: stack_addr} do
+      program = <<
+        op(:load_imm),
+        1,
+        7,
+        op(:branch_eq_imm),
+        0x11,
+        42,
+        5,
+        op(:trap),
+        op(:fallthrough),
+        op(:store_imm_u8),
+        4,
+        stack_addr::little-size(32),
+        99,
+        op(:fallthrough)
+      >>
 
-    #   assert exit_reason == :halt
-    #   # Stopped at jump_ind
-    #   assert state_.counter == 0
-    #   assert Registers.get(state_.registers, [1, 2, 3]) == [42, 24, 0xFFFF_FFFF_FFFF_0000]
-    #   assert Memory.read(state_.memory, 0x10064, 1) == {:ok, <<42>>}
-    #   assert Memory.read(state_.memory, 0x10065, 1) == {:ok, <<24>>}
-    # end
+      bitmask = <<
+        # load_imm
+        145,
+        192,
+        1::1
+      >>
 
-    # test "executes 64-bit load and store operations" do
-    #   # Program:
-    #   # store_imm_u64 addr=16, value=0x12345678 (zero-extended to 64 bits)
-    #   # load_imm_64 r1, 0xDCBA987654321001 (full 64-bit value)
-    #   # store_u64 r1, 24
-    #   program = <<
-    #     # Only 32-bit immediate
-    #     op(:store_imm_u64),
-    #     3,
-    #     16,
-    #     0,
-    #     1,
-    #     0x78,
-    #     0x56,
-    #     0x34,
-    #     0x12,
-    #     op(:load_imm_64),
-    #     0x01,
-    #     0x01,
-    #     0x10,
-    #     0x32,
-    #     0x54,
-    #     0x76,
-    #     0x98,
-    #     0xBA,
-    #     0xDC,
-    #     op(:store_u64),
-    #     1,
-    #     0x18,
-    #     0,
-    #     1
-    #   >>
+      p = create_program(program, bitmask)
+      {exit_reason, state_} = VM.execute(p, state)
 
-    #   bitmask = <<128, 64, 16>>
+      # From final fallthrough
+      assert exit_reason == :panic
+      assert state_.counter == 0
+      assert Registers.get(state_.registers, 1) == 7
+      # Verify branch was BOT taken
+      assert Memory.read(state_.memory, stack_addr, 1) == {:ok, <<0>>}
+    end
 
-    #   p = create_program(program, bitmask)
-    #   {exit_reason, state_} = VM.execute(p, %State{})
+    test "executes load_imm_jump sequence", %{state: state, stack_addr: stack_addr} do
+      # Program:
+      # load_imm_jump r1, 42, target=8  (loads 42 into r1 and jumps)
+      # trap                           (skipped)
+      # store_imm_u8 10, 99           (target of jump)
+      # fallthrough
+      program = <<
+        op(:load_imm_jump),
+        0x11,
+        42,
+        6,
+        op(:trap),
+        op(:fallthrough),
+        op(:store_imm_u8),
+        4,
+        stack_addr::little-size(32),
+        99,
+        op(:fallthrough)
+      >>
 
-    #   assert exit_reason == :panic
-    #   assert state_.counter == 0
-    #   # Verify the 64-bit immediate load worked
-    #   assert Registers.get(state_.registers, 1) == 0xDCBA987654321001
-    #   # Verify memory contents:
-    #   # First location should have zero-extended 32-bit value
-    #   assert Memory.read(state_.memory, 0x10010, 8) ==
-    #            {:ok, <<0x78, 0x56, 0x34, 0x12, 0, 0, 0, 0>>}
+      bitmask = <<142, 1::6>>
 
-    #   # Second location should have full 64-bit value from register
-    #   assert Memory.read(state_.memory, 0x10018, 8) ==
-    #            {:ok, <<0x01, 0x10, 0x32, 0x54, 0x76, 0x98, 0xBA, 0xDC>>}
-    # end
+      p = create_program(program, bitmask)
+      {exit_reason, state_} = VM.execute(p, state)
 
-    # test "executes conditional branch sequence" do
-    #   # Program:
-    #   # load_imm r1, 42                (4, 1, 42)
-    #   # branch_eq_imm r1, 42, target=9 (branch if r1 == 42)
-    #   # trap                          (will be skipped)
-    #   # store_imm_u8 20, 99          (target of branch)
-    #   # fallthrough
-    #   program = <<
-    #     op(:load_imm),
-    #     1,
-    #     42,
-    #     op(:branch_eq_imm),
-    #     0x11,
-    #     42,
-    #     5,
-    #     op(:trap),
-    #     op(:fallthrough),
-    #     op(:store_imm_u8),
-    #     3,
-    #     20,
-    #     0,
-    #     1,
-    #     99,
-    #     op(:fallthrough)
-    #   >>
+      # From final fallthrough
+      assert exit_reason == :panic
+      assert state_.counter == 0
+      assert Registers.get(state_.registers, 1) == 42
+      # Verify jump was taken
+      assert Memory.read(state_.memory, stack_addr, 1) == {:ok, <<99>>}
+    end
 
-    #   bitmask = <<145, 193>>
+    test "executes signed comparison branch sequence", %{state: state, stack_addr: stack_addr} do
+      # Program:
+      # load_imm r1, 0xFF              (load -1 in two's complement)
+      # branch_lt_s_imm r1, 0, target=9 (branch if r1 < 0 signed)
+      # trap                           (will be skipped)
+      # store_imm_u8 30, 77           (target of branch)
+      # fallthrough
+      program = <<
+        op(:load_imm),
+        1,
+        0xFF,
+        op(:branch_lt_s_imm),
+        0x11,
+        0,
+        6,
+        op(:trap),
+        op(:fallthrough),
+        op(:store_imm_u8),
+        4,
+        stack_addr::little-size(32),
+        77,
+        op(:fallthrough)
+      >>
 
-    #   p = create_program(program, bitmask)
-    #   {exit_reason, state_} = VM.execute(p, %State{})
+      bitmask = <<
+        145,
+        192,
+        1::1
+      >>
 
-    #   # From final fallthrough
-    #   assert exit_reason == :panic
-    #   assert state_.counter == 0
-    #   assert Registers.get(state_.registers, 1) == 42
-    #   # Verify branch was taken
-    #   assert Memory.read(state_.memory, 0x10014, 1) == {:ok, <<99>>}
-    # end
+      p = create_program(program, bitmask)
+      {exit_reason, state_} = VM.execute(p, state)
 
-    # test "not equel - no jump" do
-    #   program = <<
-    #     op(:load_imm),
-    #     1,
-    #     7,
-    #     op(:branch_eq_imm),
-    #     0x11,
-    #     42,
-    #     5,
-    #     op(:trap),
-    #     op(:fallthrough),
-    #     op(:store_imm_u8),
-    #     3,
-    #     20,
-    #     0,
-    #     1,
-    #     99,
-    #     op(:fallthrough)
-    #   >>
-
-    #   bitmask = <<
-    #     # load_imm
-    #     145,
-    #     193
-    #   >>
-
-    #   p = create_program(program, bitmask)
-    #   {exit_reason, state_} = VM.execute(p, %State{})
-
-    #   # From final fallthrough
-    #   assert exit_reason == :panic
-    #   assert state_.counter == 0
-    #   assert Registers.get(state_.registers, 1) == 7
-    #   # Verify branch was taken
-    #   assert Memory.read(state_.memory, 0x10014, 1) == {:ok, <<0>>}
-    # end
-
-    # test "executes load_imm_jump sequence" do
-    #   # Program:
-    #   # load_imm_jump r1, 42, target=8  (loads 42 into r1 and jumps)
-    #   # trap                           (skipped)
-    #   # store_imm_u8 10, 99           (target of jump)
-    #   # fallthrough
-    #   program = <<
-    #     op(:load_imm_jump),
-    #     0x11,
-    #     42,
-    #     6,
-    #     op(:trap),
-    #     op(:fallthrough),
-    #     op(:store_imm_u8),
-    #     3,
-    #     10,
-    #     0,
-    #     1,
-    #     99,
-    #     op(:fallthrough)
-    #   >>
-
-    #   bitmask = <<142, 1::5>>
-
-    #   p = create_program(program, bitmask)
-    #   {exit_reason, state_} = VM.execute(p, %State{})
-
-    #   # From final fallthrough
-    #   assert exit_reason == :panic
-    #   assert state_.counter == 0
-    #   assert Registers.get(state_.registers, 1) == 42
-    #   # Verify jump was taken
-    #   assert Memory.read(state_.memory, 0x1000A, 1) == {:ok, <<99>>}
-    # end
-
-    # test "executes signed comparison branch sequence" do
-    #   # Program:
-    #   # load_imm r1, 0xFF              (load -1 in two's complement)
-    #   # branch_lt_s_imm r1, 0, target=9 (branch if r1 < 0 signed)
-    #   # trap                           (will be skipped)
-    #   # store_imm_u8 30, 77           (target of branch)
-    #   # fallthrough
-    #   program = <<
-    #     op(:load_imm),
-    #     1,
-    #     0xFF,
-    #     op(:branch_lt_s_imm),
-    #     0x11,
-    #     0,
-    #     6,
-    #     op(:trap),
-    #     op(:fallthrough),
-    #     op(:store_imm_u8),
-    #     3,
-    #     30,
-    #     0,
-    #     1,
-    #     77,
-    #     op(:fallthrough)
-    #   >>
-
-    #   bitmask = <<
-    #     145,
-    #     193
-    #   >>
-
-    #   p = create_program(program, bitmask)
-    #   {exit_reason, state_} = VM.execute(p, %State{})
-
-    #   # From final fallthrough
-    #   assert exit_reason == :panic
-    #   assert state_.counter == 0
-    #   assert Registers.get(state_.registers, 1) == 0xFFFF_FFFF_FFFF_FFFF
-    #   # Verify branch was taken
-    #   assert Memory.read(state_.memory, 0x1001E, 1) == {:ok, <<77>>}
-    # end
+      # From final fallthrough
+      assert exit_reason == :panic
+      assert state_.counter == 0
+      assert Registers.get(state_.registers, 1) == 0xFFFF_FFFF_FFFF_FFFF
+      # Verify branch was taken
+      assert Memory.read(state_.memory, stack_addr, 1) == {:ok, <<77>>}
+    end
 
     test "calculates sum of even numbers from 1 to 10", %{state: state, stack_addr: stack_addr} do
       # Program:
@@ -568,7 +457,8 @@ defmodule VMTest do
         0x12
       >>
 
-      bitmask = <<130, 16::7 >> # 10000010_0010000
+      # 10000010_0010000
+      bitmask = <<130, 16::7>>
 
       p = create_program(program, bitmask)
       {exit_reason, state_} = VM.execute(p, state)
