@@ -1,8 +1,15 @@
 defmodule Instructions.TwoRegistersTest do
   use ExUnit.Case
   use PVM.Instructions
-  alias PVM.{Instructions.TwoRegisters, Memory, Registers, State}
+  alias PVM.{Instructions.TwoRegisters, Memory, Registers, State, InitProgram}
   import PVM.Memory.Constants
+
+  setup_all do
+    memory = InitProgram.construct_memory("code", "data", "args", 1, 1)
+    stack_addr = InitProgram.boundaries(4, 4, 4, 1, 1).stack_start
+    state = %State{memory: memory, registers: %Registers{r2: stack_addr}}
+    {:ok, %{memory: memory, stack_addr: stack_addr, state: state}}
+  end
 
   describe "move_reg" do
     test "copies value from one register to another" do
@@ -28,188 +35,81 @@ defmodule Instructions.TwoRegistersTest do
   end
 
   describe "execute(:sbrk)" do
-    test "allocates memory when no writable pages exist" do
-      memory =
-        %Memory{}
-        # No access by default
-        |> Memory.set_default_access(nil)
-
+    test "allocates memory after program text region", %{state: state} do
       # Request 2 pages worth of bytes
       request_size = 2 * page_size()
 
-      state = %State{
-        memory: memory,
-        registers: %Registers{r2: request_size}
-      }
-
+      state = %{state | registers: %{state.registers | r2: request_size}}
+      refute Memory.check_pages_access?(state.memory, 17, 2, :read)
       {status, new_state} = TwoRegisters.execute(:sbrk, <<op(:sbrk), 0x21>>, state)
 
       assert status == :continue
-      # Should start at beginning
-      assert new_state.registers.r1 == min_allowed_address()
-      # Verify pages 0 and 1 are now writable
-      assert Memory.check_pages_access?(new_state.memory, 16, 2, :write)
-    end
-
-    test "allocates memory after first writable block" do
-      memory =
-        %Memory{}
-        |> Memory.set_default_access(nil)
-        # Pages 16-17 are writable
-        |> Memory.set_access(16 * page_size(), 2 * page_size(), :write)
-
-      state = %State{
-        memory: memory,
-        # Request 1 page worth of bytes
-        registers: %Registers{r2: page_size()}
-      }
-
-      {status, new_state} = TwoRegisters.execute(:sbrk, <<op(:sbrk), 0x21>>, state)
-
-      assert status == :continue
-      # Should start at beginning
-      assert new_state.registers.r1 == 18 * page_size()
-      assert Memory.check_pages_access?(new_state.memory, 18, 1, :write)
-    end
-
-    test "allocates memory in gap between writable blocks" do
-      memory =
-        %Memory{}
-        |> Memory.set_default_access(nil)
-        # Pages 16-17 writable
-        |> Memory.set_access_by_page(16, 2, :write)
-        # Pages 20-21 writable
-        |> Memory.set_access_by_page(20, 2, :write)
-
-      state = %State{
-        memory: memory,
-        # Request 2 pages worth of bytes
-        registers: %Registers{r2: 2 * page_size()}
-      }
-
-      {status, new_state} = TwoRegisters.execute(:sbrk, <<op(:sbrk), 0x21>>, state)
-
-      assert status == :continue
-      # Should start at page 18
-      assert new_state.registers.r1 == 18 * page_size()
-      assert Memory.check_pages_access?(new_state.memory, 16, 4, :write)
-    end
-
-    test "handles case when readable pages block allocation" do
-      memory =
-        %Memory{}
-        |> Memory.set_default_access(nil)
-        # Page 16 writable
-        |> Memory.set_access_by_page(16, 1, :write)
-        # Page 17 readable
-        |> Memory.set_access_by_page(17, 1, :read)
-        # Page 19 writable
-        |> Memory.set_access_by_page(19, 1, :write)
-
-      state = %State{
-        memory: memory,
-        # Request 2 pages worth of bytes
-        registers: %Registers{r2: 2 * page_size()}
-      }
-
-      {status, new_state} = TwoRegisters.execute(:sbrk, <<op(:sbrk), 0x21>>, state)
-
-      assert status == :continue
-      # Should start at page 20
-      assert new_state.registers.r1 == 20 * page_size()
-      assert Memory.check_pages_access?(new_state.memory, 19, 3, :write)
-    end
-
-    test "handles request spanning multiple pages" do
-      memory =
-        %Memory{}
-        |> Memory.set_default_access(nil)
-        # Pages 18-19 readable
-        |> Memory.set_access_by_page(18, 2, :read)
-
-      # Request spans 3 pages
-      request_size = 2 * page_size() + 1
-
-      state = %State{
-        memory: memory,
-        registers: %Registers{r2: request_size}
-      }
-
-      {status, new_state} = TwoRegisters.execute(:sbrk, <<op(:sbrk), 0x21>>, state)
-
-      assert status == :continue
-      assert new_state.registers.r1 == 20 * page_size()
-      assert Memory.check_pages_access?(new_state.memory, 20, 3, :write)
-    end
-
-    test "chooses first gap when multiple gaps exist" do
-      memory =
-        %Memory{}
-        |> Memory.set_default_access(nil)
-        # Three writable blocks with gaps
-        # Page 0
-        |> Memory.set_access_by_page(16, 1, :write)
-        # Page 3
-        |> Memory.set_access_by_page(19, 1, :write)
-        # Page 6
-        |> Memory.set_access_by_page(22, 1, :write)
-
-      state = %State{
-        memory: memory,
-        # Request 2 pages worth of bytes
-        registers: %Registers{r2: 2 * page_size()}
-      }
-
-      {status, new_state} = TwoRegisters.execute(:sbrk, <<op(:sbrk), 0x21>>, state)
-
-      assert status == :continue
-      # Should use first gap (pages 17-18)
-      assert new_state.registers.r1 == 17 * page_size()
+      # page 17
+      assert new_state.registers.r1 == 0x11000
+      # Verify pages 17, 18 are now writable
       assert Memory.check_pages_access?(new_state.memory, 17, 2, :write)
-
-      state = %State{
-        memory: memory,
-        # Request 3 pages worth of bytes
-        registers: %Registers{r2: 3 * page_size()}
-      }
-
-      # Request 3 pages worth of bytes
-      {status, new_state} = TwoRegisters.execute(:sbrk, <<op(:sbrk), 0x21>>, state)
-
-      assert status == :continue
-      assert new_state.registers.r1 == 23 * page_size()
-      assert Memory.check_pages_access?(new_state.memory, 22, 4, :write)
     end
 
-    test "complex mix of readable and writable forces specific gap choice" do
-      memory =
-        %Memory{}
-        |> Memory.set_default_access(nil)
-        # Complex pattern: W=writable, R=readable, -=none
-        # W R - R W - - W (pages 0-7)
-        # Page 0
-        |> Memory.set_access_by_page(16, 1, :write)
-        # Page 1
-        |> Memory.set_access_by_page(17, 1, :read)
-        # Page 3
-        |> Memory.set_access_by_page(19, 1, :read)
-        # Page 4
-        |> Memory.set_access_by_page(20, 1, :write)
-        # Page 7
-        |> Memory.set_access_by_page(23, 1, :write)
+    test "allocates 10 pages in the first available gap", %{state: state} do
+      # Request 10 pages worth of bytes
+      request_size = 10 * page_size()
 
-      state = %State{
-        memory: memory,
-        # Request 2 pages worth of bytes
-        registers: %Registers{r2: 2 * page_size()}
-      }
+      state = %{state | registers: %{state.registers | r2: request_size}}
+
+      refute Memory.check_pages_access?(state.memory, 17, 10, :read)
+      # Initial memory access ranges:
+      # [{16, 17, :read}, {17, 48, nil}, {48, 50, :write}, ...]
 
       {status, new_state} = TwoRegisters.execute(:sbrk, <<op(:sbrk), 0x21>>, state)
 
       assert status == :continue
-      # Should use pages 21-22
-      assert new_state.registers.r1 == 21 * page_size()
-      assert Memory.check_pages_access?(new_state.memory, 20, 4, :write)
+      # Should start at page 17
+      assert new_state.registers.r1 == 17 * page_size()
+      assert Memory.check_pages_access?(new_state.memory, 17, 10, :write)
+
+      # Verify the next range is still nil (pages 27-47)
+      assert Enum.at(new_state.memory.access_ranges, 1) == {17, 27, :write}
+      assert Enum.at(new_state.memory.access_ranges, 2) == {27, 48, nil}
+    end
+
+    test "allocates 30 pages and merges with next writable block", %{state: state} do
+      # Request 30 pages worth of bytes
+      request_size = 31 * page_size()
+
+      state = %{state | registers: %{state.registers | r2: request_size}}
+
+      # Initial memory access ranges:
+      # [{16, 17, :read}, {17, 48, nil}, {48, 50, :write}, ...]
+
+      {status, new_state} = TwoRegisters.execute(:sbrk, <<op(:sbrk), 0x21>>, state)
+
+      assert status == :continue
+      # Should start at page 17
+      assert new_state.registers.r1 == 17 * page_size()
+      assert Enum.at(new_state.memory.access_ranges, 1) == {17, 50, :write}
+      assert length(new_state.memory.access_ranges) == length(state.memory.access_ranges) - 1
+    end
+
+    test "allocates large number of pages at expense of next nil block", %{state: state} do
+      request_size = 1000 * page_size()
+
+      state = %{state | registers: %{state.registers | r2: request_size}}
+      # Initial memory access ranges:
+      # [{16, 17, :read}, {17, 48, nil}, {48, 50, :write}, ...]
+
+      {status, new_state} = TwoRegisters.execute(:sbrk, <<op(:sbrk), 0x21>>, state)
+
+      assert status == :continue
+      # Should start at page 50 (after the writable block at 48-49)
+      assert new_state.registers.r1 == 50 * page_size()
+      # Verify pages 50-1049 are now writable
+      assert Memory.check_pages_access?(new_state.memory, 50, 1000, :write)
+
+      assert Enum.take(new_state.memory.access_ranges, 3) == [
+               {16, 17, :read},
+               {17, 48, nil},
+               {48, 1050, :write}
+             ]
     end
   end
 

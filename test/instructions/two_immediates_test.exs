@@ -4,13 +4,7 @@ defmodule Instructions.TwoImmediatesTest do
   alias PVM.{Instructions.TwoImmediates, Memory, State, InitProgram, Registers}
 
   setup_all do
-    o = "code"
-    w = "data"
-    c = "args"
-    z = 1
-    s = 1
-
-    memory = InitProgram.construct_memory(o, w, c, z, s)
+    memory = InitProgram.construct_memory("code", "data", "args", 1, 1)
     stack_addr = InitProgram.boundaries(4, 4, 4, 1, 1).stack_start
     state = %State{memory: memory, registers: %Registers{r2: stack_addr}}
     {:ok, %{memory: memory, stack_addr: stack_addr, state: state}}
