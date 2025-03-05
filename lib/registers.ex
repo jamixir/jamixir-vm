@@ -17,6 +17,16 @@ defmodule PVM.Registers do
           :r0 | :r1 | :r2 | :r3 | :r4 | :r5 | :r6 | :r7 | :r8 | :r9 | :r10 | :r11 | :r12 | 0..12
   @type t :: %__MODULE__{}
 
+  @doc """
+  Creates a new Registers struct from a list of values.
+  The list should contain exactly 13 integers, one for each register (r0 to r12).
+  """
+  @spec from_list([integer()]) :: t()
+  def from_list(values) when is_list(values) and length(values) == 13 do
+    [r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12] = values
+    %__MODULE__{r0: r0, r1: r1, r2: r2, r3: r3, r4: r4, r5: r5, r6: r6, r7: r7, r8: r8, r9: r9, r10: r10, r11: r11, r12: r12}
+  end
+
   @spec get(t(), register()) :: integer()
   def get(%__MODULE__{} = reg, register) when is_atom(register) do
     Map.get(reg, register)
