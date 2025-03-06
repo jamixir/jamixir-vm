@@ -89,9 +89,11 @@ defmodule PVM.Instructions.ThreeRegisters do
           a = u2i(rem(w_a, @two_32), 4)
           b = u2i(rem(w_b, @two_32), 4)
 
-          if b == 0, do: @max_64
-          if b == -1 and a == -1 * (1 <<< 31), do: a
-          i2u(div(a, b), 8)
+          cond do
+            b == 0 -> @max_64
+            b == -1 and a == -1 * (1 <<< 31) -> i2u(a, 8)
+            true -> i2u(div(a, b), 8)
+          end
 
         :rem_u_32 ->
           if rem(w_b, @two_32) == 0,
@@ -159,9 +161,11 @@ defmodule PVM.Instructions.ThreeRegisters do
             else: div(w_a, w_b)
 
         :div_s_64 ->
-          if w_b == 0, do: @max_64
-          if u2i(w_b, 8) == -1 and u2i(w_a, 8) == -1 * (1 <<< 63), do: w_a
-          i2u(div(u2i(w_a, 8), u2i(w_b, 8)), 8)
+          cond do
+            w_b == 0 -> @max_64
+            u2i(w_b, 8) == -1 and u2i(w_a, 8) == -1 * (1 <<< 63) -> w_a
+            true -> i2u(div(u2i(w_a, 8), u2i(w_b, 8)), 8)
+          end
 
         :rem_u_64 ->
           if w_b == 0, do: w_a
