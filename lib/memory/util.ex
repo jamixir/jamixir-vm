@@ -37,4 +37,29 @@ defmodule PVM.Memory.Util do
         {:continue, state_}
     end
   end
+
+  def wrap_address(%{size: size}, address) do
+    rem(rem(address, size) + size, size)
+  end
+
+  def write_to_sparse(memory, address, value) do
+    value
+    |> :binary.bin_to_list()
+    |> Enum.with_index()
+    |> Enum.reduce(memory.data, fn {byte, index}, acc ->
+      wrapped_addr = wrap_address(memory, address + index)
+      Map.put(acc, wrapped_addr, byte)
+    end)
+  end
+
+
+
+  def get_page_range(%{page_size: page_size} = memory, start_address, length) do
+    start_page = div(start_address, page_size)
+    end_address = wrap_address(memory, start_address + max(0, length - 1))
+    end_page = div(end_address, page_size)
+
+    {start_page, end_page}
+  end
+
 end

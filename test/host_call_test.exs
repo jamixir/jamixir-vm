@@ -1,10 +1,17 @@
 defmodule PVM.HostCallTest do
   use ExUnit.Case
-  alias PVM.{HostCall, State}
+  alias PVM.{HostCall, State, InitProgram, Registers}
   use PVM.Instructions
 
   def create_program(program, bitmask, jump_table \\ [], z \\ 1) do
     PVM.Encoder.encode_program(program, bitmask, jump_table, z)
+  end
+
+  setup_all do
+    memory = InitProgram.construct_memory("code", "data", "args", 1, 1)
+    stack_addr = InitProgram.boundaries(4, 4, 4, 1, 1).stack_start
+    state = %State{memory: memory, registers: %Registers{r2: stack_addr}}
+    {:ok, %{memory: memory, stack_addr: stack_addr, state: state}}
   end
 
   describe "HostCall.execute basic exit conditions" do
@@ -19,7 +26,9 @@ defmodule PVM.HostCallTest do
       end
 
       initial_context = %{test: :context}
-      {exit_reason, final_state, final_context} = HostCall.execute(p, %State{}, host_fn, initial_context)
+
+      {exit_reason, final_state, final_context} =
+        HostCall.execute(p, %State{}, host_fn, initial_context)
 
       assert exit_reason == :halt
       assert final_state.counter == 0
@@ -37,7 +46,9 @@ defmodule PVM.HostCallTest do
       end
 
       initial_context = %{test: :context}
-      {exit_reason, final_state, final_context} = HostCall.execute(p, %State{}, host_fn, initial_context)
+
+      {exit_reason, final_state, final_context} =
+        HostCall.execute(p, %State{}, host_fn, initial_context)
 
       assert exit_reason == :panic
       assert final_state.counter == 0
@@ -55,17 +66,21 @@ defmodule PVM.HostCallTest do
       end
 
       initial_context = %{test: :context}
-      initial_state = %State{gas: -1}  # Set gas to 0
-      {exit_reason, final_state, final_context} = HostCall.execute(p, initial_state, host_fn, initial_context)
+      # Set gas to 0
+      initial_state = %State{gas: -1}
+
+      {exit_reason, final_state, final_context} =
+        HostCall.execute(p, initial_state, host_fn, initial_context)
 
       assert exit_reason == :out_of_gas
       assert final_state.gas == -1
       assert final_context == initial_context
     end
 
-    test "handles fault exit reason" do
+    test "handles fault exit reason", %{state: state} do
       # Program that attempts to write to invalid memory
-      program = <<op(:store_imm_u8), 1, 0xFF, 0xFF, 42>>  # Try to write to invalid memory address
+      # Try to write to invalid memory address
+      program = <<op(:store_imm_u8), 1, 0xFF, 0xFF, 42>>
       bitmask = <<16::5>>
       p = create_program(program, bitmask)
 
@@ -74,14 +89,9 @@ defmodule PVM.HostCallTest do
       end
 
       initial_context = %{test: :context}
-      # Set memory access to read-only for the target page
-      initial_state = %State{
-        memory: %PVM.Memory{} |> PVM.Memory.set_default_access(nil)
-      }
+      {exit_reason, state_, final_context} = HostCall.execute(p, state, host_fn, initial_context)
 
-      {exit_reason, final_state, final_context} = HostCall.execute(p, initial_state, host_fn, initial_context)
-
-      assert match?({{:fault, _page}, _, _}, {exit_reason, final_state, final_context})
+      assert match?({{:fault, _page}, _, _}, {exit_reason, state_, final_context})
       assert final_context == initial_context
     end
   end

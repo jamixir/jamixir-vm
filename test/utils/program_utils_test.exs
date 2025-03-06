@@ -2,7 +2,14 @@ defmodule PVM.Utils.ProgramUtilsTest do
   use ExUnit.Case
   use PVM.Instructions
   alias PVM.Utils.ProgramUtils
-  alias PVM.{Registers, State, VM}
+  alias PVM.{Registers, State, VM, InitProgram}
+
+  setup_all do
+    memory = InitProgram.construct_memory("code", "data", "args", 1, 1)
+    stack_addr = InitProgram.boundaries(4, 4, 4, 1, 1).stack_start
+    state = %State{memory: memory, registers: %Registers{r2: stack_addr}}
+    {:ok, %{memory: memory, stack_addr: stack_addr, state: state}}
+  end
 
   describe "halt helpers" do
     test "create_halt_program creates minimal halting program" do
@@ -13,7 +20,7 @@ defmodule PVM.Utils.ProgramUtilsTest do
       assert state.counter == 0
     end
 
-    test "append_halt makes a complex program halt cleanly" do
+    test "append_halt makes a complex program halt cleanly", %{state: state, stack_addr: stack_addr} do
       # Program that sums even numbers up to 10
       base_program = <<
         op(:load_imm), 1, 0,           # sum = 0
@@ -28,14 +35,14 @@ defmodule PVM.Utils.ProgramUtilsTest do
         op(:fallthrough),
         op(:add_imm_32), 0x22, 1,       # i++
         op(:jump), 238,                  # loop
-        op(:store_u32), 1, 3, 0, 1            # store result
+        op(:store_u32), 1, stack_addr::little-size(32)            # store result
       >>
 
-      base_bitmask = <<146, 76, 72, 153, 16::size(6)>>
+      base_bitmask = <<146, 76, 72, 153, 32::size(7)>>
 
       {program, bitmask} = ProgramUtils.append_halt(base_program, base_bitmask)
       p = PVM.Encoder.encode_program(program, bitmask, [], 1)
-      {exit_reason, state} = VM.execute(p, %State{})
+      {exit_reason, state} = VM.execute(p, state)
 
       # Should halt and have executed the original instructions
       assert exit_reason == :halt
