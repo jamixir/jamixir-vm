@@ -4,6 +4,7 @@ defmodule PVM.Utils.JsonTestRunner do
   """
 
   alias PVM.{State, Memory, VM, Registers}
+  import PVM.Memory.Constants
   use ExUnit.Case
 
   @doc """
@@ -46,11 +47,12 @@ defmodule PVM.Utils.JsonTestRunner do
   @doc """
   Runs a test from a JSON file path.
   """
-  def run_json_test(test_name,file_path) do
-    test_case = file_path
-                |> File.read!()
-                |> Jason.decode!()
-                |> keys_to_atoms()
+  def run_json_test(test_name, file_path) do
+    test_case =
+      file_path
+      |> File.read!()
+      |> Jason.decode!()
+      |> keys_to_atoms()
 
     # Set up initial state and program
     {state, program} = setup_initial_state(test_case)
@@ -105,13 +107,14 @@ defmodule PVM.Utils.JsonTestRunner do
     end
 
     # Check memory
-    Enum.each(expected.memory, fn [address, expected_value, size] ->
+    Enum.each(expected.memory, fn %{address: address, contents: contents} ->
+      expected_value = :binary.list_to_bin(contents)
+      size = length(contents)
+
       case Memory.read(final_state.memory, address, size) do
         {:ok, data} ->
-          actual_value = :binary.decode_unsigned(data, :little)
-
-          assert actual_value == expected_value,
-                 "Memory at #{address}: expected #{expected_value}, got #{actual_value}"
+          assert data == expected_value,
+                 "Memory at #{address}: expected #{expected_value}, got #{data}"
 
         {:error, reason} ->
           flunk("Failed to read memory at #{address}: #{inspect(reason)}")
@@ -165,36 +168,48 @@ defmodule PVM.Utils.JsonTestRunner do
   end
 
   def setup_memory(page_map, memory_entries) do
-    memory = %Memory{}
+    pre_memory =
+      PVM.PreMemory.set_access(
+        %PVM.PreMemory{},
+        min_allowed_address(),
+        memory_size() - min_allowed_address(),
+        nil
+      )
 
-    memory =
+    # Set up page access permissions
+    pre_memory =
       if Enum.empty?(page_map) do
-        memory
+        pre_memory
       else
-        Enum.reduce(page_map, memory, fn entry, acc ->
-          [page, access] = entry
+        Enum.reduce(page_map, pre_memory, fn entry, acc ->
+          address = entry.address
+          length = entry.length
+          # Only support is-writable for now
+          access_type =
+            if Map.get(entry, :"is-writable"),
+              do: :write,
+              else: raise("Unsupported access type: #{inspect(entry)}")
 
-          Memory.set_access(
-            acc,
-            page * memory.page_size,
-            1,
-            access_atom(access)
-          )
+          PVM.PreMemory.set_access(acc, address, length, access_type)
         end)
       end
 
-    if Enum.empty?(memory_entries) do
-      memory
-    else
-      Enum.reduce(memory_entries, memory, fn entry, acc ->
-        [address, value, size] = entry
+    # Write memory contents
+    pre_memory =
+      if Enum.empty?(memory_entries) do
+        pre_memory
+      else
+        Enum.reduce(memory_entries, pre_memory, fn entry, acc ->
+          address = entry.address
+          contents = :binary.list_to_bin(entry.contents)
 
-        {:ok, mem} =
-          Memory.write(acc, address, binary_for_value(value, size))
+          PVM.PreMemory.write(acc, address, contents)
+        end)
+      end
 
-        mem
-      end)
-    end
+    # Finalize the PreMemory to create the actual Memory struct
+    pre_memory = PVM.PreMemory.resolve_overlaps(pre_memory)
+    PVM.PreMemory.finalize(pre_memory)
   end
 
   def binary_for_value(value, size) do
@@ -228,9 +243,14 @@ defmodule PVM.Utils.JsonTestRunner do
 
   defp keys_to_atoms(map) when is_map(map) do
     Map.new(map, fn
-      {key, value} when is_map(value) -> {String.to_atom(key), keys_to_atoms(value)}
-      {key, value} when is_list(value) -> {String.to_atom(key), Enum.map(value, &maybe_keys_to_atoms/1)}
-      {key, value} -> {String.to_atom(key), value}
+      {key, value} when is_map(value) ->
+        {String.to_atom(key), keys_to_atoms(value)}
+
+      {key, value} when is_list(value) ->
+        {String.to_atom(key), Enum.map(value, &maybe_keys_to_atoms/1)}
+
+      {key, value} ->
+        {String.to_atom(key), value}
     end)
   end
 

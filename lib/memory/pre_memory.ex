@@ -28,7 +28,7 @@ defmodule PVM.PreMemory do
   end
 
   def finalize(%__MODULE__{} = pre_memory) do
-    optimized_ranges = optimize_access_ranges(pre_memory.access_ranges)
+    optimized_ranges = merge_adjacent_ranges(pre_memory.access_ranges)
 
     # Create the real Memory struct
     %Memory{
@@ -39,7 +39,7 @@ defmodule PVM.PreMemory do
     }
   end
 
-  defp optimize_access_ranges(ranges) do
+  defp merge_adjacent_ranges(ranges) do
     # First, handle overwrites by keeping only the last occurrence of ranges with same start/end
     unique_ranges =
       Enum.reduce(ranges, %{}, fn {start, end_, type}, acc ->
@@ -47,10 +47,7 @@ defmodule PVM.PreMemory do
       end)
       |> Enum.map(fn {{start, end_}, type} -> {start, end_, type} end)
 
-    # Then sort and merge adjacent ranges of the same type
-    sorted = Enum.sort_by(unique_ranges, fn {start, _, _} -> start end)
-
-    Enum.reduce(sorted, [], fn
+    Enum.reduce(unique_ranges, [], fn
       range, [] ->
         [range]
 
@@ -64,5 +61,62 @@ defmodule PVM.PreMemory do
         end
     end)
     |> Enum.reverse()
+  end
+
+  def resolve_overlaps(%__MODULE__{access_ranges: ranges} = pre_memory) do
+    # Create events for range starts and ends with index for priority
+    events = create_range_events(ranges)
+
+    # Process events to build non-overlapping ranges
+    {result, _active_ranges, _last_pos} =
+      Enum.reduce(events, {[], [], nil}, fn
+        {pos, event_type, type, idx}, {result, active, last_position} ->
+          result_ = create_segment(last_position, pos, active, result)
+
+          active_updated =
+            case event_type do
+              :start ->
+                [{type, idx} | active]
+                |> Enum.sort_by(fn {_, index} -> index end)
+
+              :end ->
+                Enum.reject(active, fn {_, i} -> i == idx end)
+            end
+
+          {result_, active_updated, pos}
+      end)
+
+    %{pre_memory | access_ranges: Enum.reverse(result)}
+  end
+
+  defp create_range_events(ranges) do
+    ranges
+    |> Enum.with_index()
+    |> Enum.flat_map(fn {{start, end_, type}, idx} ->
+      # Each range creates two events: start and end
+      [
+        {start, :start, type, idx},
+        {end_, :end, type, idx}
+      ]
+    end)
+    |> Enum.sort_by(fn {pos, event_type, _, idx} ->
+      # Sort by position first, then by event type (:end before :start),
+      # then by index (lower index => higher priority)
+      {pos, if(event_type == :end, do: 0, else: 1), -idx}
+    end)
+  end
+
+  # no segment should be created
+  defp create_segment(nil, _current_position, _active_ranges, result), do: result
+  defp create_segment([], _current_position, _active_ranges, result), do: result
+
+  defp create_segment(last_position, current_position, _active_ranges, result)
+       when current_position <= last_position,
+       do: result
+
+  # a segment should be created
+  defp create_segment(last_position, current_position, active_ranges, result) do
+    {active_type, _} = List.first(active_ranges)
+    [{last_position, current_position, active_type} | result]
   end
 end
