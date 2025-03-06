@@ -2,8 +2,6 @@ defmodule PVM.Instructions do
   @moduledoc """
   Defines opcodes and gas costs for the PVM
   """
-  alias PVM.Instructions.GasCost.GPComplient
-  alias PVM.Instructions.GasCost.TestVectors
 
   defmacro __using__(_opts) do
     quote do
@@ -173,18 +171,13 @@ defmodule PVM.Instructions do
   @opcode_map %{
     trap: 0,
     fallthrough: 1,
-
     ecalli: 10,
-
     load_imm_64: 20,
-
     store_imm_u8: 30,
     store_imm_u16: 31,
     store_imm_u32: 32,
     store_imm_u64: 33,
-
     jump: 40,
-
     jump_ind: 50,
     load_imm: 51,
     load_u8: 52,
@@ -198,12 +191,10 @@ defmodule PVM.Instructions do
     store_u16: 60,
     store_u32: 61,
     store_u64: 62,
-
     store_imm_ind_u8: 70,
     store_imm_ind_u16: 71,
     store_imm_ind_u32: 72,
     store_imm_ind_u64: 73,
-
     load_imm_jump: 80,
     branch_eq_imm: 81,
     branch_ne_imm: 82,
@@ -215,7 +206,6 @@ defmodule PVM.Instructions do
     branch_le_s_imm: 88,
     branch_ge_s_imm: 89,
     branch_gt_s_imm: 90,
-
     move_reg: 100,
     sbrk: 101,
     count_set_bits_64: 102,
@@ -228,7 +218,6 @@ defmodule PVM.Instructions do
     sign_extend_16: 109,
     zero_extend_16: 110,
     reverse_bytes: 111,
-
     store_ind_u8: 120,
     store_ind_u16: 121,
     store_ind_u32: 122,
@@ -271,16 +260,13 @@ defmodule PVM.Instructions do
     rot_r_64_imm_alt: 159,
     rot_r_32_imm: 160,
     rot_r_32_imm_alt: 161,
-
     branch_eq: 170,
     branch_ne: 171,
     branch_lt_u: 172,
     branch_lt_s: 173,
     branch_ge_u: 174,
     branch_ge_s: 175,
-
     load_imm_jump_ind: 180,
-
     add_32: 190,
     sub_32: 191,
     mul_32: 192,
@@ -322,6 +308,148 @@ defmodule PVM.Instructions do
     max_u: 228,
     min: 229,
     min_u: 230
+  }
+
+  @gas_cost_map %{
+    trap: 0,
+    fallthrough: 0,
+    ecalli: 0,
+    load_imm_64: 0,
+    store_imm_u8: 0,
+    store_imm_u16: 0,
+    store_imm_u32: 0,
+    store_imm_u64: 0,
+    jump: 0,
+    jump_ind: 0,
+    load_imm: 0,
+    load_u8: 0,
+    load_i8: 0,
+    load_u16: 0,
+    load_i16: 0,
+    load_u32: 0,
+    load_i32: 0,
+    load_u64: 0,
+    store_u8: 0,
+    store_u16: 0,
+    store_u32: 0,
+    store_u64: 0,
+    store_imm_ind_u8: 0,
+    store_imm_ind_u16: 0,
+    store_imm_ind_u32: 0,
+    store_imm_ind_u64: 0,
+    load_imm_jump: 0,
+    load_imm_jump_ind: 0,
+    store_ind_u8: 0,
+    store_ind_u16: 0,
+    store_ind_u32: 0,
+    store_ind_u64: 0,
+    load_ind_u8: 0,
+    load_ind_i8: 0,
+    load_ind_u16: 0,
+    load_ind_i16: 0,
+    load_ind_u32: 0,
+    load_ind_i32: 0,
+    load_ind_u64: 0,
+    add_imm_32: 0,
+    and_imm: 0,
+    xor_imm: 0,
+    or_imm: 0,
+    mul_imm_32: 0,
+    set_lt_u_imm: 0,
+    set_lt_s_imm: 0,
+    shlo_l_imm_32: 0,
+    shlo_r_imm_32: 0,
+    shar_r_imm_32: 0,
+    neg_add_imm_32: 0,
+    set_gt_u_imm: 0,
+    set_gt_s_imm: 0,
+    shlo_l_imm_alt_32: 0,
+    shlo_r_imm_alt_32: 0,
+    shar_r_imm_alt_32: 0,
+    cmov_iz_imm: 0,
+    cmov_nz_imm: 0,
+    add_imm_64: 0,
+    mul_imm_64: 0,
+    shlo_l_imm_64: 0,
+    shlo_r_imm_64: 0,
+    shar_r_imm_64: 0,
+    neg_add_imm_64: 0,
+    shlo_l_imm_alt_64: 0,
+    shlo_r_imm_alt_64: 0,
+    shar_r_imm_alt_64: 0,
+    rot_r_64_imm: 0,
+    rot_r_64_imm_alt: 0,
+    rot_r_32_imm: 0,
+    rot_r_32_imm_alt: 0,
+    branch_eq: 0,
+    branch_ne: 0,
+    branch_ge_u: 0,
+    branch_ge_s: 0,
+    branch_lt_u: 0,
+    branch_lt_s: 0,
+    branch_eq_imm: 0,
+    branch_ne_imm: 0,
+    branch_lt_u_imm: 0,
+    branch_lt_s_imm: 0,
+    branch_le_u_imm: 0,
+    branch_le_s_imm: 0,
+    branch_ge_u_imm: 0,
+    branch_ge_s_imm: 0,
+    branch_gt_u_imm: 0,
+    branch_gt_s_imm: 0,
+    move_reg: 0,
+    sbrk: 0,
+    count_set_bits_64: 0,
+    count_set_bits_32: 0,
+    leading_zero_bits_64: 0,
+    leading_zero_bits_32: 0,
+    trailing_zero_bits_64: 0,
+    trailing_zero_bits_32: 0,
+    sign_extend_8: 0,
+    sign_extend_16: 0,
+    zero_extend_16: 0,
+    reverse_bytes: 0,
+    add_32: 0,
+    sub_32: 0,
+    mul_32: 0,
+    div_u_32: 0,
+    div_s_32: 0,
+    rem_u_32: 0,
+    rem_s_32: 0,
+    shlo_l_32: 0,
+    shlo_r_32: 0,
+    shar_r_32: 0,
+    add_64: 0,
+    sub_64: 0,
+    mul_64: 0,
+    div_u_64: 0,
+    div_s_64: 0,
+    rem_u_64: 0,
+    rem_s_64: 0,
+    shlo_l_64: 0,
+    shlo_r_64: 0,
+    shar_r_64: 0,
+    and: 0,
+    xor: 0,
+    or: 0,
+    mul_upper_s_s: 0,
+    mul_upper_u_u: 0,
+    mul_upper_s_u: 0,
+    set_lt_u: 0,
+    set_lt_s: 0,
+    cmov_iz: 0,
+    cmov_nz: 0,
+    rot_l_64: 0,
+    rot_l_32: 0,
+    rot_r_64: 0,
+    rot_r_32: 0,
+    and_inv: 0,
+    or_inv: 0,
+    xnor: 0,
+    max: 0,
+    max_u: 0,
+    min: 0,
+    min_u: 0
   }
 
   @instruction_categories %{
@@ -477,9 +605,6 @@ defmodule PVM.Instructions do
     ]
   }
 
-
-  @default_gas_costs GPComplient.gas_cost_map()
-
   # Generate from_byte/1 using the map
   for {instruction, byte} <- @opcode_map do
     def from_byte(unquote(byte)), do: unquote(instruction)
@@ -492,16 +617,12 @@ defmodule PVM.Instructions do
     def to_byte(unquote(instruction)), do: unquote(byte)
   end
 
-  # Generate gas_cost/1 using the default gas costs
-  for {instruction, cost} <- @default_gas_costs do
-    def gas_cost(unquote(instruction)) do
-      if System.get_env("PVM_TEST_VECTORS") == "true" do
-        TestVectors.gas_cost_map()[unquote(instruction)]
-      else
-        unquote(cost)
-      end
-    end
+  # Generate gas_cost/1 using the map
+  for {instruction, cost} <- @gas_cost_map do
+    def gas_cost(unquote(instruction)), do: unquote(cost)
   end
+
+  def gas_cost_map, do: @gas_cost_map
 
   @doc """
   Returns true if the opcode is a termination instruction as defined in A.3
@@ -540,15 +661,6 @@ defmodule PVM.Instructions do
 
   def opcode_map do
     @opcode_map
-  end
-
-  def gas_cost_map do
-    IO
-    if System.get_env("PVM_TEST_VECTORS") == "true" do
-      TestVectors.gas_cost_map()
-    else
-      GPComplient.gas_cost_map()
-    end
   end
 
   def instruction_categories do
