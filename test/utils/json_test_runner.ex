@@ -1,6 +1,4 @@
 defmodule PVM.Utils.JsonTestRunner do
-
-
   alias PVM.{State, Memory, VM, Registers}
   import PVM.Memory.Constants
   use ExUnit.Case
@@ -25,7 +23,6 @@ defmodule PVM.Utils.JsonTestRunner do
       end
     end
   end
-
 
   @doc """
   Runs a test from a JSON file path.
@@ -107,36 +104,24 @@ defmodule PVM.Utils.JsonTestRunner do
     #        "Gas: expected #{expected.gas}, got #{final_state.gas}"
   end
 
-
-  def setup_initial_state(test_case) do
-    initial_regs = Map.get(test_case, :"initial-regs")
-    initial_pc = Map.get(test_case, :"initial-pc")
-    initial_page_map = Map.get(test_case, :"initial-page-map", [])
-    initial_memory_entries = Map.get(test_case, :"initial-memory", [])
-    initial_gas = Map.get(test_case, :"initial-gas")
-    program_bytes = Map.get(test_case, :program)
-
-    program = :binary.list_to_bin(program_bytes)
-
+  def setup_initial_state(json) do
     state = %State{
-      counter: initial_pc,
-      gas: initial_gas,
-      registers: Registers.from_list(initial_regs),
-      memory: setup_memory(initial_page_map, initial_memory_entries)
+      counter: json[:"initial-pc"],
+      gas: json[:"initial-gas"],
+      registers: Registers.from_list(json[:"initial-regs"]),
+      memory: setup_memory(json[:"initial-page-map"] || [], json[:"initial-memory"] || [])
     }
 
-    {state, program}
+    {state, :binary.list_to_bin(json[:program])}
   end
 
-  def get_expected_values(test_case) do
-    expected_status = Map.get(test_case, :"expected-status")
-
+  def get_expected_values(json) do
     %{
-      exit_reason: parse_expected_status(expected_status),
-      pc: Map.get(test_case, :"expected-pc"),
-      regs: Map.get(test_case, :"expected-regs"),
-      memory: Map.get(test_case, :"expected-memory", []),
-      gas: Map.get(test_case, :"expected-gas")
+      exit_reason: parse_expected_status(json[:"expected-status"]),
+      pc: json[:"expected-pc"],
+      regs: json[:"expected-regs"],
+      memory: json[:"expected-memory"] || [],
+      gas: json[:"expected-gas"]
     }
   end
 
@@ -159,9 +144,7 @@ defmodule PVM.Utils.JsonTestRunner do
           length = entry.length
           # Only support is-writable for now
           access_type =
-            if Map.get(entry, :"is-writable"),
-              do: :write,
-              else: :read
+            if entry[:"is-writable"], do: :write, else: :read
 
           PVM.PreMemory.set_access(acc, address, length, access_type)
         end)
@@ -184,23 +167,13 @@ defmodule PVM.Utils.JsonTestRunner do
     PVM.PreMemory.finalize(pre_memory)
   end
 
-  def binary_for_value(value, size) do
-    case size do
-      1 -> <<value::8>>
-      2 -> <<value::little-16>>
-      4 -> <<value::little-32>>
-      8 -> <<value::little-64>>
-    end
-  end
-
+  def binary_for_value(value, size), do: <<value::little-(size * 8)>>
 
   def parse_expected_status(status) do
     case status do
-      "panic" -> :panic
-      "halt" -> :halt
-      "out_of_gas" -> :out_of_gas
       "page-fault" -> {:fault, 0}
       "ecall" -> {:ecall, 0}
+      s -> String.to_atom(s)
     end
   end
 

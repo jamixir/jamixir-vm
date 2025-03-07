@@ -1,6 +1,7 @@
 defmodule PVM.Instructions.Executor do
   alias PVM.Instructions
   alias PVM.Trace
+
   alias PVM.Instructions.{
     NoArgs,
     OneImmediate,
@@ -17,17 +18,38 @@ defmodule PVM.Instructions.Executor do
 
   def execute_instruction(opcode, program, bitmask, jump_table, start_set, state) do
     case Instructions.instruction_category(opcode) do
-      :no_args -> NoArgs.execute(opcode, state)
-      :one_immediate -> OneImmediate.execute(opcode, program, bitmask, start_set, state)
-      :two_immediates -> TwoImmediates.execute(opcode, program, bitmask, state)
-      :reg_immediate -> RegImmediate.execute(opcode, program, bitmask, jump_table, start_set, state)
-      :register_two_immediate -> RegTwoImm.execute(opcode, program, bitmask, state)
-      :register_immediate_offset -> RegImmediateOffset.execute(opcode, program, bitmask, start_set, state)
-      :two_registers -> TwoRegisters.execute(opcode, program,  state)
-      :two_registers_one_immediate -> TwoRegistersOneImmediate.execute(opcode, program, bitmask, state)
-      :two_registers_one_offset -> TwoRegistersOneOffset.execute(opcode, program, bitmask, start_set, state)
-      :two_registers_two_immediates -> TwoRegistersTwoImmediates.execute(opcode, program, bitmask, jump_table, start_set, state)
-      :three_registers -> ThreeRegisters.execute(opcode, program, state)
+      :no_args ->
+        NoArgs.execute(opcode, state)
+
+      :one_immediate ->
+        OneImmediate.execute(opcode, program, bitmask, start_set, state)
+
+      :two_immediates ->
+        TwoImmediates.execute(opcode, program, bitmask, state)
+
+      :reg_immediate ->
+        RegImmediate.execute(opcode, program, bitmask, jump_table, start_set, state)
+
+      :register_two_immediate ->
+        RegTwoImm.execute(opcode, program, bitmask, state)
+
+      :register_immediate_offset ->
+        RegImmediateOffset.execute(opcode, program, bitmask, start_set, state)
+
+      :two_registers ->
+        TwoRegisters.execute(opcode, program, state)
+
+      :two_registers_one_immediate ->
+        TwoRegistersOneImmediate.execute(opcode, program, bitmask, state)
+
+      :two_registers_one_offset ->
+        TwoRegistersOneOffset.execute(opcode, program, bitmask, start_set, state)
+
+      :two_registers_two_immediates ->
+        TwoRegistersTwoImmediates.execute(opcode, program, bitmask, jump_table, start_set, state)
+
+      :three_registers ->
+        ThreeRegisters.execute(opcode, program, state)
     end
   end
 
@@ -36,6 +58,7 @@ defmodule PVM.Instructions.Executor do
 
   def branch(value, true, counter, start_set) do
     Trace.branch(counter, value)
+
     if value in start_set do
       {:continue, value}
     else
@@ -61,7 +84,11 @@ defmodule PVM.Instructions.Executor do
         {:panic, counter}
 
       a when a > length(jump_table) * alignment_factor ->
-        Trace.write_line("exit", "panic: Jump target #{a} exceeds jump table size at PC #{counter}")
+        Trace.write_line(
+          "exit",
+          "panic: Jump target #{a} exceeds jump table size at PC #{counter}"
+        )
+
         {:panic, counter}
 
       _ when remainder != 0 ->
@@ -70,6 +97,7 @@ defmodule PVM.Instructions.Executor do
 
       _ ->
         Trace.djump(counter, jump_to)
+
         if jump_to in start_set do
           {:continue, jump_to}
         else

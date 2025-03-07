@@ -20,23 +20,60 @@ defmodule PVM.Utils.ProgramUtilsTest do
       assert state.counter == 0
     end
 
-    test "append_halt makes a complex program halt cleanly", %{state: state, stack_addr: stack_addr} do
+    test "append_halt makes a complex program halt cleanly", %{
+      state: state,
+      stack_addr: stack_addr
+    } do
       # Program that sums even numbers up to 10
       base_program = <<
-        op(:load_imm), 1, 0,           # sum = 0
-        op(:load_imm), 2, 1,           # i = 1
-        op(:load_imm), 3, 10,          # end = 10
-        op(:load_imm), 5, 2,           # divisor = 2
+        # sum = 0
+        op(:load_imm),
+        1,
+        0,
+        # i = 1
+        op(:load_imm),
+        2,
+        1,
+        # end = 10
+        op(:load_imm),
+        3,
+        10,
+        # divisor = 2
+        op(:load_imm),
+        5,
+        2,
         op(:fallthrough),
-        op(:branch_gt_u_imm), 0x12, 10, 20,  # if i > end, exit loop
-        op(:rem_u_32), 0x52, 4,         # remainder = i % 2
-        op(:branch_ne_imm), 0x14, 0, 8,  # if remainder != 0, skip
-        op(:add_32), 0x12, 1,           # sum += i
+        # if i > end, exit loop
+        op(:branch_gt_u_imm),
+        0x12,
+        10,
+        20,
+        # remainder = i % 2
+        op(:rem_u_32),
+        0x52,
+        4,
+        # if remainder != 0, skip
+        op(:branch_ne_imm),
+        0x14,
+        0,
+        8,
+        # sum += i
+        op(:add_32),
+        0x12,
+        1,
         op(:fallthrough),
-        op(:add_imm_32), 0x22, 1,       # i++
-        op(:jump), 238,                  # loop
-        op(:store_u32), 1, stack_addr::little-size(32),            # store result
-        op(:fallthrough),
+        # i++
+        op(:add_imm_32),
+        0x22,
+        1,
+        # loop
+        op(:jump),
+        238,
+        # store result
+        op(:store_u32),
+        1,
+        stack_addr::little-size(32),
+        op(:fallthrough)
       >>
 
       base_bitmask = <<146, 76, 72, 153, 65>>
@@ -49,7 +86,7 @@ defmodule PVM.Utils.ProgramUtilsTest do
       assert exit_reason == :halt
       assert state.counter == 0
       assert Registers.get(state.registers, [1, 2, 3]) == [30, 11, 10]
-      assert Memory.read!(state.memory, stack_addr, 4) == <<30,0,0,0>>
+      assert Memory.read!(state.memory, stack_addr, 4) == <<30, 0, 0, 0>>
     end
   end
 end

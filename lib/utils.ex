@@ -115,13 +115,16 @@ defmodule PVM.Utils do
     case binary do
       <<_prefix::binary-size(n), rest::binary>> = _full ->
         case byte_size(rest) do
-          size when size >= count -> binary_part(rest, 0, count)
+          size when size >= count ->
+            binary_part(rest, 0, count)
+
           remaining ->
             padding_size = count - remaining
-            rest <> <<0::size(padding_size*8)>>
+            rest <> <<0::size(padding_size * 8)>>
         end
+
       _ ->
-        <<0::size(count*8)>>
+        <<0::size(count * 8)>>
     end
   end
 

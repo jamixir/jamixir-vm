@@ -52,8 +52,6 @@ defmodule PVM.Memory.Util do
     end)
   end
 
-
-
   def get_page_range(%{page_size: page_size} = memory, start_address, length) do
     start_page = div(start_address, page_size)
     end_address = wrap_address(memory, start_address + max(0, length - 1))
@@ -61,5 +59,4 @@ defmodule PVM.Memory.Util do
 
     {start_page, end_page}
   end
-
 end

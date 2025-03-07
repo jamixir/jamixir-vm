@@ -256,8 +256,6 @@
 #       assert fault_addr == min_page * page_size()
 #     end
 
-
-
 #     test "check_pages_access validates permissions correctly" do
 #       memory =
 #         %Memory{}
@@ -276,7 +274,6 @@
 #       # Fails on page 1
 #       refute Memory.check_pages_access?(memory, 0, 2, :write)
 #     end
-
 
 #   end
 

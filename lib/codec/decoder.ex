@@ -96,24 +96,24 @@ defmodule PVM.Decoder do
   defp add_trap_bit(bitmask, trap_position) do
     # Calculate which byte and bit position we need to modify
     byte_index = div(trap_position - 1, 8)
-    bit_position = 7 - rem(trap_position - 1, 8)  # 0-based position from MSB
+    # 0-based position from MSB
+    bit_position = 7 - rem(trap_position - 1, 8)
 
     bitmask_size = byte_size(bitmask)
 
     cond do
       # If the trap position is beyond the current bitmask size, extend it
       byte_index >= bitmask_size ->
-
         bytes_to_add = byte_index - bitmask_size + 1
         trap_byte = 1 <<< bit_position
-        <<bitmask::binary, 0::size(8*(bytes_to_add-1)), trap_byte>>
+        <<bitmask::binary, 0::size(8 * (bytes_to_add - 1)), trap_byte>>
 
       # The trap position is within the current bitmask
       true ->
         # Split the bitmask at the byte we need to modify
         <<prefix::binary-size(byte_index), byte, suffix::binary>> = bitmask
         # Set the bit at the correct position
-        modified_byte = byte ||| (1 <<< bit_position)
+        modified_byte = byte ||| 1 <<< bit_position
         # Reconstruct the bitmask
         <<prefix::binary, modified_byte, suffix::binary>>
     end

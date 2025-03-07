@@ -13,11 +13,11 @@ defmodule PVM.Types do
   @type context :: any()
 
   @type host_call_state :: %{
-    gas: non_neg_integer(),
-    registers: Registers.t(),
-    memory: Memory.t()
-  }
+          gas: non_neg_integer(),
+          registers: Registers.t(),
+          memory: Memory.t()
+        }
 
   @type host_fn :: (non_neg_integer(), host_call_state(), context() ->
-                    {exit_reason(), State.t(), context()} | fault_result())
+                      {exit_reason(), State.t(), context()} | fault_result())
 end

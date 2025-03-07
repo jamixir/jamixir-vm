@@ -2,6 +2,7 @@
 
 defmodule PVM.State do
   alias PVM.Registers
+
   @type t :: %__MODULE__{
           counter: non_neg_integer(),
           gas: non_neg_integer(),

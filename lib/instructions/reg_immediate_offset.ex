@@ -8,6 +8,7 @@ defmodule PVM.Instructions.RegImmediateOffset do
   def execute(:load_imm_jump, program, bitmask, start_set, state) do
     {r_a, v_x, v_y, raw_bytes} = get_params(program, bitmask, state.counter)
     Trace.instruction_start(state.counter, "load_imm_jump")
+
     Trace.instruction_data("load_imm_jump", [
       "bytes=#{inspect(raw_bytes)}",
       "decoded: reg=#{r_a}, imm=#{v_x}, target=#{v_y}",
@@ -15,6 +16,7 @@ defmodule PVM.Instructions.RegImmediateOffset do
     ])
 
     {exit_reason, counter} = Executor.branch(v_y, true, state.counter, start_set)
+
     {exit_reason,
      %{state | counter: counter, registers: Registers.set(state.registers, r_a, v_x)}}
   end
@@ -103,7 +105,6 @@ defmodule PVM.Instructions.RegImmediateOffset do
 
   # Formula (A.25) v0.6.1
   defp get_params(program, bitmask, counter) do
-
     first_byte = binary_part_safe(program, counter + 1, 1)
     r_a = mod(:binary.first(first_byte), 16) |> min(12)
     l_x = :binary.first(first_byte) |> div(16) |> mod(8) |> min(4)

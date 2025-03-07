@@ -27,7 +27,14 @@ defmodule Instructions.TwoRegistersTwoImmediatesTest do
       state = %State{registers: %Registers{r2: 5}}
 
       {exit_status, state} =
-        TwoRegistersTwoImmediates.execute(:load_imm_jump_ind, program, bitmask, jump_table, start_set, state)
+        TwoRegistersTwoImmediates.execute(
+          :load_imm_jump_ind,
+          program,
+          bitmask,
+          jump_table,
+          start_set,
+          state
+        )
 
       # Check immediate value was loaded
       assert state.registers.r1 == 42
@@ -48,7 +55,14 @@ defmodule Instructions.TwoRegistersTwoImmediatesTest do
       state = %State{registers: %Registers{r2: 2}}
 
       {exit_status, state} =
-        TwoRegistersTwoImmediates.execute(:load_imm_jump_ind, program, bitmask, jump_table, start_set, state)
+        TwoRegistersTwoImmediates.execute(
+          :load_imm_jump_ind,
+          program,
+          bitmask,
+          jump_table,
+          start_set,
+          state
+        )
 
       assert state.registers.r1 == 42
       assert exit_status == :panic

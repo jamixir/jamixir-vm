@@ -36,7 +36,10 @@ defmodule Instructions.OneImmediateTest do
       program = <<op(:fallthrough), op(:jump), 255>>
       bitmask = <<6::3>>
       start_set = basic_block_starts(program, bitmask)
-      {exit_reason, state_} = OneImmediate.execute(:jump, program, bitmask, start_set, %State{counter: 1})
+
+      {exit_reason, state_} =
+        OneImmediate.execute(:jump, program, bitmask, start_set, %State{counter: 1})
+
       assert exit_reason == :continue
       assert state_.counter == 0
     end

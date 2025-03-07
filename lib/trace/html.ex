@@ -91,28 +91,32 @@ defmodule PVM.Trace.HTML do
     <body>
     <button id="toggleBtn" onclick="toggleFormat()">Show Hex</button>
     """
+
     File.write!(@html_file, html, [:append, :utf8])
   end
 
   def write_line(class, message) do
     # First escape any < or > characters
-    escaped_message = String.replace(message, ~r/[<>]/, fn
-      "<" -> "&lt;"
-      ">" -> "&gt;"
-    end)
+    escaped_message =
+      String.replace(message, ~r/[<>]/, fn
+        "<" -> "&lt;"
+        ">" -> "&gt;"
+      end)
 
     # Format numbers in both hex and decimal
-    formatted_message = Regex.replace(~r/\b(\d+|0x[0-9a-fA-F]+)\b/, escaped_message, fn match ->
-      number = if String.starts_with?(match, "0x") do
-        {num, _} = Integer.parse(String.slice(match, 2..-1//1), 16)
-        num
-      else
-        String.to_integer(match)
-      end
+    formatted_message =
+      Regex.replace(~r/\b(\d+|0x[0-9a-fA-F]+)\b/, escaped_message, fn match ->
+        number =
+          if String.starts_with?(match, "0x") do
+            {num, _} = Integer.parse(String.slice(match, 2..-1//1), 16)
+            num
+          else
+            String.to_integer(match)
+          end
 
-      hex = "0x#{Integer.to_string(number, 16)}"
-      "<span class='dec-num'>#{number}</span><span class='hex-num'>#{hex}</span>"
-    end)
+        hex = "0x#{Integer.to_string(number, 16)}"
+        "<span class='dec-num'>#{number}</span><span class='hex-num'>#{hex}</span>"
+      end)
 
     html_line = "<pre class='#{class}'>#{formatted_message}</pre>\n"
     File.write!(@html_file, html_line, [:append, :utf8])

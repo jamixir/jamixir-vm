@@ -11,7 +11,9 @@ defmodule Instructions.TwoRegistersOneOffsetTest do
 
       state = %State{registers: %Registers{r1: 42, r2: 42}}
 
-      {exit_status, _} = TwoRegistersOneOffset.execute(:branch_eq, program, bitmask, start_set, state)
+      {exit_status, _} =
+        TwoRegistersOneOffset.execute(:branch_eq, program, bitmask, start_set, state)
+
       assert exit_status == :continue
     end
 
@@ -21,7 +23,9 @@ defmodule Instructions.TwoRegistersOneOffsetTest do
       start_set = basic_block_starts(program, bitmask)
       state = %State{registers: %Registers{r1: 42, r2: 43}}
 
-      {exit_status, _} = TwoRegistersOneOffset.execute(:branch_ne, program, bitmask, start_set, state)
+      {exit_status, _} =
+        TwoRegistersOneOffset.execute(:branch_ne, program, bitmask, start_set, state)
+
       assert exit_status == :continue
     end
 
@@ -31,7 +35,9 @@ defmodule Instructions.TwoRegistersOneOffsetTest do
       start_set = basic_block_starts(program, bitmask)
       state = %State{registers: %Registers{r1: 0x7F, r2: 0xFF}}
 
-      {exit_status, _} = TwoRegistersOneOffset.execute(:branch_lt_u, program, bitmask, start_set, state)
+      {exit_status, _} =
+        TwoRegistersOneOffset.execute(:branch_lt_u, program, bitmask, start_set, state)
+
       assert exit_status == :continue
     end
 
@@ -41,7 +47,9 @@ defmodule Instructions.TwoRegistersOneOffsetTest do
       start_set = basic_block_starts(program, bitmask)
       state = %State{registers: %Registers{r1: 0xFFFF_0000_0000_0001, r2: 0xFF00_0000_0000_00002}}
 
-      {exit_status, _} = TwoRegistersOneOffset.execute(:branch_lt_s, program, bitmask, start_set, state)
+      {exit_status, _} =
+        TwoRegistersOneOffset.execute(:branch_lt_s, program, bitmask, start_set, state)
+
       assert exit_status == :continue
     end
 
@@ -51,7 +59,9 @@ defmodule Instructions.TwoRegistersOneOffsetTest do
       start_set = basic_block_starts(program, bitmask)
       state = %State{registers: %Registers{r1: 0xFF, r2: 0x7F}}
 
-      {exit_status, _} = TwoRegistersOneOffset.execute(:branch_ge_u, program, bitmask, start_set, state)
+      {exit_status, _} =
+        TwoRegistersOneOffset.execute(:branch_ge_u, program, bitmask, start_set, state)
+
       assert exit_status == :continue
     end
 
@@ -61,7 +71,9 @@ defmodule Instructions.TwoRegistersOneOffsetTest do
       start_set = basic_block_starts(program, bitmask)
       state = %State{registers: %Registers{r1: 0xFF00_0000_0000_00002, r2: 0xFFFF_0000_0000_0001}}
 
-      {exit_status, _} = TwoRegistersOneOffset.execute(:branch_ge_s, program, bitmask, start_set, state)
+      {exit_status, _} =
+        TwoRegistersOneOffset.execute(:branch_ge_s, program, bitmask, start_set, state)
+
       assert exit_status == :continue
     end
   end
@@ -76,7 +88,9 @@ defmodule Instructions.TwoRegistersOneOffsetTest do
       start_set = basic_block_starts(program, bitmask)
       state = %State{registers: %Registers{r12: 42}}
 
-      {exit_status, _} = TwoRegistersOneOffset.execute(:branch_eq, program, bitmask, start_set, state)
+      {exit_status, _} =
+        TwoRegistersOneOffset.execute(:branch_eq, program, bitmask, start_set, state)
+
       assert exit_status == :continue
     end
 
@@ -86,7 +100,9 @@ defmodule Instructions.TwoRegistersOneOffsetTest do
       start_set = basic_block_starts(program, bitmask)
       state = %State{registers: %Registers{r1: 42, r2: 42}}
 
-      {exit_status, _} = TwoRegistersOneOffset.execute(:branch_eq, program, bitmask, start_set, state)
+      {exit_status, _} =
+        TwoRegistersOneOffset.execute(:branch_eq, program, bitmask, start_set, state)
+
       assert exit_status == :continue
     end
 
@@ -97,7 +113,9 @@ defmodule Instructions.TwoRegistersOneOffsetTest do
 
       state = %State{registers: %Registers{r1: 42, r2: 42}}
 
-      {exit_status, _} = TwoRegistersOneOffset.execute(:branch_eq, program, bitmask, start_set, state)
+      {exit_status, _} =
+        TwoRegistersOneOffset.execute(:branch_eq, program, bitmask, start_set, state)
+
       assert exit_status == :panic
     end
   end

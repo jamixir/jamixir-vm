@@ -11,8 +11,11 @@ defmodule PVM.Instructions.TwoRegistersTwoImmediates do
 
     jump_addr = mod(w_b + v_y, @two_to_32)
 
-    Trace.instruction(state.counter, "load_imm_jump_ind",
-      "load #{v_x} into w#{r_a} and jump to [w#{r_b}(#{w_b}) + #{v_y}] = #{jump_addr}")
+    Trace.instruction(
+      state.counter,
+      "load_imm_jump_ind",
+      "load #{v_x} into w#{r_a} and jump to [w#{r_b}(#{w_b}) + #{v_y}] = #{jump_addr}"
+    )
 
     {exit_status, counter} = Executor.djump(jump_addr, state.counter, jump_table, start_set)
 

@@ -25,12 +25,13 @@ defmodule PVM.Trace do
   def write_line(class, message) do
     if enabled?() do
       # Only add counter for instruction starts (PC lines)
-      {prefix, new_counter} = if String.contains?(message, "PC:") do
-        counter = Process.get(:trace_counter)
-        {"#{counter}. ", counter + 1}
-      else
-        {"", Process.get(:trace_counter)}
-      end
+      {prefix, new_counter} =
+        if String.contains?(message, "PC:") do
+          counter = Process.get(:trace_counter)
+          {"#{counter}. ", counter + 1}
+        else
+          {"", Process.get(:trace_counter)}
+        end
 
       line = prefix <> message
       File.write!(@log_file, line <> "\n", [:append])
