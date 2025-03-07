@@ -62,10 +62,10 @@ defmodule PVM.Instructions.ThreeRegisters do
     result =
       case instruction do
         :add_32 -> w_a + w_b
-        :sub_32 -> w_a + @two_32 - rem(w_b, @two_32)
+        :sub_32 -> w_a + @two_32 - mod(w_b, @two_32)
         :mul_32 -> w_a * w_b
       end
-      |> rem(@two_32)
+      |> mod(@two_32)
       |> to_64bit(4)
 
     trace_op(state, instruction, r_a, w_a, r_b, w_b, r_d, result, raw_bytes)
@@ -81,13 +81,13 @@ defmodule PVM.Instructions.ThreeRegisters do
     result =
       case instruction do
         :div_u_32 ->
-          if rem(w_b, @two_32) == 0,
+          if mod(w_b, @two_32) == 0,
             do: @max_64,
-            else: div(rem(w_a, @two_32), rem(w_b, @two_32)) |> to_64bit(4)
+            else: div(mod(w_a, @two_32), mod(w_b, @two_32)) |> to_64bit(4)
 
         :div_s_32 ->
-          a = u2i(rem(w_a, @two_32), 4)
-          b = u2i(rem(w_b, @two_32), 4)
+          a = u2i(mod(w_a, @two_32), 4)
+          b = u2i(mod(w_b, @two_32), 4)
 
           cond do
             b == 0 -> @max_64
@@ -96,13 +96,13 @@ defmodule PVM.Instructions.ThreeRegisters do
           end
 
         :rem_u_32 ->
-          if rem(w_b, @two_32) == 0,
-            do: rem(w_a, @two_32) |> to_64bit(4),
-            else: rem(rem(w_a, @two_32), rem(w_b, @two_32)) |> to_64bit(4)
+          if mod(w_b, @two_32) == 0,
+            do: mod(w_a, @two_32) |> to_64bit(4),
+            else: mod(mod(w_a, @two_32), mod(w_b, @two_32)) |> to_64bit(4)
 
         :rem_s_32 ->
-          a = u2i(rem(w_a, @two_32), 4)
-          b = u2i(rem(w_b, @two_32), 4)
+          a = u2i(mod(w_a, @two_32), 4)
+          b = u2i(mod(w_b, @two_32), 4)
 
           if b == -1 and a == -1 * (1 <<< 31), do: 0, else: i2u(srem(a, b), 8)
       end
@@ -116,13 +116,13 @@ defmodule PVM.Instructions.ThreeRegisters do
   def execute(instruction, program, state)
       when instruction in [:shlo_l_32, :shlo_r_32, :shar_r_32] do
     {w_a, w_b, r_d, r_a, r_b, raw_bytes} = get_params(program, state)
-    shift = rem(w_b, 32)
+    shift = mod(w_b, 32)
 
     result =
       case instruction do
-        :shlo_l_32 -> rem(w_a * (1 <<< shift), @two_32) |> to_64bit(4)
-        :shlo_r_32 -> div(rem(w_a, @two_32), 1 <<< shift) |> to_64bit(4)
-        :shar_r_32 -> w_a |> rem(@two_32) |> to_64bit(4) |> div(1 <<< shift) |> i2u(8)
+        :shlo_l_32 -> mod(w_a * (1 <<< shift), @two_32) |> to_64bit(4)
+        :shlo_r_32 -> mod(w_a, @two_32) >>> shift |> to_64bit(4)
+        :shar_r_32 -> mod(w_a, @two_32) |> u2i(4) |> Bitwise.bsr(shift) |> i2u(8)
       end
 
     trace_op(state, instruction, r_a, w_a, r_b, w_b, r_d, result, raw_bytes)
@@ -141,7 +141,7 @@ defmodule PVM.Instructions.ThreeRegisters do
         :sub_64 -> w_a - w_b + @two_64
         :mul_64 -> w_a * w_b
       end
-      |> rem(@two_64)
+      |> mod(@two_64)
 
     trace_op(state, instruction, r_a, w_a, r_b, w_b, r_d, result, raw_bytes)
     state = %{state | registers: Registers.set(state.registers, r_d, result)}
@@ -156,7 +156,7 @@ defmodule PVM.Instructions.ThreeRegisters do
     result =
       case instruction do
         :div_u_64 ->
-          if rem(w_b, @two_64) == 0,
+          if mod(w_b, @two_64) == 0,
             do: @max_64,
             else: div(w_a, w_b)
 
@@ -168,13 +168,12 @@ defmodule PVM.Instructions.ThreeRegisters do
           end
 
         :rem_u_64 ->
-          if w_b == 0, do: w_a
-          rem(w_a, w_b)
+          if w_b == 0, do: w_a, else: mod(w_a, w_b)
 
         :rem_s_64 ->
           if u2i(w_b, 8) == -1 and u2i(w_a, 8) == -1 * (1 <<< 63),
             do: 0,
-            else: (srem(u2i(w_a, 8), u2i(w_b, 8))) |> i2u(8)
+            else: srem(u2i(w_a, 8), u2i(w_b, 8)) |> i2u(8)
       end
 
     trace_op(state, instruction, r_a, w_a, r_b, w_b, r_d, result, raw_bytes)
@@ -186,13 +185,13 @@ defmodule PVM.Instructions.ThreeRegisters do
   def execute(instruction, program, state)
       when instruction in [:shlo_l_64, :shlo_r_64, :shar_r_64] do
     {w_a, w_b, r_d, r_a, r_b, raw_bytes} = get_params(program, state)
-    shift = rem(w_b, 64)
+    shift = mod(w_b, 64)
 
     result =
       case instruction do
-        :shlo_l_64 -> rem(w_a * (1 <<< shift), @two_64)
-        :shlo_r_64 -> div(w_a, 1 <<< shift)
-        :shar_r_64 -> div(u2i(w_a, 8), 1 <<< shift) |> i2u(8)
+        :shlo_l_64 -> mod(w_a * (1 <<< shift), @two_64)
+        :shlo_r_64 -> w_a >>> shift
+        :shar_r_64 -> u2i(w_a, 8) >>> shift |> i2u(8)
       end
 
     trace_op(state, instruction, r_a, w_a, r_b, w_b, r_d, result, raw_bytes)
@@ -247,13 +246,13 @@ defmodule PVM.Instructions.ThreeRegisters do
     result =
       case instruction do
         :mul_upper_s_s ->
-          (u2i(w_a, 8) * u2i(w_b, 8)) |> div(@two_64) |> i2u(8)
+          (u2i(w_a, 8) * u2i(w_b, 8)) |> Bitwise.bsr(64) |> i2u(8)
 
         :mul_upper_u_u ->
-          div(w_a * w_b, @two_64)
+          (w_a * w_b) >>> 64
 
         :mul_upper_s_u ->
-          (u2i(w_a, 8) * w_b) |> div(@two_64) |> i2u(8)
+          (u2i(w_a, 8) * w_b) |> Bitwise.bsr(64) |> i2u(8)
       end
 
     trace_op(state, instruction, r_a, w_a, r_b, w_b, r_d, result, raw_bytes)
@@ -343,8 +342,8 @@ defmodule PVM.Instructions.ThreeRegisters do
     byte2 = binary_part_safe(program, state.counter + 2, 1)
     raw_bytes = byte1 <> byte2
 
-    r_a = min(12, rem(:binary.first(byte1), 16))
-    r_b = min(12, div(:binary.first(byte1), 16))
+    r_a = min(12, mod(:binary.first(byte1), 16))
+    r_b = min(12, :binary.first(byte1) >>> 4)
     r_d = min(12, :binary.first(byte2))
 
     w_a = Registers.get(state.registers, r_a)
