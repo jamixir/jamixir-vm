@@ -5,11 +5,13 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
   import PVM.Memory.Util
   # Section (A.5.10) v0.6.1
 
-  # Add this helper function at the top of the module
   defp format_bytes(bytes) do
     bytes_list = :binary.bin_to_list(bytes)
     "<<#{Enum.join(bytes_list, ", ")}>>"
   end
+
+  @two_32 0x1_0000_0000
+  @two_64 0x1_0000_0000_0000_0000
 
   # Store instructions
   def execute(instruction, program, bitmask, state)
@@ -26,9 +28,9 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
         :store_ind_u64 -> {8, 64}
       end
 
-    value = if instruction == :store_ind_u64, do: w_a, else: rem(w_a, 1 <<< bits)
+    value = if instruction == :store_ind_u64, do: w_a, else: mod(w_a, 1 <<< bits)
     addr = w_b + v_x
-    bytes = e_le(value, size)
+    bytes = <<value::(size * 8)-little>>
     bytes_string = format_bytes(bytes)
 
     Trace.instruction(state.counter, "#{instruction}",
@@ -110,9 +112,9 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
 
     result =
       case instruction do
-        :add_imm_32 -> rem(w_b + v_x, 1 <<< 32)
-        :mul_imm_32 -> rem(w_b * v_x, 1 <<< 32)
-        :neg_add_imm_32 -> rem(v_x + (1 <<< 32) - w_b, 1 <<< 32)
+        :add_imm_32 -> mod(w_b + v_x, @two_32)
+        :mul_imm_32 -> mod(w_b * v_x, @two_32)
+        :neg_add_imm_32 -> Integer.mod(v_x + (@two_32) - w_b, @two_32)
       end
       |> to_64bit(4)
 
@@ -201,31 +203,31 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     result =
       case instruction do
         :shlo_l_imm_32 ->
-          shift = rem(v_x, 32)
-          rem(w_b * (1 <<< shift), 1 <<< 32) |> to_64bit(4)
+          shift = mod(v_x, 32)
+          mod(w_b * (1 <<< shift), @two_32) |> to_64bit(4)
 
         :shlo_r_imm_32 ->
-          shift = rem(v_x, 32)
-          div(rem(w_b, 1 <<< 32), 1 <<< shift) |> to_64bit(4)
+          shift = mod(v_x, 32)
+          (mod(w_b, @two_32) >>> shift) |> to_64bit(4)
 
         :shar_r_imm_32 ->
-          shift = rem(v_x, 32)
-          u2i(rem(w_b, 1 <<< 32), 4) |> div(1 <<< shift) |> i2u(8)
+          shift = mod(v_x, 32)
+          u2i(mod(w_b, @two_32), 4) |> Bitwise.bsr(shift) |> i2u(8)
 
         :shlo_l_imm_alt_32 ->
-          shift = rem(w_b, 32)
-          rem(v_x * (1 <<< shift), 1 <<< 32) |> to_64bit(4)
+          shift = mod(w_b, 32)
+          mod(v_x * (1 <<< shift), @two_32) |> to_64bit(4)
 
         :shlo_r_imm_alt_32 ->
-          shift = rem(w_b, 32)
-          div(v_x, 1 <<< shift) |> to_64bit(4)
+          shift = mod(w_b, 32)
+          (mod(v_x, @two_32) >>> shift) |> to_64bit(4)
 
         :shar_r_imm_alt_32 ->
-          shift = rem(w_b, 32)
-          div(u2i(rem(v_x, 1 <<< 32), 4), 1 <<< shift) |> i2u(8)
+          shift = mod(w_b, 32)
+          u2i(mod(v_x, @two_32), 4) |> Bitwise.bsr(shift) |> i2u(8)
       end
 
-    shift = rem(shift_amt, 32)
+    shift = mod(shift_amt, 32)
     Trace.instruction(state.counter, "#{instruction}", "bytes=#{format_bytes(raw_bytes)}\nw#{r_a} = #{shift_val} #{op_symbol} #{shift} = #{result}")
     state = %{state | registers: Registers.set(state.registers, r_a, result)}
     {:continue, state}
@@ -268,9 +270,9 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
 
     result =
       case instruction do
-        :add_imm_64 -> rem(w_b + v_x, 1 <<< 64)
-        :mul_imm_64 -> rem(w_b * v_x, 1 <<< 64)
-        :neg_add_imm_64 -> rem(v_x + (1 <<< 64) - w_b, 1 <<< 64)
+        :add_imm_64 -> mod(w_b + v_x, @two_64)
+        :mul_imm_64 -> mod(w_b * v_x, @two_64)
+        :neg_add_imm_64 -> mod(v_x + (@two_64) - w_b, @two_64)
       end
 
     expr = if instruction == :neg_add_imm_64, do: "#{v_x} - w#{r_b}(#{w_b})", else: "w#{r_b}(#{w_b}) #{op_symbol} #{v_x}"
@@ -307,31 +309,31 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     result =
       case instruction do
         :shlo_l_imm_64 ->
-          shift = rem(v_x, 64)
-          rem(w_b * (1 <<< shift), 1 <<< 64)
+          shift = mod(v_x, 64)
+          mod(w_b * (1 <<< shift), @two_64)
 
         :shlo_r_imm_64 ->
-          shift = rem(v_x, 64)
-          div(w_b, 1 <<< shift)
+          shift = mod(v_x, 64)
+          w_b >>> shift
 
         :shar_r_imm_64 ->
-          shift = rem(v_x, 64)
-          div(u2i(w_b, 8), 1 <<< shift) |> i2u(8)
+          shift = mod(v_x, 64)
+          (u2i(w_b, 8) >>> shift) |> i2u(8)
 
         :shlo_l_imm_alt_64 ->
-          shift = rem(w_b, 64)
-          rem(v_x * (1 <<< shift), 1 <<< 64)
+          shift = mod(w_b, 64)
+          mod(v_x * (1 <<< shift), @two_64)
 
         :shlo_r_imm_alt_64 ->
-          shift = rem(w_b, 64)
-          div(v_x, 1 <<< shift)
+          shift = mod(w_b, 64)
+          v_x >>> shift
 
         :shar_r_imm_alt_64 ->
-          shift = rem(w_b, 64)
-          div(u2i(v_x, 8), 1 <<< shift) |> i2u(8)
+          shift = mod(w_b, 64)
+          (u2i(v_x, 8) >>> shift) |> i2u(8)
       end
 
-    shift = rem(shift_amt, 64)
+    shift = mod(shift_amt, 64)
     Trace.instruction(state.counter, "#{instruction}", "bytes=#{format_bytes(raw_bytes)}\nw#{r_a} = #{shift_val} #{op_symbol} #{shift} = #{result}")
     state = %{state | registers: Registers.set(state.registers, r_a, result)}
     {:continue, state}
@@ -341,7 +343,8 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
   def execute(:rot_r_64_imm, program, bitmask, state) do
     {r_a, r_b, v_x, raw_bytes} = get_params(program, bitmask, state.counter)
     number = Registers.get(state.registers, r_b)
-    shift = rem(v_x, 64)
+
+    shift = mod(v_x, 64)
     result = rotate(number, shift, 64, :right)
 
     Trace.instruction(state.counter, "rot_r_64_imm", "bytes=#{format_bytes(raw_bytes)}\nw#{r_a} = w#{r_b}(#{number}) ror #{shift} = #{result}")
@@ -352,7 +355,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
   def execute(:rot_r_64_imm_alt, program, bitmask, state) do
     {r_a, r_b, v_x, raw_bytes} = get_params(program, bitmask, state.counter)
     w_b = Registers.get(state.registers, r_b)
-    shift = rem(w_b, 64)
+    shift = mod(w_b, 64)
     result = rotate(v_x, shift, 64, :right)
 
     Trace.instruction(state.counter, "rot_r_64_imm_alt", "bytes=#{format_bytes(raw_bytes)}\nw#{r_a} = #{v_x} ror #{shift} = #{result}")
@@ -363,7 +366,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
   def execute(:rot_r_32_imm, program, bitmask, state) do
     {r_a, r_b, v_x, raw_bytes} = get_params(program, bitmask, state.counter)
     w_b = Registers.get(state.registers, r_b)
-    shift = rem(v_x, 32)
+    shift = mod(v_x, 32)
     result = rotate(w_b, shift, 32, :right) |> Utils.extend_to_64bit(4)
 
     Trace.instruction(state.counter, "rot_r_32_imm", "bytes=#{format_bytes(raw_bytes)}\nw#{r_a} = w#{r_b}(#{w_b}) ror #{shift} = #{result}")
@@ -374,7 +377,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
   def execute(:rot_r_32_imm_alt, program, bitmask, state) do
     {r_a, r_b, v_x, raw_bytes} = get_params(program, bitmask, state.counter)
     w_b = Registers.get(state.registers, r_b)
-    shift = rem(w_b, 32)
+    shift = mod(w_b, 32)
     result = rotate(v_x, shift, 32, :right) |> Utils.extend_to_64bit(4)
 
     Trace.instruction(state.counter, "rot_r_32_imm_alt", "bytes=#{format_bytes(raw_bytes)}\nw#{r_a} = #{v_x} ror #{shift} = #{result}")
@@ -386,8 +389,8 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
   defp get_params(program, bitmask, counter) do
 
     byte1 = binary_part_safe(program, counter + 1, 1)
-    r_a = min(12, rem(:binary.first(byte1), 16))
-    r_b = min(12, div(:binary.first(byte1), 16))
+    r_a = min(12, mod(:binary.first(byte1), 16))
+    r_b = min(12, :binary.first(byte1) >>> 4)
 
     l_x = min(4, max(0, skip(counter, bitmask) - 1))
     imm_bytes = binary_part_safe(program, counter + 2, l_x)
