@@ -2,7 +2,7 @@ defmodule PVM.Utils.ProgramUtilsTest do
   use ExUnit.Case
   use PVM.Instructions
   alias PVM.Utils.ProgramUtils
-  alias PVM.{Registers, State, VM, InitProgram}
+  alias PVM.{Registers, State, VM, InitProgram, Memory}
 
   setup_all do
     memory = InitProgram.construct_memory("code", "data", "args", 1, 1)
@@ -35,10 +35,11 @@ defmodule PVM.Utils.ProgramUtilsTest do
         op(:fallthrough),
         op(:add_imm_32), 0x22, 1,       # i++
         op(:jump), 238,                  # loop
-        op(:store_u32), 1, stack_addr::little-size(32)            # store result
+        op(:store_u32), 1, stack_addr::little-size(32),            # store result
+        op(:fallthrough),
       >>
 
-      base_bitmask = <<146, 76, 72, 153, 32::size(7)>>
+      base_bitmask = <<146, 76, 72, 153, 65>>
 
       {program, bitmask} = ProgramUtils.append_halt(base_program, base_bitmask)
       p = PVM.Encoder.encode_program(program, bitmask, [], 1)
@@ -48,6 +49,7 @@ defmodule PVM.Utils.ProgramUtilsTest do
       assert exit_reason == :halt
       assert state.counter == 0
       assert Registers.get(state.registers, [1, 2, 3]) == [30, 11, 10]
+      assert Memory.read!(state.memory, stack_addr, 4) == <<30,0,0,0>>
     end
   end
 end
