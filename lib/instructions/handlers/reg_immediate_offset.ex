@@ -105,8 +105,8 @@ defmodule PVM.Instructions.RegImmediateOffset do
   defp get_params(program, bitmask, counter) do
 
     first_byte = binary_part_safe(program, counter + 1, 1)
-    r_a = rem(:binary.first(first_byte), 16) |> min(12)
-    l_x = :binary.first(first_byte) |> div(16) |> rem(8) |> min(4)
+    r_a = mod(:binary.first(first_byte), 16) |> min(12)
+    l_x = :binary.first(first_byte) |> div(16) |> mod(8) |> min(4)
     l_y = (skip(counter, bitmask) - l_x - 1) |> max(0) |> min(4)
 
     imm_bytes = binary_part_safe(program, counter + 2, l_x)

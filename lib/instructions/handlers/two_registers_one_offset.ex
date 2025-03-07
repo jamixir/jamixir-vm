@@ -45,13 +45,13 @@ defmodule PVM.Instructions.TwoRegistersOneOffset do
     r_a =
       binary_part_safe(program, state.counter + 1, 1)
       |> :binary.first()
-      |> rem(16)
+      |> mod(16)
       |> min(12)
 
     r_b =
       binary_part_safe(program, state.counter + 1, 1)
       |> :binary.first()
-      |> div(16)
+      |> Bitwise.bsr(4)
       |> min(12)
 
     l_x = min(4, max(0, skip(state.counter, bitmask) - 1))
