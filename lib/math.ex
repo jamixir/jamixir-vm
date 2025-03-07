@@ -35,27 +35,6 @@ defmodule PVM.Math do
     |> Enum.reduce(0, fn {bit, i}, acc -> acc + bit * (1 <<< i) end)
   end
 
-  # Formula (A.13) v0.6.1
-  # Converts an integer to its binary (big-endian) as list
-  # Example: int_to_bits_be(5, 1) returns [0,0,0,0,0,1,0,1]
-  @spec int_to_bits_be(non_neg_integer(), non_neg_integer()) :: list(0 | 1)
-  def int_to_bits_be(value, num_bytes) do
-    for i <- (8 * num_bytes - 1)..0, do: rem(value >>> i, 2)
-  end
-
-  # Formula (A.14) v0.6.1
-  # Converts a list of bits in big-endian order back to an integer
-  # Example: bits_to_int_be([1,0,1,0,0,0,0,0]) returns 5
-  @spec bits_to_int_be(list(0 | 1)) :: non_neg_integer()
-  def bits_to_int_be(bits) do
-    bits_length = length(bits)
-
-    0..(bits_length - 1)
-    |> Enum.reduce(0, fn i, acc ->
-      acc + Enum.at(bits, bits_length - 1 - i) * (1 <<< i)
-    end)
-  end
-
   # Formula (A.32) v0.6.2
   @spec signed_remainder(integer(), integer()) :: integer()
   def signed_remainder(a, 0), do: a
@@ -84,8 +63,6 @@ defmodule PVM.Math do
       def i2u(value, num_bytes), do: PVM.Math.signed_to_unsigned(value, num_bytes)
       def u2b(value, num_bytes), do: PVM.Math.int_to_bits(value, num_bytes)
       def b2u(bits), do: PVM.Math.bits_to_int(bits)
-      def u2b_be(value, num_bytes), do: PVM.Math.int_to_bits_be(value, num_bytes)
-      def b2u_be(bits), do: PVM.Math.bits_to_int_be(bits)
       def srem(a, b), do: PVM.Math.signed_remainder(a, b)
       def mod(a, b), do: PVM.Math.mod(a, b)
     end
