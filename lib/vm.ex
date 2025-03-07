@@ -30,11 +30,9 @@ defmodule PVM.VM do
           do_execute(program, bitmask, jump_table, start_set, state_)
 
         reason when reason in [:panic, :halt] ->
-          IO.puts("########################")
           {reason, %{state_ | counter: 0}}
 
         _ ->
-          IO.puts("########################")
           {exit_reason, state_}
       end
     end
