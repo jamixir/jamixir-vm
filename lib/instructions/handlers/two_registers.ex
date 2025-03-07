@@ -2,6 +2,7 @@ defmodule PVM.Instructions.TwoRegisters do
   alias PVM.{Registers, Memory, Trace}
   use PVM.Math
   use PVM.{Encoder, Decoder, Utils}
+  import Bitwise, only: [&&&: 2, bsr: 2]
   # Section (A.5.9) v0.6.1
 
   def execute(:move_reg, program, state) do
@@ -51,7 +52,7 @@ defmodule PVM.Instructions.TwoRegisters do
   def execute(:count_set_bits_64, program, state) do
     {r_d, r_a} = get_params(program, state.counter)
     w_a = Registers.get(state.registers, r_a)
-    bits_sum = w_a |> u2b(8) |> Enum.sum()
+    bits_sum = w_a |> Integer.digits(2) |> Enum.sum()
 
     Trace.instruction(
       state.counter,
@@ -65,7 +66,7 @@ defmodule PVM.Instructions.TwoRegisters do
   def execute(:count_set_bits_32, program, state) do
     {r_d, r_a} = get_params(program, state.counter)
     w_a = Registers.get(state.registers, r_a)
-    bits_sum = w_a |> rem(0x1_0000_0000) |> u2b(4) |> Enum.sum()
+    bits_sum = (w_a &&& 0xFFFFFFFF) |> Integer.digits(2) |> Enum.sum()
 
     Trace.instruction(
       state.counter,
@@ -80,11 +81,8 @@ defmodule PVM.Instructions.TwoRegisters do
     {r_d, r_a} = get_params(program, state.counter)
     w_a = Registers.get(state.registers, r_a)
 
-    leading_zero_bits =
-      w_a
-      |> u2b(8)
-      |> Enum.with_index()
-      |> Enum.find_index(fn {bit, _index} -> bit == 1 end)
+    binary_digits = Integer.digits(w_a, 2)
+    leading_zero_bits = if w_a == 0, do: 64, else: 64 - length(binary_digits)
 
     Trace.instruction(
       state.counter,
@@ -99,12 +97,7 @@ defmodule PVM.Instructions.TwoRegisters do
     {r_d, r_a} = get_params(program, state.counter)
     w_a = Registers.get(state.registers, r_a)
 
-    leading_zero_bits =
-      w_a
-      |> rem(0x1_0000_0000)
-      |> u2b(4)
-      |> Enum.with_index()
-      |> Enum.find_index(fn {bit, _index} -> bit == 1 end)
+    leading_zero_bits = if w_a == 0, do: 32, else: 32 - length(Integer.digits(w_a, 2))
 
     Trace.instruction(
       state.counter,
@@ -119,13 +112,7 @@ defmodule PVM.Instructions.TwoRegisters do
     {r_d, r_a} = get_params(program, state.counter)
     w_a = Registers.get(state.registers, r_a)
 
-    bits = w_a |> u2b(8)
-    len = length(bits)
-
-    trailing_zero_bits =
-      Enum.find_index(0..(len - 1), fn i ->
-        Enum.at(bits, len - 1 - i) == 1
-      end)
+    trailing_zero_bits = count_trailing_zeros(w_a, 64)
 
     Trace.instruction(
       state.counter,
@@ -138,12 +125,9 @@ defmodule PVM.Instructions.TwoRegisters do
 
   def execute(:trailing_zero_bits_32, program, state) do
     {r_d, r_a} = get_params(program, state.counter)
-    w_a = Registers.get(state.registers, r_a)
-    bits = w_a |> rem(0x1_0000_0000) |> u2b(4)
-    len = length(bits)
+    w_a = Registers.get(state.registers, r_a) &&& 0xFFFFFFFF
 
-    trailing_zero_bits =
-      Enum.find_index(0..(len - 1), fn i -> Enum.at(bits, len - 1 - i) == 1 end)
+    trailing_zero_bits = count_trailing_zeros(w_a, 32)
 
     Trace.instruction(
       state.counter,
@@ -157,7 +141,7 @@ defmodule PVM.Instructions.TwoRegisters do
   def execute(:sign_extend_8, program, state) do
     {r_d, r_a} = get_params(program, state.counter)
     w_a = Registers.get(state.registers, r_a)
-    sign_extended = w_a |> rem(0x100) |> u2i(1) |> i2u(8)
+    sign_extended = w_a |> mod(0x100) |> u2i(1) |> i2u(8)
 
     Trace.instruction(
       state.counter,
@@ -171,7 +155,7 @@ defmodule PVM.Instructions.TwoRegisters do
   def execute(:sign_extend_16, program, state) do
     {r_d, r_a} = get_params(program, state.counter)
     w_a = Registers.get(state.registers, r_a)
-    sign_extended = w_a |> rem(0x10000) |> u2i(2) |> i2u(8)
+    sign_extended = w_a |> mod(0x10000) |> u2i(2) |> i2u(8)
 
     Trace.instruction(
       state.counter,
@@ -185,7 +169,7 @@ defmodule PVM.Instructions.TwoRegisters do
   def execute(:zero_extend_16, program, state) do
     {r_d, r_a} = get_params(program, state.counter)
     w_a = Registers.get(state.registers, r_a)
-    zero_extended = w_a |> rem(0x10000)
+    zero_extended = w_a |> mod(0x10000)
 
     Trace.instruction(
       state.counter,
@@ -219,6 +203,9 @@ defmodule PVM.Instructions.TwoRegisters do
   # Formula (A.26) v0.6.1
   defp get_params(program, counter) do
     byte = binary_part_safe(program, counter + 1, 1) |> :binary.first()
-    {rem(byte, 16) |> min(12), div(byte, 16) |> min(12)}
+    {mod(byte, 16) |> min(12), bsr(byte, 4) |> min(12)}
   end
+
+  def count_trailing_zeros(0, bits), do: bits
+  def count_trailing_zeros(n, _bits), do: trunc(:math.log2(n &&& -n))
 end
