@@ -76,44 +76,46 @@ defmodule PVM.Decoder do
 
     <<program::binary-size(prog_len), bitmask::bitstring>> = rest
 
-    bitmask = reverse_bitmask(bitmask)
+    bitmask = reverse_bitmask(bitmask, byte_size(program))
 
     {program, bitmask, jump_table}
   end
 
-  def reverse_bitmask(bitmask) do
-    bytes = byte_size(bitmask)
-    bits = bit_size(bitmask)
-    case bytes do
-      0 -> bitmask
-      1 ->
-        # Single byte - check if it's full or partial
-        case bits do
-          8 ->
-            <<n>> = bitmask
-            <<reverse_bits(n, 8)::bitstring>>
-          bits ->
-            <<n>> = <<0::size(8 - bits), bitmask::bits>>
-            <<reversed::bits>> = reverse_bits(n, 8)
-            <<reversed::bitstring-size(bits)>>
-        end
+  def reverse_bitmask(bitmask, program_length \\ nil) do
+    # Simply reverse each byte in the bitmask
+    reversed = reverse_each_byte(bitmask)
 
-      n ->
-        # Multiple bytes - check if last byte is full
-        case bits do
-          total_bits when rem(total_bits, 8) == 0 ->
-            # All full bytes - simple case
-            reverse_each_byte(bitmask)
+    if program_length do
+      add_trap_bit(reversed, program_length + 1)
+    else
+      reversed
+    end
+  end
 
-          _total_bits ->
-            # Last byte is partial
-            <<all_but_last::binary-size(n - 1), last::bitstring>> = bitmask
-            reversed_full = reverse_each_byte(all_but_last)
-            bits_in_last = bit_size(last)
-            <<n>> = <<0::size(8 - bits_in_last), last::bits>>
-            <<reversed_last::bits>> = reverse_bits(n, 8)
-            <<reversed_full::binary, reversed_last::bitstring-size(bits_in_last)>>
-        end
+  # Add a trap bit at the specified position
+  defp add_trap_bit(bitmask, trap_position) do
+    # Calculate which byte and bit position we need to modify
+    byte_index = div(trap_position - 1, 8)
+    bit_position = 7 - rem(trap_position - 1, 8)  # 0-based position from MSB
+
+    bitmask_size = byte_size(bitmask)
+
+    cond do
+      # If the trap position is beyond the current bitmask size, extend it
+      byte_index >= bitmask_size ->
+
+        bytes_to_add = byte_index - bitmask_size + 1
+        trap_byte = 1 <<< bit_position
+        <<bitmask::binary, 0::size(8*(bytes_to_add-1)), trap_byte>>
+
+      # The trap position is within the current bitmask
+      true ->
+        # Split the bitmask at the byte we need to modify
+        <<prefix::binary-size(byte_index), byte, suffix::binary>> = bitmask
+        # Set the bit at the correct position
+        modified_byte = byte ||| (1 <<< bit_position)
+        # Reconstruct the bitmask
+        <<prefix::binary, modified_byte, suffix::binary>>
     end
   end
 
