@@ -21,7 +21,7 @@ defmodule VMTest do
       # fallthrough (17)
       # trap (0)
       program = <<op(:fallthrough), op(:fallthrough), op(:trap)>>
-      bitmask = <<7::3>>
+      bitmask = <<224>>
 
       p = create_program(program, bitmask)
       {exit_reason, state_} = VM.execute(p, %State{})
@@ -69,7 +69,7 @@ defmodule VMTest do
 
       # Mark instruction starts
       # 10010010_00000110_00000001_1001
-      bitmask = <<146, 6, 1, 9::4>>
+      bitmask = <<146, 6, 1, 144>>
       jump_table = [2, 4, 6, 8, 24, 1]
 
       p = create_program(program, bitmask, jump_table)
@@ -110,7 +110,7 @@ defmodule VMTest do
       >>
 
       # 10000001_00000100_00010000_0
-      bitmask = <<129, 4, 16, 0::1>>
+      bitmask = <<129, 4, 16, 0>>
 
       p = create_program(program, bitmask)
       {exit_reason, state_} = VM.execute(p, state)
@@ -146,7 +146,7 @@ defmodule VMTest do
         op(:fallthrough)
       >>
 
-      bitmask = <<145, 192, 1::1>>
+      bitmask = <<145, 192, 1>>
 
       p = create_program(program, bitmask)
       {exit_reason, state_} = VM.execute(p, state)
@@ -156,7 +156,7 @@ defmodule VMTest do
       assert state_.counter == 0
       assert Registers.get(state_.registers, 1) == 42
       # Verify branch was taken
-      assert Memory.read(state_.memory, stack_addr , 1) == {:ok, <<99>>}
+      assert Memory.read(state_.memory, stack_addr, 1) == {:ok, <<99>>}
     end
 
     test "not equel - no jump", %{state: state, stack_addr: stack_addr} do
@@ -181,7 +181,7 @@ defmodule VMTest do
         # load_imm
         145,
         192,
-        1::1
+        1
       >>
 
       p = create_program(program, bitmask)
@@ -215,7 +215,7 @@ defmodule VMTest do
         op(:fallthrough)
       >>
 
-      bitmask = <<142, 1::6>>
+      bitmask = <<142, 1>>
 
       p = create_program(program, bitmask)
       {exit_reason, state_} = VM.execute(p, state)
@@ -255,7 +255,7 @@ defmodule VMTest do
       bitmask = <<
         145,
         192,
-        1::1
+        1
       >>
 
       p = create_program(program, bitmask)
@@ -340,60 +340,9 @@ defmodule VMTest do
         stack_addr::little-size(32)
       >>
 
-      bitmask = <<
-        # load_imm sum (0)
-        1::1,
-        0::1,
-        0::1,
-        # load_imm i (3)
-        1::1,
-        0::1,
-        0::1,
-        # load_imm end (6)
-        1::1,
-        0::1,
-        0::1,
-        # load_imm divisor (9)
-        1::1,
-        0::1,
-        0::1,
-        # fallthrough (12)
-        1::1,
-        # branch_gt_u_imm (13*)
-        1::1,
-        0::1,
-        0::1,
-        0::1,
-        # rem_u_32 (17*)
-        1::1,
-        0::1,
-        0::1,
-        # branch_ne_imm (20::1)
-        1::1,
-        0::1,
-        0::1,
-        0::1,
-        # add_32 (24*)
-        1::1,
-        0::1,
-        0::1,
-        # fallthrough (27)
-        1::1,
-        # add_imm_32 (28*)
-        1::1,
-        0::1,
-        0::1,
-        # jump (31)
-        1::1,
-        0::1,
-        # store_u32 (33*)
-        1::1,
-        0::1,
-        0::1,
-        0::1,
-        0::1,
-        0::1
-      >>
+      # 10010010_01001100_01001000_10011001_0100_0000
+      # = 146, 76, 72, 153, 64
+      bitmask = <<146, 76, 72, 153, 64>>
 
       p = create_program(program, bitmask)
       {exit_reason, state_} = VM.execute(p, state)
@@ -413,7 +362,7 @@ defmodule VMTest do
       # Program:
       # store_imm_u8 addr=0x100FF, value=42
       program = <<op(:store_imm_u8), 3, 0xFF, 0, 1, 42>>
-      bitmask = <<32::6>>
+      bitmask = <<128>>
 
       p = create_program(program, bitmask)
 
@@ -458,7 +407,7 @@ defmodule VMTest do
       >>
 
       # 10000010_0010000
-      bitmask = <<130, 16::7>>
+      bitmask = <<130, 32>>
 
       p = create_program(program, bitmask)
       {exit_reason, state_} = VM.execute(p, state)
@@ -492,7 +441,7 @@ defmodule VMTest do
         op(:fallthrough)
       >>
 
-      bitmask = <<146, 3::3>>
+      bitmask = <<146, 96>>
 
       p = create_program(program, bitmask)
       {exit_reason, state_} = VM.execute(p, %State{})
@@ -523,7 +472,7 @@ defmodule VMTest do
         op(:fallthrough)
       >>
 
-      bitmask = <<144, 3::2>>
+      bitmask = <<144, 192>>
       jump_table = [2, 4, 10]
 
       p = create_program(program, bitmask, jump_table)
