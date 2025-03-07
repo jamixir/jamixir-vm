@@ -2,13 +2,14 @@ defmodule PVM.Instructions.TwoRegistersTwoImmediates do
   use PVM.Utils
   alias PVM.{Instructions.Executor, Registers, Trace}
   use PVM.Math
-  import Bitwise
+
+  @two_to_32 0x1_0000_0000
 
   def execute(:load_imm_jump_ind, program, bitmask, jump_table, start_set, state) do
     {r_a, r_b, v_x, v_y} = get_params(program, bitmask, state.counter)
     w_b = Registers.get(state.registers, r_b)
 
-    jump_addr = rem(w_b + v_y, 1 <<< 32)
+    jump_addr = mod(w_b + v_y, @two_to_32)
 
     Trace.instruction(state.counter, "load_imm_jump_ind",
       "load #{v_x} into w#{r_a} and jump to [w#{r_b}(#{w_b}) + #{v_y}] = #{jump_addr}")
@@ -24,19 +25,19 @@ defmodule PVM.Instructions.TwoRegistersTwoImmediates do
     r_a =
       binary_part_safe(program, counter + 1, 1)
       |> :binary.first()
-      |> rem(16)
+      |> mod(16)
       |> min(12)
 
     r_b =
       binary_part_safe(program, counter + 1, 1)
       |> :binary.first()
-      |> div(16)
+      |> Bitwise.bsr(4)
       |> min(12)
 
     l_x =
       binary_part_safe(program, counter + 2, 1)
       |> :binary.first()
-      |> rem(8)
+      |> mod(8)
       |> min(4)
 
     l = skip(counter, bitmask)
