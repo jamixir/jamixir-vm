@@ -1,6 +1,8 @@
 defmodule PVM.Math do
   import Bitwise
 
+  defguard is_power_of_2(x) when is_integer(x) and x > 0 and (x &&& x - 1) == 0
+
   # Formula (A.9) v0.61
   @spec unsigned_to_signed(non_neg_integer(), non_neg_integer()) :: integer()
   def unsigned_to_signed(value, num_bytes) do
@@ -59,6 +61,23 @@ defmodule PVM.Math do
   def signed_remainder(a, 0), do: a
   def signed_remainder(a, b), do: rem(a, b)
 
+  # Efficient modulo operation using bitwise AND for powers of 2
+  @spec mod(integer(), integer()) :: integer()
+  # 2^8
+  def mod(value, 0x100), do: value &&& 0xFF
+  # 2^16
+  def mod(value, 0x10000), do: value &&& 0xFFFF
+  # 2^32
+  def mod(value, 0x1_0000_0000), do: value &&& 0xFFFFFFFF
+  # 2^64
+  def mod(value, 0x1_0000_0000_0000_0000), do: value &&& 0xFFFF_FFFF_FFFF_FFFF
+
+  # Handle other powers of 2
+  def mod(value, divisor) when is_power_of_2(divisor), do: value &&& divisor - 1
+
+  # Fall back to regular remainder for non-powers of 2
+  def mod(value, divisor), do: rem(value, divisor)
+
   defmacro __using__(_) do
     quote do
       def u2i(value, num_bytes), do: PVM.Math.unsigned_to_signed(value, num_bytes)
@@ -68,6 +87,7 @@ defmodule PVM.Math do
       def u2b_be(value, num_bytes), do: PVM.Math.int_to_bits_be(value, num_bytes)
       def b2u_be(bits), do: PVM.Math.bits_to_int_be(bits)
       def srem(a, b), do: PVM.Math.signed_remainder(a, b)
+      def mod(a, b), do: PVM.Math.mod(a, b)
     end
   end
 end
