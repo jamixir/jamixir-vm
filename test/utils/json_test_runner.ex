@@ -1,7 +1,5 @@
 defmodule PVM.Utils.JsonTestRunner do
-  @moduledoc """
-  Utility for running VM tests from JSON test cases.
-  """
+
 
   alias PVM.{State, Memory, VM, Registers}
   import PVM.Memory.Constants
@@ -28,40 +26,21 @@ defmodule PVM.Utils.JsonTestRunner do
     end
   end
 
-  defmacro generate_limited_json_tests(test_dir, test_files, max_tests) do
-    quote bind_quoted: [test_dir: test_dir, test_files: test_files, max_tests: max_tests] do
-      limited_files = Enum.take(test_files, max_tests)
-
-      for file_name <- limited_files do
-        test_name = Path.basename(file_name, ".json")
-        file_path = Path.join(test_dir, file_name)
-
-        @tag :test_vectors
-        test "#{test_name}" do
-          PVM.Utils.JsonTestRunner.run_json_test(unquote(test_name), unquote(file_path))
-        end
-      end
-    end
-  end
 
   @doc """
   Runs a test from a JSON file path.
   """
-  def run_json_test(test_name, file_path) do
+  def run_json_test(file_path) do
     test_case =
       file_path
       |> File.read!()
       |> Jason.decode!()
       |> keys_to_atoms()
 
-    # Set up initial state and program
     {state, program} = setup_initial_state(test_case)
 
-    # Execute the program
-    IO.puts(test_name)
     {exit_reason, final_state} = VM.execute(program, state)
 
-    # Get expected values
     expected = get_expected_values(test_case)
 
     # Check exit reason
@@ -69,11 +48,11 @@ defmodule PVM.Utils.JsonTestRunner do
       {_e, ^exit_reason} ->
         :ok
 
-      # We don't check the exact fault address
+      # don't check the exact fault address
       {{:fault, _}, {:fault, _}} ->
         :ok
 
-      # We don't check the exact ecall number
+      # don't check the exact ecall number
       {{:ecall, _}, {:ecall, _}} ->
         :ok
 
@@ -128,12 +107,8 @@ defmodule PVM.Utils.JsonTestRunner do
     #        "Gas: expected #{expected.gas}, got #{final_state.gas}"
   end
 
-  @doc """
-  Sets up the initial state and program from a test case.
-  Returns {state, program}.
-  """
+
   def setup_initial_state(test_case) do
-    # Extract test data
     initial_regs = Map.get(test_case, :"initial-regs")
     initial_pc = Map.get(test_case, :"initial-pc")
     initial_page_map = Map.get(test_case, :"initial-page-map", [])
@@ -141,10 +116,8 @@ defmodule PVM.Utils.JsonTestRunner do
     initial_gas = Map.get(test_case, :"initial-gas")
     program_bytes = Map.get(test_case, :program)
 
-    # Convert program to binary
     program = :binary.list_to_bin(program_bytes)
 
-    # Set up initial state
     state = %State{
       counter: initial_pc,
       gas: initial_gas,
@@ -188,7 +161,7 @@ defmodule PVM.Utils.JsonTestRunner do
           access_type =
             if Map.get(entry, :"is-writable"),
               do: :write,
-              else: raise("Unsupported access type: #{inspect(entry)}")
+              else: :read
 
           PVM.PreMemory.set_access(acc, address, length, access_type)
         end)
@@ -207,7 +180,6 @@ defmodule PVM.Utils.JsonTestRunner do
         end)
       end
 
-    # Finalize the PreMemory to create the actual Memory struct
     pre_memory = PVM.PreMemory.resolve_overlaps(pre_memory)
     PVM.PreMemory.finalize(pre_memory)
   end
@@ -221,22 +193,13 @@ defmodule PVM.Utils.JsonTestRunner do
     end
   end
 
-  def access_atom(access_str) do
-    case access_str do
-      "read" -> :read
-      "write" -> :write
-      "none" -> nil
-    end
-  end
 
   def parse_expected_status(status) do
     case status do
       "panic" -> :panic
       "halt" -> :halt
       "out_of_gas" -> :out_of_gas
-      # Placeholder, actual address will be checked separately
-      "fault" -> {:fault, 0}
-      # Placeholder, actual number will be checked separately
+      "page-fault" -> {:fault, 0}
       "ecall" -> {:ecall, 0}
     end
   end
