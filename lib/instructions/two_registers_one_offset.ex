@@ -16,17 +16,21 @@ defmodule PVM.Instructions.TwoRegistersOneOffset do
   end
 
   defp trace_comparison(state, instruction, r_a, w_a, r_b, w_b, result, target) do
-    op_symbol = case instruction do
-      :branch_eq -> "=="
-      :branch_ne -> "!="
-      :branch_lt_u -> "<"
-      :branch_lt_s -> "<s"
-      :branch_ge_u -> ">="
-      :branch_ge_s -> ">=s"
-    end
+    op_symbol =
+      case instruction do
+        :branch_eq -> "=="
+        :branch_ne -> "!="
+        :branch_lt_u -> "<"
+        :branch_lt_s -> "<s"
+        :branch_ge_u -> ">="
+        :branch_ge_s -> ">=s"
+      end
 
-    Trace.instruction(state.counter, "#{instruction}",
-      "if w#{r_a}(#{w_a}) #{op_symbol} w#{r_b}(#{w_b}) then branch to #{target} [#{result}]")
+    Trace.instruction(
+      state.counter,
+      "#{instruction}",
+      "if w#{r_a}(#{w_a}) #{op_symbol} w#{r_b}(#{w_b}) then branch to #{target} [#{result}]"
+    )
   end
 
   defp instruction_to_op(instruction, w_a, w_b) do

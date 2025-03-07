@@ -13,7 +13,10 @@ defmodule Instructions.RegTwoImmTest do
   end
 
   describe "store_imm_ind operations" do
-    test "store_imm_ind_u8 writes byte value at register-based address", %{state: state, stack_addr: stack_addr} do
+    test "store_imm_ind_u8 writes byte value at register-based address", %{
+      state: state,
+      stack_addr: stack_addr
+    } do
       # Set up register 1 with base address 10
       program = <<op(:store_imm_ind_u8), 17, @offset, 42>>
       bitmask = <<8::4>>
@@ -23,7 +26,10 @@ defmodule Instructions.RegTwoImmTest do
       assert Memory.read(state.memory, stack_addr + @offset, 1) == {:ok, <<42>>}
     end
 
-    test "store_imm_ind_u16 writes 16-bit value at register-based address", %{state: state, stack_addr: stack_addr} do
+    test "store_imm_ind_u16 writes 16-bit value at register-based address", %{
+      state: state,
+      stack_addr: stack_addr
+    } do
       program = <<op(:store_imm_ind_u16), 33, @offset, 0, 34, 12>>
       bitmask = <<64::6>>
       state = %{state | registers: %{state.registers | r1: stack_addr}}
@@ -32,7 +38,10 @@ defmodule Instructions.RegTwoImmTest do
       assert Memory.read(state.memory, stack_addr + @offset, 2) == {:ok, <<34, 12>>}
     end
 
-    test "store_imm_ind_u32 writes 32-bit value at register-based address", %{state: state, stack_addr: stack_addr} do
+    test "store_imm_ind_u32 writes 32-bit value at register-based address", %{
+      state: state,
+      stack_addr: stack_addr
+    } do
       program = <<op(:store_imm_ind_u32), 33, @offset, 0, 78, 56, 34, 12>>
       bitmask = <<128>>
       state = %{state | registers: %{state.registers | r1: stack_addr}}
@@ -41,7 +50,10 @@ defmodule Instructions.RegTwoImmTest do
       assert Memory.read(state.memory, stack_addr + @offset, 4) == {:ok, <<78, 56, 34, 12>>}
     end
 
-    test "store_imm_ind_u64 writes 64-bit value at register-based address", %{state: state, stack_addr: stack_addr} do
+    test "store_imm_ind_u64 writes 64-bit value at register-based address", %{
+      state: state,
+      stack_addr: stack_addr
+    } do
       program = <<op(:store_imm_ind_u64), 33, @offset, 0, 78, 56, 34, 12, 0, 0, 0, 0>>
       bitmask = <<128>>
       state = %{state | registers: %{state.registers | r1: stack_addr}}

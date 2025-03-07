@@ -55,6 +55,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
         TwoRegistersOneImmediate.execute(:store_ind_u32, program, bitmask, state)
 
       assert exit_status == :continue
+
       assert Memory.read(state.memory, stack_addr + @offset, 4) ==
                {:ok, <<0x78, 0x56, 0x34, 0x12>>}
     end
@@ -580,7 +581,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
       program = <<op(:rot_r_32_imm_alt), @registers, 0x80, 0x56, 0x34, 0x12>>
       bitmask = <<1, 0, 0, 0, 0, 0>>
       state = %State{registers: %Registers{r2: 4}}
-      #0x1234_5680 -> 0x01234_568
+      # 0x1234_5680 -> 0x01234_568
 
       {exit_status, state} =
         TwoRegistersOneImmediate.execute(:rot_r_32_imm_alt, program, bitmask, state)

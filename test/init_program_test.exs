@@ -9,14 +9,32 @@ defmodule PVM.InitProgramTest do
       # o_size = 1, w_size = 1, z = 1, s = 1
       # o = "A", w = "B", c_size = 1, c = "C"
       binary = <<
-        1, 0, 0,  # o_size (3 bytes)
-        1, 0, 0,  # w_size (3 bytes)
-        1, 0,     # z (2 bytes)
-        1, 0, 0,  # s (3 bytes)
-        ?A,       # o (1 byte)
-        ?B,       # w (1 byte)
-        1, 0, 0, 0,  # c_size (4 bytes)
-        ?C        # c (1 byte)
+        # o_size (3 bytes)
+        1,
+        0,
+        0,
+        # w_size (3 bytes)
+        1,
+        0,
+        0,
+        # z (2 bytes)
+        1,
+        0,
+        # s (3 bytes)
+        1,
+        0,
+        0,
+        # o (1 byte)
+        ?A,
+        # w (1 byte)
+        ?B,
+        # c_size (4 bytes)
+        1,
+        0,
+        0,
+        0,
+        # c (1 byte)
+        ?C
       >>
 
       assert {:ok, {o_size, o, w_size, w, z, s, c}} = InitProgram.parse_program_segments(binary)
@@ -37,14 +55,33 @@ defmodule PVM.InitProgramTest do
     test "fails when sizes don't match (too small, leftover binary)" do
       # Setting o_size = 1 but providing 2 bytes for o
       binary = <<
-        1, 0, 0,  # o_size (3 bytes)
-        1, 0, 0,  # w_size (3 bytes)
-        1, 0,     # z (2 bytes)
-        1, 0, 0,  # s (3 bytes)
-        ?A, ?B,   # o (2 bytes, but size was 1)
-        ?C,       # w (1 byte)
-        1, 0, 0, 0,  # c_size (4 bytes)
-        ?D        # c (1 byte)
+        # o_size (3 bytes)
+        1,
+        0,
+        0,
+        # w_size (3 bytes)
+        1,
+        0,
+        0,
+        # z (2 bytes)
+        1,
+        0,
+        # s (3 bytes)
+        1,
+        0,
+        0,
+        # o (2 bytes, but size was 1)
+        ?A,
+        ?B,
+        # w (1 byte)
+        ?C,
+        # c_size (4 bytes)
+        1,
+        0,
+        0,
+        0,
+        # c (1 byte)
+        ?D
       >>
 
       assert {:error, :invalid_format} = InitProgram.parse_program_segments(binary)
@@ -53,14 +90,32 @@ defmodule PVM.InitProgramTest do
     test "fails when sizes don't match (too big, runs out of binary)" do
       # Setting o_size = 2 but providing only 1 byte for o
       binary = <<
-        2, 0, 0,  # o_size (3 bytes)
-        1, 0, 0,  # w_size (3 bytes)
-        1, 0,     # z (2 bytes)
-        1, 0, 0,  # s (3 bytes)
-        ?A,       # o (1 byte, but size was 2)
-        ?B,       # w (1 byte)
-        1, 0, 0, 0,  # c_size (4 bytes)
-        ?C        # c (1 byte)
+        # o_size (3 bytes)
+        2,
+        0,
+        0,
+        # w_size (3 bytes)
+        1,
+        0,
+        0,
+        # z (2 bytes)
+        1,
+        0,
+        # s (3 bytes)
+        1,
+        0,
+        0,
+        # o (1 byte, but size was 2)
+        ?A,
+        # w (1 byte)
+        ?B,
+        # c_size (4 bytes)
+        1,
+        0,
+        0,
+        0,
+        # c (1 byte)
+        ?C
       >>
 
       assert {:error, :invalid_format} = InitProgram.parse_program_segments(binary)
@@ -68,11 +123,26 @@ defmodule PVM.InitProgramTest do
 
     test "succeeds when all sizes are 0 but still requires minimum binary length" do
       binary = <<
-        0, 0, 0,  # o_size
-        0, 0, 0,  # w_size
-        0, 0,     # z
-        0, 0, 0,  # s
-        0, 0, 0, 0  # c_size
+        # o_size
+        0,
+        0,
+        0,
+        # w_size
+        0,
+        0,
+        0,
+        # z
+        0,
+        0,
+        # s
+        0,
+        0,
+        0,
+        # c_size
+        0,
+        0,
+        0,
+        0
       >>
 
       assert {:ok, {o_size, o, w_size, w, z, s, c}} = InitProgram.parse_program_segments(binary)
@@ -87,19 +157,40 @@ defmodule PVM.InitProgramTest do
 
     test "fails when o_size is larger than remaining binary" do
       binary = <<
-        8, 0, 0,  # o_size = 8 (too big)
-        1, 0, 0,    # w_size
-        1, 0,       # z
-        1, 0, 0,    # s
-        ?A, ?B, ?C, # o
-        ?D, ?F,     # w
-        0, 0, 0, 2,  # c_size
-        ?G, ?G       # c
+        # o_size = 8 (too big)
+        8,
+        0,
+        0,
+        # w_size
+        1,
+        0,
+        0,
+        # z
+        1,
+        0,
+        # s
+        1,
+        0,
+        0,
+        # o
+        ?A,
+        ?B,
+        ?C,
+        # w
+        ?D,
+        ?F,
+        # c_size
+        0,
+        0,
+        0,
+        2,
+        # c
+        ?G,
+        ?G
       >>
 
       assert {:error, :invalid_format} = InitProgram.parse_program_segments(binary)
     end
-
   end
 
   describe "verify_size_constraint/4" do
@@ -119,8 +210,10 @@ defmodule PVM.InitProgramTest do
 
     test "rejects when combined w_size and z calculation is too large" do
       # Make w_size + z * Zp overflow
-      z = 1 <<< 20  # Large z value
-      w_size = 1 <<< 20  # Large w_size
+      # Large z value
+      z = 1 <<< 20
+      # Large w_size
+      w_size = 1 <<< 20
       assert InitProgram.verify_size_constraint(1, w_size, z, 1) == false
     end
 
@@ -132,22 +225,30 @@ defmodule PVM.InitProgramTest do
     test "accepts values just under the limit" do
       # Calculate maximum allowed values that should still pass
       max_safe = (1 <<< 32) - 5 * (1 <<< 16) - (1 <<< 24)
-      safe_size = max_safe >>> 2  # Divide by 4 to split among components
+      # Divide by 4 to split among components
+      safe_size = max_safe >>> 2
 
       assert InitProgram.verify_size_constraint(
-        safe_size,  # o_size
-        safe_size,  # w_size
-        1,          # z (small to avoid multiplication overflow)
-        safe_size   # s
-      ) == true
+               # o_size
+               safe_size,
+               # w_size
+               safe_size,
+               # z (small to avoid multiplication overflow)
+               1,
+               # s
+               safe_size
+             ) == true
     end
   end
 
   describe "construct_memory/5" do
     test "correctly sets up basic memory layout" do
-      o = "code"    # 4 bytes
-      w = "data"    # 4 bytes
-      c = "args"    # 4 bytes
+      # 4 bytes
+      o = "code"
+      # 4 bytes
+      w = "data"
+      # 4 bytes
+      c = "args"
       z = 1
       s = 1
 
@@ -163,15 +264,18 @@ defmodule PVM.InitProgramTest do
       assert {:ok, _} = Memory.write(memory, w_start, "test")
 
       # Test arguments (read-only)
-      args_start = InitProgram.max_addr()  - InitProgram.zz() - InitProgram.zi()
+      args_start = InitProgram.max_addr() - InitProgram.zz() - InitProgram.zi()
       assert {:ok, "args"} = Memory.read(memory, args_start, 4)
       assert {:error, {:fault, _}} = Memory.write(memory, args_start, "fail")
     end
 
     test "correctly handles padding regions" do
-      o = "a"       # 1 byte
-      w = "b"       # 1 byte
-      c = "c"       # 1 byte
+      # 1 byte
+      o = "a"
+      # 1 byte
+      w = "b"
+      # 1 byte
+      c = "c"
       z = 1
       s = 1
 
@@ -179,7 +283,8 @@ defmodule PVM.InitProgramTest do
 
       # Test padding after o (should be readable zeros)
       o_end = InitProgram.zz() + 1
-      padding_size = InitProgram.p(1) - 1  # p(1) minus the single byte
+      # p(1) minus the single byte
+      padding_size = InitProgram.p(1) - 1
       assert {:ok, padding} = Memory.read(memory, o_end, padding_size)
       assert padding == :binary.copy(<<0>>, padding_size)
       assert {:error, {:fault, _}} = Memory.write(memory, o_end, "x")
@@ -193,8 +298,6 @@ defmodule PVM.InitProgramTest do
       assert {:ok, _} = Memory.write(memory, w_end, <<0>>)
     end
 
-
-
     test "correctly sets up inaccessible regions" do
       o = "code"
       w = "data"
@@ -203,7 +306,6 @@ defmodule PVM.InitProgramTest do
       s = 1
 
       memory = InitProgram.construct_memory(o, w, c, z, s)
-
 
       # Test gap between segments (should be inaccessible)
       gap_start = InitProgram.zz() + InitProgram.p(byte_size(o))
@@ -215,7 +317,8 @@ defmodule PVM.InitProgramTest do
       o = "a"
       w = "b"
       c = "c"
-      z = 2  # Request 2 pages of work area
+      # Request 2 pages of work area
+      z = 2
       s = 1
 
       memory = InitProgram.construct_memory(o, w, c, z, s)
@@ -232,14 +335,28 @@ defmodule PVM.InitProgramTest do
 
   describe "initialize_registers/1" do
     test "initializes registers with correct values" do
-      registers = InitProgram.initialize_registers(<<1,2,3,4>>)
+      registers = InitProgram.initialize_registers(<<1, 2, 3, 4>>)
 
       # Check specific registers that should have predefined values (A.35)
-      assert Registers.get(registers, [0, 1, 7, 8]) == [0xFFFF_FFFF_FFFF_0000, 0xFFFF_FFFF_FEFE_0000, 0xFFFF_FFFFFEFF_0000, 4]
+      assert Registers.get(registers, [0, 1, 7, 8]) == [
+               0xFFFF_FFFF_FFFF_0000,
+               0xFFFF_FFFF_FEFE_0000,
+               0xFFFF_FFFFFEFF_0000,
+               4
+             ]
 
       # Check that other registers are initialized to 0
-      assert Registers.get(registers, [2, 3, 4, 5, 6, 9, 10, 11, 12]) == [0, 0, 0, 0, 0, 0, 0, 0, 0]
-
+      assert Registers.get(registers, [2, 3, 4, 5, 6, 9, 10, 11, 12]) == [
+               0,
+               0,
+               0,
+               0,
+               0,
+               0,
+               0,
+               0,
+               0
+             ]
     end
   end
 
@@ -247,20 +364,30 @@ defmodule PVM.InitProgramTest do
     test "successfully initializes program with valid input" do
       # Create a valid program binary (8KB segments)
       page_size = 4096
-      test_pattern = :binary.copy(<<65>>, 2 * page_size)  # "A" repeated for 8KB
+      # "A" repeated for 8KB
+      test_pattern = :binary.copy(<<65>>, 2 * page_size)
 
       binary = <<
-        (2 * page_size)::little-size(24),  # o_size (3 bytes)
-        (2 * page_size)::little-size(24),  # w_size (3 bytes)
-        1::little-size(16),                # z (2 bytes)
-        1::little-size(24),                # s (3 bytes)
-        test_pattern::binary,              # o (8KB)
-        test_pattern::binary,              # w (8KB)
-        (2 * page_size)::little-size(32),  # c_size (4 bytes)
-        test_pattern::binary               # c (8KB)
+        # o_size (3 bytes)
+        2 * page_size::little-size(24),
+        # w_size (3 bytes)
+        2 * page_size::little-size(24),
+        # z (2 bytes)
+        1::little-size(16),
+        # s (3 bytes)
+        1::little-size(24),
+        # o (8KB)
+        test_pattern::binary,
+        # w (8KB)
+        test_pattern::binary,
+        # c_size (4 bytes)
+        2 * page_size::little-size(32),
+        # c (8KB)
+        test_pattern::binary
       >>
 
-      args = :binary.copy(<<66>>, 2 * page_size)  # "B" repeated for 8KB
+      # "B" repeated for 8KB
+      args = :binary.copy(<<66>>, 2 * page_size)
 
       assert {code, registers, memory} = InitProgram.initialize_program(binary, args)
 
@@ -273,14 +400,32 @@ defmodule PVM.InitProgramTest do
     test "returns nil for invalid program" do
       # Create an invalid program (sizes too large)
       binary = <<
-        0xFF, 0xFF, 0xFF,  # o_size (too large)
-        1, 0, 0,           # w_size
-        1, 0,              # z
-        1, 0, 0,           # s
-        65,                # o
-        66,                # w
-        1, 0, 0, 0,        # c_size
-        67                 # c
+        # o_size (too large)
+        0xFF,
+        0xFF,
+        0xFF,
+        # w_size
+        1,
+        0,
+        0,
+        # z
+        1,
+        0,
+        # s
+        1,
+        0,
+        0,
+        # o
+        65,
+        # w
+        66,
+        # c_size
+        1,
+        0,
+        0,
+        0,
+        # c
+        67
       >>
 
       args = "test"
@@ -289,17 +434,26 @@ defmodule PVM.InitProgramTest do
 
     test "returns nil for invalid size constraints" do
       # Create a program that would violate A.33
-      huge_size = 1 <<< 30  # Very large size that should violate constraints
+      # Very large size that should violate constraints
+      huge_size = 1 <<< 30
 
       binary = <<
-        huge_size::little-size(24),  # o_size
-        1::little-size(24),          # w_size
-        1::little-size(16),          # z
-        1::little-size(24),          # s
-        65,                          # o
-        66,                          # w
-        1::little-size(32),          # c_size
-        67                           # c
+        # o_size
+        huge_size::little-size(24),
+        # w_size
+        1::little-size(24),
+        # z
+        1::little-size(16),
+        # s
+        1::little-size(24),
+        # o
+        65,
+        # w
+        66,
+        # c_size
+        1::little-size(32),
+        # c
+        67
       >>
 
       args = "test"

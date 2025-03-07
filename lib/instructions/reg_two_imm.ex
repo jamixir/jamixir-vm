@@ -14,8 +14,11 @@ defmodule PVM.Instructions.RegTwoImm do
     stored_value = mod(v_y, @two_to_8)
     target_addr = w_a + v_x
 
-    Trace.instruction(state.counter, "#{store_type}",
-      "store #{stored_value} to address w#{r_a}(#{w_a}) + #{v_x} = #{target_addr}")
+    Trace.instruction(
+      state.counter,
+      "#{store_type}",
+      "store #{stored_value} to address w#{r_a}(#{w_a}) + #{v_x} = #{target_addr}"
+    )
 
     write_memory(state, target_addr, <<stored_value>>)
   end
@@ -26,8 +29,11 @@ defmodule PVM.Instructions.RegTwoImm do
     stored_value = mod(v_y, @two_to_16)
     target_addr = w_a + v_x
 
-    Trace.instruction(state.counter, "#{store_type}",
-      "store #{stored_value} to address w#{r_a}(#{w_a}) + #{v_x} = #{target_addr}")
+    Trace.instruction(
+      state.counter,
+      "#{store_type}",
+      "store #{stored_value} to address w#{r_a}(#{w_a}) + #{v_x} = #{target_addr}"
+    )
 
     write_memory(state, target_addr, <<stored_value::16-little>>)
   end
@@ -38,8 +44,11 @@ defmodule PVM.Instructions.RegTwoImm do
     stored_value = mod(v_y, @two_to_32)
     target_addr = w_a + v_x
 
-    Trace.instruction(state.counter, "#{store_type}",
-      "store #{stored_value} to address w#{r_a}(#{w_a}) + #{v_x} = #{target_addr}")
+    Trace.instruction(
+      state.counter,
+      "#{store_type}",
+      "store #{stored_value} to address w#{r_a}(#{w_a}) + #{v_x} = #{target_addr}"
+    )
 
     write_memory(state, target_addr, <<stored_value::32-little>>)
   end
@@ -49,8 +58,11 @@ defmodule PVM.Instructions.RegTwoImm do
     w_a = Registers.get(state.registers, r_a)
     target_addr = w_a + v_x
 
-    Trace.instruction(state.counter, "#{store_type}",
-      "store #{v_y} to address w#{r_a}(#{w_a}) + #{v_x} = #{target_addr}")
+    Trace.instruction(
+      state.counter,
+      "#{store_type}",
+      "store #{v_y} to address w#{r_a}(#{w_a}) + #{v_x} = #{target_addr}"
+    )
 
     write_memory(state, target_addr, <<v_y::64-little>>)
   end
@@ -64,7 +76,7 @@ defmodule PVM.Instructions.RegTwoImm do
       binary_part_safe(program, counter + 1, 1)
       |> :binary.first()
       |> Bitwise.bsr(4)
-      |>  mod(8)
+      |> mod(8)
       |> min(4)
 
     l_y = (skip(counter, bitmask) - l_x - 1) |> max(0) |> min(4)

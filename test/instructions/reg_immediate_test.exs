@@ -9,6 +9,7 @@ defmodule Instructions.RegImmediateTest do
     state = %State{memory: memory, registers: %Registers{r2: stack_addr}}
     {:ok, %{memory: memory, stack_addr: stack_addr, state: state}}
   end
+
   describe "load operations" do
     test "load_imm loads immediate value into register" do
       program = <<op(:load_imm), 0x01, 42>>

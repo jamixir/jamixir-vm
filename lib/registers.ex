@@ -24,7 +24,22 @@ defmodule PVM.Registers do
   @spec from_list([integer()]) :: t()
   def from_list(values) when is_list(values) and length(values) == 13 do
     [r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12] = values
-    %__MODULE__{r0: r0, r1: r1, r2: r2, r3: r3, r4: r4, r5: r5, r6: r6, r7: r7, r8: r8, r9: r9, r10: r10, r11: r11, r12: r12}
+
+    %__MODULE__{
+      r0: r0,
+      r1: r1,
+      r2: r2,
+      r3: r3,
+      r4: r4,
+      r5: r5,
+      r6: r6,
+      r7: r7,
+      r8: r8,
+      r9: r9,
+      r10: r10,
+      r11: r11,
+      r12: r12
+    }
   end
 
   @spec get(t(), register()) :: integer()
@@ -63,9 +78,12 @@ defmodule PVM.Registers do
   @spec set(t(), %{atom() => integer()}) :: t()
   def set(%__MODULE__{} = reg, updates) when is_map(updates) do
     case updates do
-      %{} when map_size(updates) == 0 -> reg
+      %{} when map_size(updates) == 0 ->
+        reg
+
       _ ->
         {key, _} = Enum.at(updates, 0)
+
         cond do
           is_atom(key) -> do_set_atom_keys(reg, updates)
           is_integer(key) -> do_set_integer_keys(reg, updates)

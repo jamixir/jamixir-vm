@@ -39,7 +39,9 @@ defmodule Instructions.RegImmediateOffsetTest do
       bitmask = <<1::1, 0::1, 0::1, 0::1, 1::1, 0::1, 0::1, 0::1, 1::1>>
       start_set = basic_block_starts(program, bitmask)
       state = %State{registers: %Registers{r1: 42}}
-      {exit_reason, state_} = RegImmediateOffset.execute(:branch_eq_imm, program, bitmask, start_set, state)
+
+      {exit_reason, state_} =
+        RegImmediateOffset.execute(:branch_eq_imm, program, bitmask, start_set, state)
 
       assert state_.counter == 9
       assert exit_reason == :continue
@@ -53,7 +55,9 @@ defmodule Instructions.RegImmediateOffsetTest do
       bitmask = <<1::1, 0::1, 0::1, 0::1, 1::1, 0::1, 0::1, 0::1, 1::1, 1::1>>
       start_set = basic_block_starts(program, bitmask)
       state = %State{registers: %Registers{r1: 43}}
-      {exit_reason, state_} = RegImmediateOffset.execute(:branch_ne_imm, program, bitmask, start_set, state)
+
+      {exit_reason, state_} =
+        RegImmediateOffset.execute(:branch_ne_imm, program, bitmask, start_set, state)
 
       assert state_.counter == 10
       assert exit_reason == :continue
