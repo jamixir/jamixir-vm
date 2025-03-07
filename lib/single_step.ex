@@ -23,25 +23,22 @@ defmodule PVM.SingleStep do
         next_counter(%{exit_reason: exit_reason, counter: state_.counter}, state.counter, bitmask)
 
       gas_cost = Instructions.gas_cost(opcode)
-      IO.inspect({opcode, gas_cost}, label: "Gas cost")
 
-      state_ = %{
+
+      deduct_gas = %{
         state_
-        | counter: next_counter,
-          gas: state.gas - gas_cost
+        | gas: state.gas - gas_cost
       }
-
-      state_deducted_gas = %{state | gas: state.gas - gas_cost}
 
       case exit_reason do
         {:fault, page} ->
-          {{:fault, page}, state_deducted_gas}
+          {{:fault, page}, deduct_gas}
 
         :panic ->
-          {:panic, state_deducted_gas}
+          {:panic, deduct_gas}
 
         _ ->
-          {exit_reason, state_}
+          {exit_reason, %{deduct_gas | counter: next_counter}}
       end
     end
   end
