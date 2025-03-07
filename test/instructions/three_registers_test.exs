@@ -332,7 +332,7 @@ defmodule Instructions.ThreeRegistersTest do
       state = %State{registers: %Registers{r1: 0xF234_5678, r2: 4}}
 
       {_, state} = ThreeRegisters.execute(:shar_r_32, program, state)
-      assert state.registers.r3 == 0xFFFF_FFFF_F234_567
+      assert state.registers.r3 == 0xFFFF_FFFF_FF23_4567
     end
 
     test "shlo_l_64 performs logical left shift" do
@@ -356,7 +356,7 @@ defmodule Instructions.ThreeRegistersTest do
       state = %State{registers: %Registers{r1: 0xF234567890ABCDEF, r2: 4}}
 
       {_, state} = ThreeRegisters.execute(:shar_r_64, program, state)
-      assert state.registers.r3 == 0xFF234567890ABCDF
+      assert state.registers.r3 == 0xFF23_4567_890A_BCDE
     end
   end
 
@@ -382,7 +382,7 @@ defmodule Instructions.ThreeRegistersTest do
       state = %State{registers: %Registers{r1: 0x8000000000000000, r2: 0xFFFFFFFFFFFFFFFF}}
 
       {_, state} = ThreeRegisters.execute(:mul_upper_s_u, program, state)
-      assert state.registers.r3 == 0x8000000000000001
+      assert state.registers.r3 == 0x8000000000000000
     end
   end
 
