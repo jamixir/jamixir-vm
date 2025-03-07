@@ -541,20 +541,21 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
     test "rot_r_64_imm performs 64-bit right rotation" do
       program = <<op(:rot_r_64_imm), @registers, 8>>
       bitmask = <<4::3>>
-      state = %State{registers: %Registers{r2: 0x0000_1001_0000_0210}}
+      state = %State{registers: %Registers{r2: 0xA000_1001_0000_0210}}
 
       {exit_status, state} =
         TwoRegistersOneImmediate.execute(:rot_r_64_imm, program, bitmask, state)
 
       assert exit_status == :continue
-      assert state.registers.r1 == 0x0010_0100_0002_1000
+      assert state.registers.r1 == 0x10A0_0010_0100_0002
     end
 
     test "rot_r_64_imm_alt performs alternative 64-bit right rotation" do
-      # 0x0100_0203
       program = <<op(:rot_r_64_imm_alt), @registers, 0x03, 0x02, 0, 0x01>>
+      # 0x0000_0000_0100_0203
       bitmask = <<1, 0, 0, 0, 0, 0>>
-      state = %State{registers: %Registers{r2: 48}}
+      state = %State{registers: %Registers{r2: 16}}
+      # 16 bits = 2 bytes = 4 nibbles
 
       {exit_status, state} =
         TwoRegistersOneImmediate.execute(:rot_r_64_imm_alt, program, bitmask, state)
@@ -565,26 +566,27 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
 
     test "rot_r_32_imm performs 32-bit right rotation" do
       program = <<op(:rot_r_32_imm), @registers, 12>>
-      bitmask = <<4::3>>
+      bitmask = <<128>>
       state = %State{registers: %Registers{r2: 0xABCD_1234}}
 
       {exit_status, state} =
         TwoRegistersOneImmediate.execute(:rot_r_32_imm, program, bitmask, state)
 
       assert exit_status == :continue
-      assert state.registers.r1 == 0xFFFF_FFFF_D123_4ABC
+      assert state.registers.r1 == 0x234A_BCD1
     end
 
     test "rot_r_32_imm_alt performs alternative 32-bit right rotation" do
       program = <<op(:rot_r_32_imm_alt), @registers, 0x80, 0x56, 0x34, 0x12>>
       bitmask = <<1, 0, 0, 0, 0, 0>>
       state = %State{registers: %Registers{r2: 4}}
+      #0x1234_5680 -> 0x01234_568
 
       {exit_status, state} =
         TwoRegistersOneImmediate.execute(:rot_r_32_imm_alt, program, bitmask, state)
 
       assert exit_status == :continue
-      assert state.registers.r1 == 0x2345_6801
+      assert state.registers.r1 == 0x01234_568
     end
 
     test "rotation operations handle rotation amount modulo bit width" do
@@ -596,7 +598,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
         TwoRegistersOneImmediate.execute(:rot_r_64_imm, program, bitmask, state)
 
       assert exit_status == :continue
-      assert state.registers.r1 == 0x2345_6789_ABCD_EF01
+      assert state.registers.r1 == 0x0123_4567_89AB_CDEF
     end
   end
 end

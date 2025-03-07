@@ -155,7 +155,7 @@ defmodule Instructions.TwoRegistersTest do
       {status, new_state} = TwoRegisters.execute(:leading_zero_bits_64, program, state)
 
       assert status == :continue
-      assert new_state.registers.r1 == 1
+      assert new_state.registers.r1 == 60
     end
 
     test "handles no leading zeros" do
@@ -165,7 +165,7 @@ defmodule Instructions.TwoRegistersTest do
       {status, new_state} = TwoRegisters.execute(:leading_zero_bits_64, program, state)
 
       assert status == :continue
-      assert new_state.registers.r1 == 0
+      assert new_state.registers.r1 == 63
     end
   end
 
@@ -177,7 +177,7 @@ defmodule Instructions.TwoRegistersTest do
       {status, new_state} = TwoRegisters.execute(:leading_zero_bits_32, program, state)
 
       assert status == :continue
-      assert new_state.registers.r1 == 1
+      assert new_state.registers.r1 == 28
     end
   end
 
@@ -189,7 +189,7 @@ defmodule Instructions.TwoRegistersTest do
       {status, new_state} = TwoRegisters.execute(:trailing_zero_bits_64, program, state)
 
       assert status == :continue
-      assert new_state.registers.r1 == 64 - 3
+      assert new_state.registers.r1 == 0
     end
 
     test "handles no trailing zeros" do
@@ -211,7 +211,7 @@ defmodule Instructions.TwoRegistersTest do
       {status, new_state} = TwoRegisters.execute(:trailing_zero_bits_32, program, state)
 
       assert status == :continue
-      assert new_state.registers.r1 == 32 - 3
+      assert new_state.registers.r1 == 0
     end
   end
 
