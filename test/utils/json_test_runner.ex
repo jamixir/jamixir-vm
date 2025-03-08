@@ -1,6 +1,5 @@
 defmodule PVM.Utils.JsonTestRunner do
   alias PVM.{State, Memory, VM, Registers}
-  import PVM.Memory.Constants
   use ExUnit.Case
 
   @doc """
@@ -126,13 +125,7 @@ defmodule PVM.Utils.JsonTestRunner do
   end
 
   def setup_memory(page_map, memory_entries) do
-    pre_memory =
-      PVM.PreMemory.set_access(
-        %PVM.PreMemory{},
-        min_allowed_address(),
-        memory_size() - min_allowed_address(),
-        nil
-      )
+    pre_memory = PVM.PreMemory.init_nil_memory()
 
     # Set up page access permissions
     pre_memory =
@@ -142,7 +135,7 @@ defmodule PVM.Utils.JsonTestRunner do
         Enum.reduce(page_map, pre_memory, fn entry, acc ->
           address = entry.address
           length = entry.length
-          # Only support is-writable for now
+
           access_type =
             if entry[:"is-writable"], do: :write, else: :read
 
@@ -167,12 +160,9 @@ defmodule PVM.Utils.JsonTestRunner do
     PVM.PreMemory.finalize(pre_memory)
   end
 
-  def binary_for_value(value, size), do: <<value::little-(size * 8)>>
-
   def parse_expected_status(status) do
     case status do
       "page-fault" -> {:fault, 0}
-      "ecall" -> {:ecall, 0}
       s -> String.to_atom(s)
     end
   end
