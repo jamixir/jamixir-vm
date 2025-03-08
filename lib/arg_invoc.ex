@@ -17,7 +17,7 @@ defmodule PVM.ArgInvoc do
     # If trace is enabled in opts, set it in config
     if opts[:trace] do
       Application.put_env(:pvm, :trace, true)
-      PVM.Trace.init_trace_file()
+      PVM.Trace.init_trace_file(opts[:trace_name])
     end
 
     case InitProgram.initialize_program(program, args) do
