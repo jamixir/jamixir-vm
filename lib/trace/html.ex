@@ -1,9 +1,11 @@
 defmodule PVM.Trace.HTML do
-  @html_file "pvm_trace.html"
+  @default_html_file "pvm_trace.html"
 
-  def init do
+  def init(html_file \\ nil) do
+    html_file = html_file || @default_html_file
+
     # First clear the file
-    File.write!(@html_file, "")
+    File.write!(html_file, "")
 
     # Then append the header
     html = """
@@ -92,10 +94,12 @@ defmodule PVM.Trace.HTML do
     <button id="toggleBtn" onclick="toggleFormat()">Show Hex</button>
     """
 
-    File.write!(@html_file, html, [:append, :utf8])
+    File.write!(html_file, html, [:append, :utf8])
   end
 
-  def write_line(class, message) do
+  def write_line(html_file \\ nil, class, message) do
+    html_file = html_file || @default_html_file
+
     # First escape any < or > characters
     escaped_message =
       String.replace(message, ~r/[<>]/, fn
@@ -119,10 +123,11 @@ defmodule PVM.Trace.HTML do
       end)
 
     html_line = "<pre class='#{class}'>#{formatted_message}</pre>\n"
-    File.write!(@html_file, html_line, [:append, :utf8])
+    File.write!(html_file, html_line, [:append, :utf8])
   end
 
-  def close do
-    File.write!(@html_file, "</body></html>", [:append, :utf8])
+  def close(html_file \\ nil) do
+    html_file = html_file || @default_html_file
+    File.write!(html_file, "</body></html>", [:append, :utf8])
   end
 end
