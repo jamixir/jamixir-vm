@@ -15,6 +15,15 @@ defmodule PVM.PreMemory do
             page_size: page_size(),
             size: memory_size()
 
+  def init_nil_memory() do
+    set_access(
+      %__MODULE__{},
+      min_allowed_address(),
+      memory_size() - min_allowed_address(),
+      nil
+    )
+  end
+
   def write(%__MODULE__{} = pre_memory, address, value) when is_binary(value) do
     new_data = write_to_sparse(pre_memory, address, value)
     %__MODULE__{pre_memory | data: new_data}
