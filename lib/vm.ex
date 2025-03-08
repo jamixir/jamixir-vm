@@ -24,6 +24,7 @@ defmodule PVM.VM do
 
     case exit_reason do
       :continue when state_.gas >= 0 ->
+        :erlang.yield()
         do_execute(program, bitmask, jump_table, start_set, state_)
 
       :continue ->
