@@ -139,16 +139,20 @@ defmodule PVM.Memory do
   end
 
   defp check_permissions(memory, start_page, end_page, required_access) do
-    page_range = get_sequential_pages(start_page, end_page, number_of_pages(memory))
+    if start_page < 16 do
+      {:error, start_page * memory.page_size}
+    else
+      page_range = get_sequential_pages(start_page, end_page, number_of_pages(memory))
 
-    # Find the first page that doesn't have the required access
-    Enum.find_value(page_range, :ok, fn page ->
-      case find_access_for_page(memory.access_ranges, page) do
-        access when required_access == :read and access in [:read, :write] -> nil
-        access when required_access == :write and access == :write -> nil
-        _ -> {:error, page * memory.page_size}
-      end
-    end)
+      # Find the first page that doesn't have the required access
+      Enum.find_value(page_range, :ok, fn page ->
+        case find_access_for_page(memory.access_ranges, page) do
+          access when required_access == :read and access in [:read, :write] -> nil
+          access when required_access == :write and access == :write -> nil
+          _ -> {:error, page * memory.page_size}
+        end
+      end)
+    end
   end
 
   def find_access_for_page(access_ranges, page) do
