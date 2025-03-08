@@ -73,7 +73,6 @@ defmodule PVM.HostCall do
       {:continue, new_state, new_context} ->
         state_ = struct(State, Map.merge(new_state, %{counter: state.counter}))
 
-        # Call do_execute instead of execute to avoid recalculating
         do_execute(program, bitmask, jump_table, start_set, state_, host_fn, new_context)
 
       {reason, {final_state, final_context}} when reason in [:halt, :panic, :out_of_gas] ->
