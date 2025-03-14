@@ -36,8 +36,10 @@ defmodule PVM.PreMemory do
     %__MODULE__{pre_memory | access_ranges: [new_range | pre_memory.access_ranges]}
   end
 
-  def finalize(%__MODULE__{} = pre_memory) do
-    optimized_ranges = merge_adjacent_ranges(pre_memory.access_ranges)
+  def finalize(%__MODULE__{access_ranges: ranges} = pre_memory) do
+    optimized_ranges =
+      resolve_overlaps(ranges)
+      |> merge_adjacent_ranges()
 
     # Create the real Memory struct
     %Memory{
@@ -72,9 +74,9 @@ defmodule PVM.PreMemory do
     |> Enum.reverse()
   end
 
-  def resolve_overlaps(%__MODULE__{access_ranges: ranges} = pre_memory) do
+  defp resolve_overlaps(access_ranges) do
     # Create events for range starts and ends with index for priority
-    events = create_range_events(ranges)
+    events = create_range_events(access_ranges)
 
     # Process events to build non-overlapping ranges
     {result, _active_ranges, _last_pos} =
@@ -95,7 +97,7 @@ defmodule PVM.PreMemory do
           {result_, active_updated, pos}
       end)
 
-    %{pre_memory | access_ranges: Enum.reverse(result)}
+    Enum.reverse(result)
   end
 
   defp create_range_events(ranges) do
