@@ -82,6 +82,24 @@ defmodule Instructions.ThreeRegistersTest do
       assert state.registers.r3 == 0xFFFF_FFFF_FFFF_FFFB
     end
 
+    test "div_s_32 rounds towards zero for positive non-integer result" do
+      program = <<op(:div_s_32), 0x21, 3>>
+      state = %State{registers: %Registers{r1: 5, r2: 2}}
+
+      {_, state} = ThreeRegisters.execute(:div_s_32, program, state)
+      # 5 / 2 = 2.5, rounded towards zero = 2
+      assert state.registers.r3 == 2
+    end
+
+    test "div_s_32 rounds towards zero for negative non-integer result" do
+      program = <<op(:div_s_32), 0x21, 3>>
+      state = %State{registers: %Registers{r1: 0xFFFF_FFFD, r2: 2}}  # -3 in 32-bit signed
+
+      {_, state} = ThreeRegisters.execute(:div_s_32, program, state)
+      # -3 / 2 = -1.5, rounded towards zero = -1
+      assert state.registers.r3 == 0xFFFF_FFFF_FFFF_FFFF  # -1 in 64-bit signed
+    end
+
     test "rem_s_32 performs signed remainder" do
       program = <<op(:rem_s_32), 0x21, 3>>
       state = %State{registers: %Registers{r1: 0xFFFFFFFFD6, r2: 10}}
@@ -291,6 +309,24 @@ defmodule Instructions.ThreeRegistersTest do
 
       {_, state} = ThreeRegisters.execute(:div_s_64, program, state)
       assert state.registers.r3 == 0xC000000000000000
+    end
+
+    test "div_s_64 rounds towards zero for positive non-integer result" do
+      program = <<op(:div_s_64), 0x21, 3>>
+      state = %State{registers: %Registers{r1: 5, r2: 2}}
+
+      {_, state} = ThreeRegisters.execute(:div_s_64, program, state)
+      # 5 / 2 = 2.5, rounded towards zero = 2
+      assert state.registers.r3 == 2
+    end
+
+    test "div_s_64 rounds towards zero for negative non-integer result" do
+      program = <<op(:div_s_64), 0x21, 3>>
+      state = %State{registers: %Registers{r1: 0xFFFF_FFFF_FFFF_FFFD, r2: 2}}  # -3 in 64-bit signed
+
+      {_, state} = ThreeRegisters.execute(:div_s_64, program, state)
+      # -3 / 2 = -1.5, rounded towards zero = -1
+      assert state.registers.r3 == 0xFFFF_FFFF_FFFF_FFFF  # -1 in 64-bit signed
     end
 
     test "rem_u_64 performs unsigned remainder" do

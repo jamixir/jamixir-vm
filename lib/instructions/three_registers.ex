@@ -92,7 +92,7 @@ defmodule PVM.Instructions.ThreeRegisters do
           cond do
             b == 0 -> @max_64
             b == -1 and a == -1 * (1 <<< 31) -> i2u(a, 8)
-            true -> i2u(div(a, b), 8)
+            true -> div(a, b) |> rtz() |> i2u(8)
           end
 
         :rem_u_32 ->
@@ -164,7 +164,7 @@ defmodule PVM.Instructions.ThreeRegisters do
           cond do
             w_b == 0 -> @max_64
             u2i(w_b, 8) == -1 and u2i(w_a, 8) == -1 * (1 <<< 63) -> w_a
-            true -> i2u(div(u2i(w_a, 8), u2i(w_b, 8)), 8)
+            true -> div(u2i(w_a, 8), u2i(w_b, 8)) |> rtz() |> i2u(8)
           end
 
         :rem_u_64 ->
