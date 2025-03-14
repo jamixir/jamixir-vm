@@ -48,7 +48,13 @@ defmodule PVM.Memory.Util do
     |> Enum.with_index()
     |> Enum.reduce(memory.data, fn {byte, index}, acc ->
       wrapped_addr = wrap_address(memory, address + index)
-      Map.put(acc, wrapped_addr, byte)
+      page_num = div(wrapped_addr, memory.page_size)
+      page_offset = rem(wrapped_addr, memory.page_size)
+
+      # Get or create the page, then update it with the new byte
+      page = Map.get(acc, page_num, %{})
+      updated_page = Map.put(page, page_offset, byte)
+      Map.put(acc, page_num, updated_page)
     end)
   end
 

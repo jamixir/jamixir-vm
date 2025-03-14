@@ -3,7 +3,7 @@ defmodule PVM.Memory do
   alias PVM.Memory.RangeManager
 
   @type t :: %__MODULE__{
-          data: %{non_neg_integer() => byte()},
+          data: %{non_neg_integer() => %{non_neg_integer() => byte()}}, # Page => {Offset => Byte}
           access_ranges: [{non_neg_integer(), non_neg_integer(), atom()}],
           page_size: pos_integer(),
           size: pos_integer()
@@ -133,7 +133,12 @@ defmodule PVM.Memory do
     0..(length - 1)
     |> Enum.map(fn offset ->
       wrapped_addr = wrap_address(memory, address + offset)
-      Map.get(data, wrapped_addr, 0)
+      page_num = div(wrapped_addr, memory.page_size)
+      page_offset = rem(wrapped_addr, memory.page_size)
+
+      # Get the page, then get the byte from the page
+      page = Map.get(data, page_num, %{})
+      Map.get(page, page_offset, 0)
     end)
     |> :binary.list_to_bin()
   end
