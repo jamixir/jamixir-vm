@@ -48,12 +48,9 @@ defmodule PVM.Memory.Util do
     |> Enum.with_index()
     |> Enum.reduce(memory.data, fn {byte, index}, acc ->
       wrapped_addr = wrap_address(memory, address + index)
-      page_num = div(wrapped_addr, memory.page_size)
-      page_offset = rem(wrapped_addr, memory.page_size)
+      {page_num, page_offset} = page_address(memory, wrapped_addr)
 
-      # Get or create the page, then update it with the new byte
-      page = Map.get(acc, page_num, %{})
-      updated_page = Map.put(page, page_offset, byte)
+      updated_page = Map.get(acc, page_num, %{}) |> Map.put(page_offset, byte)
       Map.put(acc, page_num, updated_page)
     end)
   end
@@ -64,5 +61,42 @@ defmodule PVM.Memory.Util do
     end_page = div(end_address, page_size)
 
     {start_page, end_page}
+  end
+
+  def page_address(memory, address),
+    do: {div(address, memory.page_size), rem(address, memory.page_size)}
+
+  def pages_with_data(%{data: data}) do
+    Map.keys(data)
+    |> Enum.filter(&(map_size(Map.get(data, &1)) > 0))
+  end
+
+  def get_page_binary(%{data: data, page_size: page_size}, page_num) do
+    page = Map.get(data, page_num, %{})
+
+    # Sort offsets for sequential processing
+    offsets = page |> Map.keys() |> Enum.sort()
+
+    if offsets == [] do
+      :binary.copy(<<0>>, page_size)
+    else
+      # Build the binary in chunks between data points
+      {binary, last_pos} =
+        Enum.reduce(offsets, {<<>>, 0}, fn offset, {acc, pos} ->
+          zeros_needed = offset - pos
+          zeros = if zeros_needed > 0, do: :binary.copy(<<0>>, zeros_needed), else: <<>>
+
+          byte_val = Map.get(page, offset)
+          {<<acc::binary, zeros::binary, byte_val::8>>, offset + 1}
+        end)
+
+      remaining = page_size - last_pos
+
+      if remaining > 0 do
+        <<binary::binary, 0::unit(8)-size(remaining)>>
+      else
+        binary
+      end
+    end
   end
 end
