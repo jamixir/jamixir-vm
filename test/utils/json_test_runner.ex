@@ -156,7 +156,6 @@ defmodule PVM.Utils.JsonTestRunner do
         end)
       end
 
-    pre_memory = PVM.PreMemory.resolve_overlaps(pre_memory)
     PVM.PreMemory.finalize(pre_memory)
   end
 

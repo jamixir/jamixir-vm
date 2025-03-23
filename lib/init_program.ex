@@ -1,4 +1,5 @@
 defmodule PVM.InitProgram do
+  alias PVM.PreMemory
   alias PVM.{Memory, Registers}
   require Logger
   import PVM.Memory.Constants
@@ -90,6 +91,9 @@ defmodule PVM.InitProgram do
     a_size = byte_size(a)
     boundaries = boundaries(o_size, w_size, a_size, z, s)
 
+    # notice that the nil access regions are filled in by `PreMemory.init_nil_memory()` in `construct_memory` function
+    # comments below are places for easy reading
+
     [
       # Program text region: [Zz, Zz + |o|] => R
       {boundaries.program_text_start, boundaries.program_text_end, o, :read},
@@ -98,7 +102,6 @@ defmodule PVM.InitProgram do
       {boundaries.program_text_end, boundaries.program_text_padding_end, nil, :read},
 
       # No access region between program text and data
-      {boundaries.program_text_padding_end, boundaries.data_start, nil, nil},
 
       # Data region: [2Zz + Z(|o|), 2Zz + Z(|o|) + |w|] => W
       {boundaries.data_start, boundaries.data_end, w, :write},
@@ -107,22 +110,19 @@ defmodule PVM.InitProgram do
       {boundaries.data_end, boundaries.data_padding_end, nil, :write},
 
       # No access region between data and stack
-      {boundaries.data_padding_end, boundaries.stack_start, nil, nil},
 
       # Stack region: [2^32 - 2Zz - Zi - P(s), 2^32 - 2Zz - Zi] => W
       {boundaries.stack_start, boundaries.stack_end, nil, :write},
 
       # No access region between stack and args
-      {boundaries.stack_end, boundaries.args_start, nil, nil},
 
       # Args region: [2^32 - Zz - Zi, 2^32 - Zz - Zi + |a|] => R
       {boundaries.args_start, boundaries.args_end, a, :read},
 
       # Args padding: [2^32 - Zz - Zi + |a|, 2^32 - Zz - Zi + P(|a|)] => R
-      {boundaries.args_end, boundaries.args_padding_end, nil, :read},
+      {boundaries.args_end, boundaries.args_padding_end, nil, :read}
 
       # No access region between args and end of memory
-      {boundaries.args_padding_end, boundaries.memory_end, nil, nil}
     ]
   end
 
@@ -132,7 +132,7 @@ defmodule PVM.InitProgram do
     regions = memory_regions(o, w, a, z, s)
 
     pre_memory =
-      Enum.reduce(regions, %PVM.PreMemory{}, fn
+      Enum.reduce(regions, PreMemory.init_nil_memory(), fn
         {start, end_, nil, access}, mem ->
           PVM.PreMemory.set_access(mem, start, end_ - start, access)
 
