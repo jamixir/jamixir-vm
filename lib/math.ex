@@ -56,8 +56,6 @@ defmodule PVM.Math do
 
   # Fall back to regular remainder for non-powers of 2
   def mod(value, divisor), do: rem(value, divisor)
-  def rtz(x) when x < 0, do: ceil(x)
-  def rtz(x), do: floor(x)
 
   defmacro __using__(_) do
     quote do
@@ -67,7 +65,6 @@ defmodule PVM.Math do
       def b2u(bits), do: PVM.Math.bits_to_int(bits)
       def srem(a, b), do: PVM.Math.signed_remainder(a, b)
       def mod(a, b), do: PVM.Math.mod(a, b)
-      def rtz(x), do: PVM.Math.rtz(x)
     end
   end
 end
