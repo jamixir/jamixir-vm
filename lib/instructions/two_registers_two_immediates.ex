@@ -1,6 +1,6 @@
 defmodule PVM.Instructions.TwoRegistersTwoImmediates do
   use PVM.Utils
-  alias PVM.{Instructions.Executor, Registers, Trace}
+  alias PVM.{Instructions.Executor, Registers}
   use PVM.Math
 
   @two_to_32 0x1_0000_0000
@@ -10,12 +10,6 @@ defmodule PVM.Instructions.TwoRegistersTwoImmediates do
     w_b = Registers.get(state.registers, r_b)
 
     jump_addr = mod(w_b + v_y, @two_to_32)
-
-    Trace.instruction(
-      state.counter,
-      "load_imm_jump_ind",
-      "load #{v_x} into w#{r_a} and jump to [w#{r_b}(#{w_b}) + #{v_y}] = #{jump_addr}"
-    )
 
     {exit_status, counter} = Executor.djump(jump_addr, state.counter, jump_table, start_set)
 

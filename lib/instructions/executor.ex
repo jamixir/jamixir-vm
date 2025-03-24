@@ -17,6 +17,12 @@ defmodule PVM.Instructions.Executor do
   }
 
   def execute_instruction(opcode, program, bitmask, jump_table, start_set, state) do
+    {status, new_state} = execute_inner(opcode, program, bitmask, jump_table, start_set, state)
+    Trace.instruction_executed(opcode, state.counter, new_state)
+    {status, new_state}
+  end
+
+  defp execute_inner(opcode, program, bitmask, jump_table, start_set, state) do
     case Instructions.instruction_category(opcode) do
       :no_args ->
         NoArgs.execute(opcode, state)
@@ -57,12 +63,9 @@ defmodule PVM.Instructions.Executor do
   def branch(_value, false, counter, _start_set), do: {:continue, counter}
 
   def branch(value, true, counter, start_set) do
-    Trace.branch(counter, value)
-
     if value in start_set do
       {:continue, value}
     else
-      Trace.write_line("exit", "panic: Invalid branch target #{value} at PC #{counter}")
       {:panic, counter}
     end
   end
@@ -76,32 +79,21 @@ defmodule PVM.Instructions.Executor do
     case a do
       # 2^32 - 2^16
       0xFFFF0000 ->
-        Trace.write_line("exit", "halt: Program halted at PC #{counter}")
         {:halt, counter}
 
       0 ->
-        Trace.write_line("exit", "panic: Invalid jump target 0 at PC #{counter}")
         {:panic, counter}
 
       a when a > length(jump_table) * alignment_factor ->
-        Trace.write_line(
-          "exit",
-          "panic: Jump target #{a} exceeds jump table size at PC #{counter}"
-        )
-
         {:panic, counter}
 
       _ when remainder != 0 ->
-        Trace.write_line("exit", "panic: Unaligned jump target #{a} at PC #{counter}")
         {:panic, counter}
 
       _ ->
-        Trace.djump(counter, jump_to)
-
         if jump_to in start_set do
           {:continue, jump_to}
         else
-          Trace.write_line("exit", "panic: Invalid jump target #{jump_to} at PC #{counter}")
           {:panic, counter}
         end
     end

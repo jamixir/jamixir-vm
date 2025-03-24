@@ -1,5 +1,7 @@
 defmodule PVM.Trace do
   alias PVM.Trace.HTML
+  require Logger
+  use PVM.Encoder
 
   @default_log_file "pvm_trace.log"
 
@@ -36,70 +38,56 @@ defmodule PVM.Trace do
   defp get_html_filename(nil), do: "pvm_trace.html"
   defp get_html_filename(name), do: "pvm_trace_#{name}.html"
 
-  def write_line(class, message) do
+  def instruction_executed(opcode, pc, post_state) do
     if enabled?() do
-      # Only add counter for instruction starts (PC lines)
-      {prefix, new_counter} =
-        if String.contains?(message, "PC:") do
-          counter = Process.get(:trace_counter)
-          {"#{counter}. ", counter + 1}
-        else
-          {"", Process.get(:trace_counter)}
-        end
+      counter = Process.get(:trace_counter, 1)
+      instruction_name = get_instruction_name(opcode)
 
-      line = prefix <> message
+      mem_hash = pvm_hash(post_state)
+
+      reg_str = inspect(post_state.registers)
+
+      line =
+        "#{counter}: PC #{pc} #{instruction_name}" <>
+          String.pad_trailing("", 30) <>
+          "g=#{post_state.gas} pvmHash=#{mem_hash} reg=#{reg_str}"
+
       log_file = Process.get(:trace_log_file) || @default_log_file
       File.write!(log_file, line <> "\n", [:append])
-      HTML.write_line(Process.get(:trace_html_file), class, line)
+      HTML.write_line(Process.get(:trace_html_file), "instruction", line)
 
-      Process.put(:trace_counter, new_counter)
+      Process.put(:trace_counter, counter + 1)
     end
   end
 
-  def instruction_start(pc, type) do
-    if enabled?() do
-      write_line("header", "\n----------------------------------------")
-      write_line("header", "PC: #{pc} Executing #{type}")
-    end
-  end
+  defp get_instruction_name(opcode), do: to_string(opcode) |> String.upcase()
 
-  def instruction_data(type, lines) when is_list(lines) do
-    if enabled?() do
-      Enum.each(lines, fn line ->
-        write_line("instruction", "#{type}: #{line}")
+  defp pvm_hash(%PVM.State{} = state) do
+    registers =
+      PVM.Registers.to_list(state.registers) |> Enum.map(&e_le(&1, 8)) |> Enum.join(<<>>)
+
+    pages = PVM.Memory.Util.pages_with_data(state.memory) |> Enum.sort()
+
+    # Create a binary with each page's address and content
+    pages_binary =
+      pages
+      |> Enum.map(fn page_num ->
+        page_content = PVM.Memory.Util.get_page_binary(state.memory, page_num)
+
+        <<page_num::32-little, page_content::binary>>
       end)
-    end
-  end
+      |> Enum.join(<<>>)
 
-  # For backwards compatibility
-  def instruction(pc, type, data \\ nil) when is_integer(pc) do
-    instruction_start(pc, type)
-    if data, do: write_line("instruction", "#{type}: #{data}")
-  end
+    bin = <<registers::binary, state.gas::64-little, pages_binary::binary>>
 
-  def branch(from, to) do
-    if enabled?() do
-      write_line("branch", "branch: Branching to PC #{to} step #{to - from}")
-    end
-  end
+    # 4. Compute Blake2b hash of the binary data
+    hash = Blake2.hash2b(bin, 32)
 
-  def djump(from, to) do
-    if enabled?() do
-      write_line("branch", "djump: Djumping to PC #{to} step #{to - from}")
-    end
-  end
+    # 5. Format hash as a shortened string like "9724..2f0e"
+    prefix = Base.encode16(binary_part(hash, 0, 2), case: :lower)
+    suffix = Base.encode16(binary_part(hash, byte_size(hash), -2), case: :lower)
 
-  def state_change(registers, memory_chunks, gas) do
-    if enabled?() do
-      write_line("state", "New Gas: #{gas}")
-      write_line("state", "New Registers: #{inspect(registers)}")
-
-      Enum.each(memory_chunks, fn chunk ->
-        write_line("state", "New Memory chunk: #{inspect(chunk)}")
-      end)
-
-      write_line("header", "------------------------------")
-    end
+    "#{prefix}..#{suffix}"
   end
 
   def close_trace_file do
