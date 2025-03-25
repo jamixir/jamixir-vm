@@ -1,7 +1,6 @@
 defmodule PVM.Instructions.TwoImmediates do
   use PVM.{Encoder, Utils, Math}
   import PVM.Memory.Util
-  alias PVM.Trace
   # Section (A.17) v0.5
 
   @two_to_8 0x100
@@ -11,27 +10,23 @@ defmodule PVM.Instructions.TwoImmediates do
   def execute(:store_imm_u8, program, bitmask, state) do
     {v_x, v_y} = get_params(program, bitmask, state.counter)
     value = mod(v_y, @two_to_8)
-    Trace.instruction(state.counter, "store_imm_u8", "store #{value} to address #{v_x}")
     write_memory(state, v_x, <<value>>)
   end
 
   def execute(:store_imm_u16, program, bitmask, state) do
     {v_x, v_y} = get_params(program, bitmask, state.counter)
     value = mod(v_y, @two_to_16)
-    Trace.instruction(state.counter, "store_imm_u16", "store #{value} to address #{v_x}")
     write_memory(state, v_x, <<value::16-little>>)
   end
 
   def execute(:store_imm_u32, program, bitmask, state) do
     {v_x, v_y} = get_params(program, bitmask, state.counter)
     value = mod(v_y, @two_to_32)
-    Trace.instruction(state.counter, "store_imm_u32", "store #{value} to address #{v_x}")
     write_memory(state, v_x, <<value::32-little>>)
   end
 
   def execute(:store_imm_u64, program, bitmask, state) do
     {v_x, v_y} = get_params(program, bitmask, state.counter)
-    Trace.instruction(state.counter, "store_imm_u64", "store #{v_y} to address #{v_x}")
     write_memory(state, v_x, <<v_y::64-little>>)
   end
 

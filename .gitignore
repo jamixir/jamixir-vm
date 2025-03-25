@@ -3,3 +3,5 @@ target/
 _build/
 deps/
 cover/
+*.log
+*.html

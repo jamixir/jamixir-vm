@@ -1,6 +1,6 @@
 defmodule PVM.Instructions.RegImmediate do
   use PVM.{Decoder, Encoder, Utils, Math}
-  alias PVM.{Instructions.Executor, Registers, Trace}
+  alias PVM.{Instructions.Executor, Registers}
   import PVM.Memory.Util
 
   @two_to_8 0x100
@@ -15,8 +15,6 @@ defmodule PVM.Instructions.RegImmediate do
 
     <<value::64-little>> = binary_part_safe(program, state.counter + 2, 8)
 
-    Trace.instruction(state.counter, "load_imm_64", "set w#{register_index}=#{value}")
-
     state = %{state | registers: Registers.set(state.registers, register_index, value)}
     {:continue, state}
   end
@@ -26,12 +24,6 @@ defmodule PVM.Instructions.RegImmediate do
     {register_index, addr} = get_params(program, bitmask, state.counter)
     register_value = Registers.get(state.registers, register_index)
     target = mod(register_value + addr, 0x1_0000_0000)
-
-    Trace.instruction(
-      state.counter,
-      "jump_ind",
-      "jump to w#{register_index}(#{register_value}) + #{addr} = #{target}"
-    )
 
     {exit_status, counter} =
       Executor.djump(
@@ -47,20 +39,12 @@ defmodule PVM.Instructions.RegImmediate do
   def execute(:load_imm, program, bitmask, _jump_table, _start_set, state) do
     {register_index, value} = get_params(program, bitmask, state.counter)
 
-    Trace.instruction(state.counter, "load_imm", "set w#{register_index}=#{value}")
-
     state = %{state | registers: Registers.set(state.registers, register_index, value)}
     {:continue, state}
   end
 
-  def execute(load_type = :load_u8, program, bitmask, _jump_table, _start_set, state) do
+  def execute(:load_u8, program, bitmask, _jump_table, _start_set, state) do
     {register_index, addr} = get_params(program, bitmask, state.counter)
-
-    Trace.instruction(
-      state.counter,
-      "#{load_type}",
-      "load from address #{addr} to w#{register_index}"
-    )
 
     read_memory(
       state,
@@ -73,14 +57,8 @@ defmodule PVM.Instructions.RegImmediate do
     )
   end
 
-  def execute(load_type = :load_i8, program, bitmask, _jump_table, _start_set, state) do
+  def execute(:load_i8, program, bitmask, _jump_table, _start_set, state) do
     {register_index, addr} = get_params(program, bitmask, state.counter)
-
-    Trace.instruction(
-      state.counter,
-      "#{load_type}",
-      "load from address #{addr} to w#{register_index}"
-    )
 
     read_memory(state, addr, 1, fn value ->
       signed_value =
@@ -97,12 +75,6 @@ defmodule PVM.Instructions.RegImmediate do
   def execute(:load_u16, program, bitmask, _jump_table, _start_set, state) do
     {register_index, addr} = get_params(program, bitmask, state.counter)
 
-    Trace.instruction(
-      state.counter,
-      "load_u16",
-      "load from address #{addr} to w#{register_index}"
-    )
-
     read_memory(state, addr, 2, fn <<v::16-little>> ->
       %{
         state
@@ -113,12 +85,6 @@ defmodule PVM.Instructions.RegImmediate do
 
   def execute(:load_i16, program, bitmask, _jump_table, _start_set, state) do
     {register_index, addr} = get_params(program, bitmask, state.counter)
-
-    Trace.instruction(
-      state.counter,
-      "load_i16",
-      "load from address #{addr} to w#{register_index}"
-    )
 
     read_memory(state, addr, 2, fn <<value::16-little>> ->
       signed_value = to_64bit(value, 2)
@@ -133,12 +99,6 @@ defmodule PVM.Instructions.RegImmediate do
   def execute(:load_u32, program, bitmask, _jump_table, _start_set, state) do
     {register_index, addr} = get_params(program, bitmask, state.counter)
 
-    Trace.instruction(
-      state.counter,
-      "load_u32",
-      "load from address #{addr} to w#{register_index}"
-    )
-
     read_memory(state, addr, 4, fn <<v::32-little>> ->
       %{
         state
@@ -149,12 +109,6 @@ defmodule PVM.Instructions.RegImmediate do
 
   def execute(:load_i32, program, bitmask, _jump_table, _start_set, state) do
     {register_index, addr} = get_params(program, bitmask, state.counter)
-
-    Trace.instruction(
-      state.counter,
-      "load_i32",
-      "load from address #{addr} to w#{register_index}"
-    )
 
     read_memory(state, addr, 4, fn <<value::32-little>> ->
       signed_value = to_64bit(value, 4)
@@ -169,12 +123,6 @@ defmodule PVM.Instructions.RegImmediate do
   def execute(:load_u64, program, bitmask, _jump_table, _start_set, state) do
     {register_index, addr} = get_params(program, bitmask, state.counter)
 
-    Trace.instruction(
-      state.counter,
-      "load_u64",
-      "load from address #{addr} to w#{register_index}"
-    )
-
     read_memory(state, addr, 8, fn <<v::64-little>> ->
       %{
         state
@@ -183,57 +131,33 @@ defmodule PVM.Instructions.RegImmediate do
     end)
   end
 
-  def execute(store_type = :store_u8, program, bitmask, _jump_table, _start_set, state) do
+  def execute(:store_u8, program, bitmask, _jump_table, _start_set, state) do
     {register_index, addr} = get_params(program, bitmask, state.counter)
     value = Registers.get(state.registers, register_index)
     stored_value = mod(value, @two_to_8)
 
-    Trace.instruction(
-      state.counter,
-      "#{store_type}",
-      "store w#{register_index}(#{value}) to address #{addr}, value=#{stored_value}"
-    )
-
     write_memory(state, addr, <<stored_value>>)
   end
 
-  def execute(store_type = :store_u16, program, bitmask, _jump_table, _start_set, state) do
+  def execute(:store_u16, program, bitmask, _jump_table, _start_set, state) do
     {register_index, addr} = get_params(program, bitmask, state.counter)
     value = Registers.get(state.registers, register_index)
     stored_value = mod(value, @two_to_16)
 
-    Trace.instruction(
-      state.counter,
-      "#{store_type}",
-      "store w#{register_index}(#{value}) to address #{addr}, value=#{stored_value}"
-    )
-
     write_memory(state, addr, <<stored_value::16-little>>)
   end
 
-  def execute(store_type = :store_u32, program, bitmask, _jump_table, _start_set, state) do
+  def execute(:store_u32, program, bitmask, _jump_table, _start_set, state) do
     {register_index, addr} = get_params(program, bitmask, state.counter)
     value = Registers.get(state.registers, register_index)
     stored_value = mod(value, @two_to_32)
 
-    Trace.instruction(
-      state.counter,
-      "#{store_type}",
-      "store w#{register_index}(#{value}) to address #{addr}, value=#{stored_value}"
-    )
-
     write_memory(state, addr, <<stored_value::32-little>>)
   end
 
-  def execute(store_type = :store_u64, program, bitmask, _jump_table, _start_set, state) do
+  def execute(:store_u64, program, bitmask, _jump_table, _start_set, state) do
     {register_index, addr} = get_params(program, bitmask, state.counter)
     value = Registers.get(state.registers, register_index)
-
-    Trace.instruction(
-      state.counter,
-      "#{store_type}",
-      "store w#{register_index}(#{value}) to address #{addr}, value=#{value}"
-    )
 
     write_memory(state, addr, <<value::64-little>>)
   end

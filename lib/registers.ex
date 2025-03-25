@@ -110,4 +110,17 @@ defmodule PVM.Registers do
       raise ArgumentError, "Keys must be either all atoms or all integers"
     end
   end
+
+  def to_list(%__MODULE__{} = registers), do: 0..12 |> Enum.map(&Map.get(registers, :"r#{&1}"))
+end
+
+defimpl Inspect, for: PVM.Registers do
+  def inspect(registers, _opts) do
+    register_str =
+      0..12
+      |> Enum.map(&"w#{&1}:#{Map.get(registers, String.to_atom("r#{&1}"))}")
+      |> Enum.join(" ")
+
+    "[#{register_str}]"
+  end
 end
