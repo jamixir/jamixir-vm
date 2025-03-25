@@ -111,34 +111,16 @@ defmodule PVM.Registers do
     end
   end
 
-  def to_list(%__MODULE__{} = registers) do
-    [
-      registers.r0,
-      registers.r1,
-      registers.r2,
-      registers.r3,
-      registers.r4,
-      registers.r5,
-      registers.r6,
-      registers.r7,
-      registers.r8,
-      registers.r9,
-      registers.r10,
-      registers.r11,
-      registers.r12
-    ]
-  end
+  def to_list(%__MODULE__{} = registers), do: 0..12 |> Enum.map(&Map.get(registers, :"r#{&1}"))
 end
 
 defimpl Inspect, for: PVM.Registers do
   def inspect(registers, _opts) do
     register_str =
-      registers
-      |> PVM.Registers.to_list()
-      |> Enum.with_index()
-      |> Enum.map(fn {value, i} -> "w#{i}:#{value}" end)
+      0..12
+      |> Enum.map(&"w#{&1}:#{Map.get(registers, String.to_atom("r#{&1}"))}")
       |> Enum.join(" ")
 
-    "\"[#{register_str}]\""
+    "[#{register_str}]"
   end
 end
