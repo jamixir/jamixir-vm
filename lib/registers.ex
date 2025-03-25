@@ -135,7 +135,8 @@ defimpl Inspect, for: PVM.Registers do
     register_str =
       registers
       |> PVM.Registers.to_list()
-      |> Enum.map(&to_string/1)
+      |> Enum.with_index()
+      |> Enum.map(fn {value, i} -> "w#{i}:#{value}" end)
       |> Enum.join(" ")
 
     "\"[#{register_str}]\""

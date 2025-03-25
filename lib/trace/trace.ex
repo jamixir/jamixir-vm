@@ -12,7 +12,6 @@ defmodule PVM.Trace do
     # Check if --trace-pvm flag was passed
     cli_enabled = System.get_env("MIX_TEST_PVM_TRACE") == "true"
 
-    # Enable if either method is used
     config_enabled || cli_enabled
   end
 
@@ -41,16 +40,13 @@ defmodule PVM.Trace do
   def instruction_executed(opcode, pc, post_state) do
     if enabled?() do
       counter = Process.get(:trace_counter, 1)
-      instruction_name = get_instruction_name(opcode)
 
-      mem_hash = pvm_hash(post_state)
-
-      reg_str = inspect(post_state.registers)
+      counter_str = String.pad_leading("#{counter}", 5)
+      pc_str = String.pad_leading("#{pc}", 5)
+      instruction_str = String.pad_trailing(get_instruction_name(opcode), 20)
 
       line =
-        "#{counter}: PC #{pc} #{instruction_name}" <>
-          String.pad_trailing("", 30) <>
-          "g=#{post_state.gas} pvmHash=#{mem_hash} reg=#{reg_str}"
+        "#{counter_str}: PC #{pc_str} #{instruction_str}  g=#{post_state.gas} pvmHash=#{pvm_hash(post_state)} reg=#{inspect(post_state.registers)}"
 
       log_file = Process.get(:trace_log_file) || @default_log_file
       File.write!(log_file, line <> "\n", [:append])
