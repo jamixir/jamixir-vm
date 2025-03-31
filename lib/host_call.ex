@@ -75,8 +75,8 @@ defmodule PVM.HostCall do
 
         do_execute(program, bitmask, jump_table, start_set, state_, host_fn, new_context)
 
-      {reason, {final_state, final_context}} when reason in [:halt, :panic, :out_of_gas] ->
-        {reason, %{final_state | counter: state.counter}, final_context}
+      {reason, final_state, final_context} when reason in [:halt, :panic, :out_of_gas] ->
+        {reason, Map.put(final_state, :counter, state.counter), final_context}
     end
   end
 end
