@@ -339,9 +339,9 @@ defmodule PVM.InitProgramTest do
 
       # Check specific registers that should have predefined values (A.35)
       assert Registers.get(registers, [0, 1, 7, 8]) == [
-               0xFFFF_FFFF_FFFF_0000,
-               0xFFFF_FFFF_FEFE_0000,
-               0xFFFF_FFFFFEFF_0000,
+               0xFFFF_0000,
+               0xFEFE_0000,
+               0xFEFF_0000,
                4
              ]
 
