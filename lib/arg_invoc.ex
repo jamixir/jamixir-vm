@@ -34,26 +34,27 @@ defmodule PVM.ArgInvoc do
 
         {reason, final_state, final_context} = HostCall.execute(code, state, host_fn, context)
         PVM.Trace.close_trace_file()
-        transform_result(reason, final_state, final_context)
+        used_gas = gas - max(final_state.gas, 0)
+        transform_result(used_gas, reason, final_state, final_context)
     end
   end
 
-  # Formula (A.41) v0.6.1
-  defp transform_result(:halt, state, context) do
+  # Formula (A.41) v0.6.4
+  defp transform_result(used_gas, :halt, state, context) do
     start_addr = state.registers.r7
     end_addr = state.registers.r8
 
     case Memory.read(state.memory, start_addr, end_addr - start_addr) do
-      {:ok, data} -> {state.gas, data, context}
-      {:error, _} -> {state.gas, <<>>, context}
+      {:ok, data} -> {used_gas, data, context}
+      {:error, _} -> {used_gas, <<>>, context}
     end
   end
 
-  defp transform_result(:out_of_gas, state, context) do
-    {state.gas, :out_of_gas, context}
+  defp transform_result(used_gas, :out_of_gas, _state, context) do
+    {used_gas, :out_of_gas, context}
   end
 
-  defp transform_result(_reason, state, context) do
-    {state.gas, :panic, context}
+  defp transform_result(used_gas, _reason, _state, context) do
+    {used_gas, :panic, context}
   end
 end
