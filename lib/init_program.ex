@@ -12,11 +12,11 @@ defmodule PVM.InitProgram do
   def zi, do: 0x100_0000
   def max_addr, do: memory_size()
 
-  # Formula (A.34) v0.6.1
+  # Formula (A.37) v0.6.5
   def parse_program_segments(binary) when byte_size(binary) >= 15 do
     try do
       <<o_size::24-little, w_size::24-little, z::16-little, s::24-little, o::binary-size(o_size),
-        w::binary-size(w_size), c_size::32-little, c::binary-size(c_size)>> = binary
+        w::binary-size(w_size), c_size::32-little, c::binary-size(c_size), _a::binary>> = binary
 
       {:ok, {o_size, o, w_size, w, z, s, c}}
     rescue
