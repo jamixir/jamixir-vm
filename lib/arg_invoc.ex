@@ -39,12 +39,12 @@ defmodule PVM.ArgInvoc do
     end
   end
 
-  # Formula (A.41) v0.6.4
+  # Formula (A.43) v0.6.5
   defp transform_result(used_gas, :halt, state, context) do
     start_addr = state.registers.r7
-    end_addr = state.registers.r8
+    length = state.registers.r8
 
-    case Memory.read(state.memory, start_addr, end_addr - start_addr) do
+    case Memory.read(state.memory, start_addr, length) do
       {:ok, data} -> {used_gas, data, context}
       {:error, _} -> {used_gas, <<>>, context}
     end
