@@ -12,7 +12,7 @@ defmodule PVM.InitProgram do
   def zi, do: 0x100_0000
   def max_addr, do: memory_size()
 
-  # Formula (A.34) v0.6.1
+  # Formula (A.37) v0.6.6
   def parse_program_segments(binary) when byte_size(binary) >= 15 do
     try do
       <<o_size::24-little, w_size::24-little, z::16-little, s::24-little, o::binary-size(o_size),
@@ -26,6 +26,7 @@ defmodule PVM.InitProgram do
 
   def parse_program_segments(_), do: {:error, :insufficient_bytes}
 
+  # Formula (A.36) v0.6.6
   def initialize_program(program, a) do
     with {:ok, {o_size, o, w_size, w, z, s, c}} <- parse_program_segments(program) do
       # Verify condition A.37
