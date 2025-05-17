@@ -7,9 +7,9 @@ defmodule PVM.Instructions.RegImmediate do
   @two_to_16 0x1_0000
   @two_to_32 0x1_0000_0000
 
-  # Section (A.5.3) v0.6.1
+  # Section (A.5.3) v0.6.6
   def execute(:load_imm_64, program, _bitmask, _jump_table, _start_set, state) do
-    # Formula (A.20) v0.6.1
+    # Formula (A.21) v0.6.6
     register_index =
       min(12, mod(binary_part_safe(program, state.counter + 1, 1) |> :binary.first(), 16))
 
@@ -19,7 +19,7 @@ defmodule PVM.Instructions.RegImmediate do
     {:continue, state}
   end
 
-  # Section (A.5.6) v0.6.1
+  # Section (A.5.6) v0.6.6
   def execute(:jump_ind, program, bitmask, jump_table, start_set, state) do
     {register_index, addr} = get_params(program, bitmask, state.counter)
     register_value = Registers.get(state.registers, register_index)
@@ -162,7 +162,7 @@ defmodule PVM.Instructions.RegImmediate do
     write_memory(state, addr, <<value::64-little>>)
   end
 
-  # Formula (A.23) v0.6.1
+  # Formula (A.24) v0.6.6
   defp get_params(program, bitmask, counter) do
     register_index =
       min(12, mod(binary_part_safe(program, counter + 1, 1) |> :binary.first(), 16))

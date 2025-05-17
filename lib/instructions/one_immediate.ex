@@ -3,9 +3,9 @@ defmodule PVM.Instructions.OneImmediate do
   use PVM.Utils
   alias PVM.Instructions.Executor
 
-  # Section (A.5.2) v0.6.1
+  # Section (A.5.2) v0.6.6
   def execute(:ecalli, program, bitmask, _start_set, state) do
-    # Formula (A.19) v0.6.1
+    # Formula (A.20) v0.6.6
     l_x = min(4, skip(state.counter, bitmask))
 
     value = decode_and_extend(program, state.counter + 1, l_x)
@@ -13,9 +13,9 @@ defmodule PVM.Instructions.OneImmediate do
     {{:ecall, value}, state}
   end
 
-  # Section (A.5.5) v0.6.1
+  # Section (A.5.5) v0.6.6
   def execute(:jump, program, bitmask, start_set, state) do
-    # Formula (A.22) v0.6.1
+    # Formula (A.23) v0.6.6
     l_x = min(4, skip(state.counter, bitmask))
     shift_signed = decode_bytes(program, state.counter + 1, l_x) |> u2i(l_x)
     v_x = state.counter + shift_signed

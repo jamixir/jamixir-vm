@@ -1,7 +1,7 @@
 defmodule PVM.Instructions.TwoImmediates do
   use PVM.{Encoder, Utils, Math}
   import PVM.Memory.Util
-  # Section (A.17) v0.5
+  # Section (A.20) v0.6.6
 
   @two_to_8 0x100
   @two_to_16 0x1_0000

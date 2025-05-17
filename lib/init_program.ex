@@ -4,11 +4,11 @@ defmodule PVM.InitProgram do
   require Logger
   import PVM.Memory.Constants
 
-  # Formula (4.25) v0.6.1
+  # Formula (4.25) v0.6.6
   def zp, do: page_size()
-  # Formula (A.35) v0.6.1
+  # Formula (A.38) v0.6.6
   def zz, do: min_allowed_address()
-  # Formula (A.35) v0.6.1
+  # Formula (A.38) v0.6.6
   def zi, do: 0x100_0000
   def max_addr, do: memory_size()
 
@@ -42,16 +42,16 @@ defmodule PVM.InitProgram do
     end
   end
 
-  # Formula (A.36) v0.6.1
+  # Formula (A.39) v0.6.6
   def z(x), do: ceil(x / zz()) * zz()
   def p(x), do: ceil(x / zp()) * zp()
 
-  # Formula (A.37) v0.6.1
+  # Formula (A.40) v0.6.6
   def verify_size_constraint(o_size, w_size, z, s) do
     z(o_size) + z(w_size + z * zp()) + z(s) <= 0x1_0000_0000 - 5 * zz() - zi()
   end
 
-  # Formula (A.39) v0.6.1
+  # Formula (A.42) v0.6.6
   def initialize_registers(a) do
     %Registers{
       r0: 0xFFFF_0000,
@@ -93,7 +93,7 @@ defmodule PVM.InitProgram do
     boundaries = boundaries(o_size, w_size, a_size, z, s)
 
     # notice that the nil access regions are filled in by `PreMemory.init_nil_memory()` in `construct_memory` function
-    # comments below are places for easy reading
+    # comments below are placed for easy reading
 
     [
       # Program text region: [Zz, Zz + |o|] => R
@@ -127,7 +127,7 @@ defmodule PVM.InitProgram do
     ]
   end
 
-  # Formula (A.38) v0.6.1
+  # Formula (A.41) v0.6.6
   @spec construct_memory(binary(), binary(), binary(), integer(), integer()) :: Memory.t()
   def construct_memory(o, w, a, z, s) do
     regions = memory_regions(o, w, a, z, s)

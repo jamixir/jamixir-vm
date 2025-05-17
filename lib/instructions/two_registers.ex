@@ -3,7 +3,7 @@ defmodule PVM.Instructions.TwoRegisters do
   use PVM.Math
   use PVM.{Encoder, Decoder, Utils}
   import Bitwise, only: [&&&: 2, bsr: 2]
-  # Section (A.5.9) v0.6.1
+  # Section (A.5.9) v0.6.6
 
   def execute(:move_reg, program, state) do
     {r_d, r_a} = get_params(program, state.counter)
@@ -126,7 +126,7 @@ defmodule PVM.Instructions.TwoRegisters do
     {:continue, %{state | registers: Registers.set(state.registers, r_d, reversed)}}
   end
 
-  # Formula (A.26) v0.6.1
+  # Formula (A.27) v0.6.6
   defp get_params(program, counter) do
     byte = binary_part_safe(program, counter + 1, 1) |> :binary.first()
     {mod(byte, 16) |> min(12), bsr(byte, 4) |> min(12)}

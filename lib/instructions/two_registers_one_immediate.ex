@@ -3,7 +3,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
   use PVM.{Decoder, Encoder, Utils, Math}
   alias PVM.{Registers, Utils}
   import PVM.Memory.Util
-  # Section (A.5.10) v0.6.1
+  # Section (A.5.10) v0.6.6
 
   @two_32 0x1_0000_0000
   @two_64 0x1_0000_0000_0000_0000
@@ -297,7 +297,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     {:continue, state}
   end
 
-  # Formula (A.27) v0.6.1
+  # Formula (A.28) v0.6.6
   defp get_params(program, bitmask, counter) do
     byte1 = binary_part_safe(program, counter + 1, 1)
     r_a = min(12, mod(:binary.first(byte1), 16))

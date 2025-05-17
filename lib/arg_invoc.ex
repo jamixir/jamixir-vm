@@ -1,5 +1,5 @@
 defmodule PVM.ArgInvoc do
-  # Formula (A.40) v0.6.1
+  # Formula (A.41) v0.6.6
 
   alias PVM.{InitProgram, HostCall, State, Types, Memory}
 
@@ -22,7 +22,7 @@ defmodule PVM.ArgInvoc do
 
     case InitProgram.initialize_program(program, args) do
       nil ->
-        {gas, :panic, context}
+        {0, :panic, context}
 
       {code, registers, memory} ->
         state = %State{
@@ -39,22 +39,23 @@ defmodule PVM.ArgInvoc do
     end
   end
 
-  # Formula (A.43) v0.6.5
-  defp transform_result(used_gas, :halt, state, context) do
-    start_addr = state.registers.r7
-    length = state.registers.r8
+  # Formula (A.43) v0.6.6
+  # R Function
+  defp transform_result(used_gas, :halt, state_, context_) do
+    start_addr = state_.registers.r7
+    length = state_.registers.r8
 
-    case Memory.read(state.memory, start_addr, length) do
-      {:ok, data} -> {used_gas, data, context}
-      {:error, _} -> {used_gas, <<>>, context}
+    case Memory.read(state_.memory, start_addr, length) do
+      {:ok, data} -> {used_gas, data, context_}
+      {:error, _} -> {used_gas, <<>>, context_}
     end
   end
 
-  defp transform_result(used_gas, :out_of_gas, _state, context) do
-    {used_gas, :out_of_gas, context}
+  defp transform_result(used_gas, :out_of_gas, _state, context_) do
+    {used_gas, :out_of_gas, context_}
   end
 
-  defp transform_result(used_gas, _reason, _state, context) do
-    {used_gas, :panic, context}
+  defp transform_result(used_gas, _reason, _state, context_) do
+    {used_gas, :panic, context_}
   end
 end

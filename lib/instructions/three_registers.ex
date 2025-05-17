@@ -7,7 +7,7 @@ defmodule PVM.Instructions.ThreeRegisters do
   @two_64 0x1_0000_0000_0000_0000
   @max_64 0xFFFF_FFFF_FFFF_FFFF
 
-  # Section A.5.12 v0.6.1
+  # Section A.5.13 v0.6.6
 
   # 32-bit arithmetic operations
   def execute(instruction, program, state)
@@ -278,7 +278,7 @@ defmodule PVM.Instructions.ThreeRegisters do
     {:continue, state}
   end
 
-  # Formula (A.30) v0.6.1
+  # Formula (A.31) v0.6.6
   defp get_params(program, state) do
     byte1 = binary_part_safe(program, state.counter + 1, 1)
     byte2 = binary_part_safe(program, state.counter + 2, 1)

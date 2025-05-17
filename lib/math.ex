@@ -3,21 +3,21 @@ defmodule PVM.Math do
 
   defguard is_power_of_2(x) when is_integer(x) and x > 0 and (x &&& x - 1) == 0
 
-  # Formula (A.9) v0.61
+  # Formula (A.10) v0.6.6
   @spec unsigned_to_signed(non_neg_integer(), non_neg_integer()) :: integer()
   def unsigned_to_signed(value, num_bytes) do
     threshold = 1 <<< (8 * num_bytes - 1)
     if value < threshold, do: value, else: value - (1 <<< (8 * num_bytes))
   end
 
-  # Formula (A.10) v0.6.1
+  # Formula (A.11) v0.6.6
   @spec signed_to_unsigned(integer(), non_neg_integer()) :: non_neg_integer()
   def signed_to_unsigned(value, num_bytes) do
     modulus = 1 <<< (8 * num_bytes)
     rem(modulus + value, modulus)
   end
 
-  # Formula (A.11) v0.6.1
+  # Formula (A.12) v0.6.6
   # Converts an integer to its binary (little-endian) as list
   # Example: int_to_bits(10, 1) returns [0,1,0,1,0,0,0,0]
   @spec int_to_bits(non_neg_integer(), non_neg_integer()) :: list(0 | 1)
@@ -25,7 +25,7 @@ defmodule PVM.Math do
     for i <- 0..(8 * num_bytes - 1), do: rem(value >>> i, 2)
   end
 
-  # Formula (A.12) v0.6.1
+  # Formula (A.13) v0.6.6
   # Converts a list of bits back to an integer (from little-endian format)
   # Example: bits_to_int([1,0,1,0,0,0,0,0]) returns 5
   @spec bits_to_int(list(0 | 1)) :: non_neg_integer()
@@ -35,7 +35,7 @@ defmodule PVM.Math do
     |> Enum.reduce(0, fn {bit, i}, acc -> acc + bit * (1 <<< i) end)
   end
 
-  # Formula (A.32) v0.6.2
+  # Formula (A.32) v0.6.6
   @spec signed_remainder(integer(), integer()) :: integer()
   def signed_remainder(a, 0), do: a
   def signed_remainder(a, b), do: rem(a, b)

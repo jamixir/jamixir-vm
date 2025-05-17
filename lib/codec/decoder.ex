@@ -56,10 +56,10 @@ defmodule PVM.Decoder do
     end
   end
 
-  # Formula (A.2) v0.6.2
-  def decode_program(bin) do
+  # Formula (A.2) v0.6.6
+  def deblob(bin) do
     try do
-      {program, bitmask, jump_table} = decode_program!(bin)
+      {program, bitmask, jump_table} = deblob!(bin)
       {:ok, {program, bitmask, jump_table}}
     rescue
       error ->
@@ -67,7 +67,7 @@ defmodule PVM.Decoder do
     end
   end
 
-  def decode_program!(bin) do
+  def deblob!(bin) do
     {jump_len, rest} = decode_next_integer(bin)
     {z, rest} = decode_next_le(rest, 1)
     {prog_len, rest} = decode_next_integer(rest)
