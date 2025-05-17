@@ -12,7 +12,7 @@ defmodule PVM.HostCall do
   @spec execute(binary(), State.t(), Types.host_fn(), Types.context()) ::
           {Types.exit_reason() | Types.fault_result(), State.t(), Types.context()}
   def execute(program, state, host_fn, context) do
-    case Decoder.decode_program(program) do
+    case Decoder.deblob(program) do
       {:ok, {program, bitmask, jump_table}} ->
         start_set = PVM.Utils.basic_block_starts(program, bitmask)
         do_execute(program, bitmask, jump_table, start_set, state, host_fn, context)

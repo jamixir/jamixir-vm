@@ -1,12 +1,16 @@
-# Formula (A.5) v0.5
+# Formula (A.6) v0.6.6
 
 defmodule PVM.State do
   alias PVM.Registers
 
   @type t :: %__MODULE__{
+          # i
           counter: non_neg_integer(),
+          # q
           gas: non_neg_integer(),
+          # ω
           registers: Registers.t(),
+          # µ
           memory: PVM.Memory.t()
         }
 

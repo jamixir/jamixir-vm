@@ -2,12 +2,12 @@ defmodule PVM.VM do
   use PVM.{Encoder, Instructions, Utils}
   alias PVM.{State, SingleStep, Types, Decoder}
 
-  # Formula (A.1) v0.6.1
+  # Formula (A.1) v0.6.6
   @spec execute(binary(), State.t()) :: State.t()
   @spec execute(any(), any()) ::
           {:halt | :panic | {:ecall, non_neg_integer()} | {:fault, non_neg_integer()}, any()}
   def execute(program, state) do
-    case Decoder.decode_program(program) do
+    case Decoder.deblob(program) do
       {:ok, {program, bitmask, jump_table}} ->
         start_set = basic_block_starts(program, bitmask)
         do_execute(program, bitmask, jump_table, start_set, state)

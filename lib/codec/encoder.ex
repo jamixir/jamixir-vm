@@ -3,13 +3,11 @@ defmodule PVM.Encoder do
   A module for encoding data structures into binary format.
   """
 
-  # Formula (300) v0.4.5
+  # Formula (C.5) v0.6.6
   @spec encode_little_endian(integer(), integer()) :: binary()
   def encode_little_endian(_, 0), do: <<>>
 
-  def encode_little_endian(x, l) do
-    <<rem(x, 256)>> <> encode_little_endian(div(x, 256), l - 1)
-  end
+  def encode_little_endian(x, l), do: <<x::l*8-little>>
 
   @spec encode_le(integer(), integer()) :: binary()
   def encode_le(x, l), do: encode_little_endian(x, l)
@@ -24,10 +22,9 @@ defmodule PVM.Encoder do
     end
   end
 
-  # Formula (301) v0.4.5
+  # Formula (C.6) v0.6.6
   defp encode_integer(0), do: <<0>>
 
-  # Formula (301) v0.4.5
   defp encode_integer(x) do
     if x >= 2 ** 64, do: raise(ArgumentError, "Integer value is too large to encode")
 

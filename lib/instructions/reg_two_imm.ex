@@ -2,7 +2,7 @@ defmodule PVM.Instructions.RegTwoImm do
   use PVM.{Decoder, Encoder, Utils, Math}
   alias PVM.Registers
   import PVM.Memory.Util
-  # Section (A.5.7) v0.6.1
+  # Section (A.5.7) v0.6.6
 
   @two_to_8 0x100
   @two_to_16 0x1_0000
@@ -43,7 +43,7 @@ defmodule PVM.Instructions.RegTwoImm do
     write_memory(state, target_addr, <<v_y::64-little>>)
   end
 
-  # Formula (A.24) v0.6.1
+  # Formula (A.25) v0.6.6
   defp get_params(program, bitmask, counter) do
     r_a =
       binary_part_safe(program, counter + 1, 1) |> :binary.first() |> mod(16) |> min(12)
