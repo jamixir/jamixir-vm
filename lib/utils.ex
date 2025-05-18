@@ -84,6 +84,7 @@ defmodule PVM.Utils do
     prev_counter
   end
 
+  # Formula (A.7) v0.6.6
   def next_counter(%{counter: counter}, prev_counter, bitmask) do
     if counter != prev_counter do
       counter

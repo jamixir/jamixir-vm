@@ -35,6 +35,14 @@ defmodule PVM.Math do
     |> Enum.reduce(0, fn {bit, i}, acc -> acc + bit * (1 <<< i) end)
   end
 
+    # Formula (A.14) v0.6.6
+    def leading_zeros(0, bytes), do: bytes * 8
+    def leading_zeros(value, bytes) do
+      bits = bytes * 8
+      value = mod(value, 1 <<< bits)
+      bits - length(Integer.digits(value, 2))
+    end
+
   # Formula (A.32) v0.6.6
   @spec signed_remainder(integer(), integer()) :: integer()
   def signed_remainder(a, 0), do: a
@@ -65,6 +73,7 @@ defmodule PVM.Math do
       def b2u(bits), do: PVM.Math.bits_to_int(bits)
       def srem(a, b), do: PVM.Math.signed_remainder(a, b)
       def mod(a, b), do: PVM.Math.mod(a, b)
+      def leading_zeros(value, bytes), do: PVM.Math.leading_zeros(value, bytes)
     end
   end
 end

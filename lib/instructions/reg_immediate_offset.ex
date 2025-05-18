@@ -71,7 +71,7 @@ defmodule PVM.Instructions.RegImmediateOffset do
     end
   end
 
-  # Formula (A.26) v0.6.6
+  # Formula (A.29) v0.6.6
   defp get_params(program, bitmask, counter) do
     first_byte = binary_part_safe(program, counter + 1, 1)
     r_a = mod(:binary.first(first_byte), 16) |> min(12)

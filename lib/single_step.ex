@@ -24,6 +24,7 @@ defmodule PVM.SingleStep do
 
       gas_cost = Instructions.gas_cost(opcode)
 
+      # Formula (A.7) v0.6.6
       deduct_gas = %{
         state_
         | gas: state.gas - gas_cost

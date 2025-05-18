@@ -3,8 +3,9 @@ defmodule PVM.Instructions.TwoRegisters do
   use PVM.Math
   use PVM.{Encoder, Decoder, Utils}
   import Bitwise, only: [&&&: 2, bsr: 2]
-  # Section (A.5.9) v0.6.6
 
+  @two_to_32 0x1_0000_0000
+  # Section (A.5.9) v0.6.6
   def execute(:move_reg, program, state) do
     {r_d, r_a} = get_params(program, state.counter)
     w_a = Registers.get(state.registers, r_a)
@@ -55,8 +56,7 @@ defmodule PVM.Instructions.TwoRegisters do
     {r_d, r_a} = get_params(program, state.counter)
     w_a = Registers.get(state.registers, r_a)
 
-    binary_digits = Integer.digits(w_a, 2)
-    leading_zero_bits = if w_a == 0, do: 64, else: 64 - length(binary_digits)
+    leading_zero_bits = leading_zeros(w_a, 8)
 
     {:continue, %{state | registers: Registers.set(state.registers, r_d, leading_zero_bits)}}
   end
@@ -65,7 +65,7 @@ defmodule PVM.Instructions.TwoRegisters do
     {r_d, r_a} = get_params(program, state.counter)
     w_a = Registers.get(state.registers, r_a)
 
-    leading_zero_bits = if w_a == 0, do: 32, else: 32 - length(Integer.digits(w_a, 2))
+    leading_zero_bits = leading_zeros(w_a, 4)
 
     {:continue, %{state | registers: Registers.set(state.registers, r_d, leading_zero_bits)}}
   end
