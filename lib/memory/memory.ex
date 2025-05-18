@@ -141,6 +141,7 @@ defmodule PVM.Memory do
     |> :binary.list_to_bin()
   end
 
+  # Formula (A.9) v0.6.6
   defp check_permissions(memory, start_page, end_page, required_access) do
     if start_page < 16 do
       {:error, start_page * memory.page_size}

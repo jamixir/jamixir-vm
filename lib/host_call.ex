@@ -1,14 +1,9 @@
 defmodule PVM.HostCall do
-  @moduledoc """
-  Implements the host-call state machine (ΨH) as defined in formula A.27.
-  """
-
+# Formula (A.34) v 0.6.6
   alias PVM.{State, Types, VM, Decoder}
   use PVM.Utils
 
-  @doc """
-  Executes a host call state transition according to ΨH definition.
-  """
+
   @spec execute(binary(), State.t(), Types.host_fn(), Types.context()) ::
           {Types.exit_reason() | Types.fault_result(), State.t(), Types.context()}
   def execute(program, state, host_fn, context) do
