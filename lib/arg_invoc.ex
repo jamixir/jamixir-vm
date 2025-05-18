@@ -1,5 +1,5 @@
 defmodule PVM.ArgInvoc do
-  # Formula (A.41) v0.6.6
+  # Formula (A.43) v0.6.6
 
   alias PVM.{InitProgram, HostCall, State, Types, Memory}
 
