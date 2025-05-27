@@ -92,10 +92,23 @@ defmodule PVM.InitProgram do
     a_size = byte_size(a)
     boundaries = boundaries(o_size, w_size, a_size, z, s)
 
+    heap_start = boundaries.data_padding_end
+    heap_end = boundaries.stack_start
+
+    IO.puts("\n=== MEMORY REGIONS CALCULATION ===")
+    IO.puts("Input sizes: o=#{o_size}, w=#{w_size}, a=#{a_size}, z=#{z}, s=#{s}")
+    IO.puts("Calculated boundaries:")
+    IO.puts("  Data padding end: #{boundaries.data_padding_end}")
+    IO.puts("  Stack start: #{boundaries.stack_start}")
+    IO.puts("  Heap start: #{heap_start}")
+    IO.puts("  Heap end: #{heap_end}")
+
+    IO.puts("Boundaries: #{inspect(boundaries)}")
+
     # notice that the nil access regions are filled in by `PreMemory.init_nil_memory()` in `construct_memory` function
     # comments below are places for easy reading
 
-    [
+    regions = [
       # Program text region: [Zz, Zz + |o|] => R
       {boundaries.program_text_start, boundaries.program_text_end, o, :read},
 
@@ -111,6 +124,7 @@ defmodule PVM.InitProgram do
       {boundaries.data_end, boundaries.data_padding_end, nil, :write},
 
       # No access region between data and stack
+      # This is the Heap area
 
       # Stack region: [2^32 - 2Zz - Zi - P(s), 2^32 - 2Zz - Zi] => W
       {boundaries.stack_start, boundaries.stack_end, nil, :write},
@@ -125,12 +139,20 @@ defmodule PVM.InitProgram do
 
       # No access region between args and end of memory
     ]
+
+    {regions, %{heap_start: heap_start, heap_end: heap_end}}
   end
 
   # Formula (A.38) v0.6.1
   @spec construct_memory(binary(), binary(), binary(), integer(), integer()) :: Memory.t()
   def construct_memory(o, w, a, z, s) do
-    regions = memory_regions(o, w, a, z, s)
+    {regions, heap_boundaries} = memory_regions(o, w, a, z, s)
+
+    IO.puts("\n=== MEMORY CONSTRUCTION ===")
+    IO.puts("Heap boundaries calculated:")
+    IO.puts("  Heap start: #{heap_boundaries.heap_start}")
+    IO.puts("  Heap end: #{heap_boundaries.heap_end}")
+    IO.puts("  Heap size: #{heap_boundaries.heap_end - heap_boundaries.heap_start} bytes")
 
     pre_memory =
       Enum.reduce(regions, PreMemory.init_nil_memory(), fn
@@ -144,6 +166,20 @@ defmodule PVM.InitProgram do
       end)
 
     # Finalize to create the real Memory struct with optimized access ranges
-    PVM.PreMemory.finalize(pre_memory)
+    mem = PVM.PreMemory.finalize(pre_memory)
+
+    memory = %{
+      mem
+      | current_heap_pointer: heap_boundaries.heap_start,
+        max_heap_pointer: heap_boundaries.heap_end
+    }
+
+    IO.puts("Memory struct created with:")
+    IO.puts("  Current heap pointer: #{memory.current_heap_pointer}")
+    IO.puts("  Max heap pointer: #{memory.max_heap_pointer}")
+    IO.puts("  Page size: #{memory.page_size}")
+    IO.puts("=== MEMORY CONSTRUCTION END ===\n")
+
+    memory
   end
 end

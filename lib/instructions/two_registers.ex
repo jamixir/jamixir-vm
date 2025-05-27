@@ -14,24 +14,71 @@ defmodule PVM.Instructions.TwoRegisters do
 
   def execute(:sbrk, program, state) do
     {r_d, r_a} = get_params(program, state.counter)
-    bytes_needed = Registers.get(state.registers, r_a)
-    pages_needed = ceil(bytes_needed / state.memory.page_size)
+    size = Registers.get(state.registers, r_a)
 
-    case Memory.find_free_memory(state.memory, pages_needed) do
-      nil ->
-        {:continue, state}
+    IO.puts("\n=== SBRK EXECUTION ===")
+    IO.puts("Register r_d: #{r_d}, Register r_a: #{r_a}")
+    IO.puts("Requested size: #{size}")
+    IO.puts("Current heap pointer: #{state.memory.current_heap_pointer}")
+    IO.puts("Max heap pointer: #{state.memory.max_heap_pointer}")
 
-      start_page ->
-        start_address = start_page * state.memory.page_size
+    if size == 0 do
+      IO.puts("Size is 0 - returning current heap pointer")
+      IO.puts("Returning: #{state.memory.current_heap_pointer}")
+      IO.puts("=== SBRK END (query) ===\n")
 
+      # The guest wants to know the current heap pointer
+      {:continue, %{state | registers: Registers.set(state.registers, r_d, state.memory.current_heap_pointer)}}
+    else
+      # The guest wants to allocate
+      new_heap_pointer = state.memory.current_heap_pointer + size
+
+      IO.puts("Attempting allocation of #{size} bytes")
+      IO.puts("New heap pointer would be: #{new_heap_pointer}")
+
+      if new_heap_pointer > state.memory.max_heap_pointer do
+        IO.puts("ALLOCATION FAILED - exceeds max heap pointer")
+        IO.puts("Max allowed: #{state.memory.max_heap_pointer}, requested: #{new_heap_pointer}")
+        IO.puts("Returning: 0")
+        IO.puts("=== SBRK END (failed) ===\n")
+
+        # Allocation failed
+        {:continue, %{state | registers: Registers.set(state.registers, r_d, 0)}}
+      else
+        # Allocation succeeded - return old heap pointer and update current pointer
+        old_heap_pointer = state.memory.current_heap_pointer
+
+        IO.puts("ALLOCATION SUCCEEDED")
+        IO.puts("Old heap pointer (returning): #{old_heap_pointer}")
+
+        # Calculate pages to mark as writable
+        start_page = div(state.memory.current_heap_pointer, state.memory.page_size)
+        end_page = div(new_heap_pointer - 1, state.memory.page_size)
+        pages_needed = end_page - start_page + 1
+
+        IO.puts("Page calculations:")
+        IO.puts("  Page size: #{state.memory.page_size}")
+        IO.puts("  Start address: #{state.memory.current_heap_pointer} -> Start page: #{start_page}")
+        IO.puts("  End address: #{new_heap_pointer - 1} -> End page: #{end_page}")
+        IO.puts("  Pages needed: #{pages_needed}")
+
+        # Mark the allocated pages as writable
         new_memory = Memory.set_access_by_page(state.memory, start_page, pages_needed, :write)
 
-        {:continue,
-         %{
-           state
-           | memory: new_memory,
-             registers: Registers.set(state.registers, r_d, start_address)
-         }}
+        IO.puts("Marked pages #{start_page} to #{start_page + pages_needed - 1} as writable")
+
+        # Update the heap pointer in the memory struct
+        updated_memory = %{new_memory | current_heap_pointer: new_heap_pointer}
+
+        IO.puts("Updated current heap pointer to: #{new_heap_pointer}")
+        IO.puts("=== SBRK END (success) ===\n")
+
+        {:continue, %{
+          state
+          | memory: updated_memory,
+            registers: Registers.set(state.registers, r_d, old_heap_pointer)
+        }}
+      end
     end
   end
 
