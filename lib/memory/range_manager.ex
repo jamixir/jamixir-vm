@@ -44,49 +44,6 @@ defmodule PVM.Memory.RangeManager do
   end
 
   @doc """
-  used by :sbrk to allocate memory
-  """
-  def find_free_space_in_ranges([], min_page, max_page, pages_needed) do
-    # No occupied ranges - entire memory is available
-    if max_page - min_page + 1 >= pages_needed do
-      min_page
-    else
-      nil
-    end
-  end
-
-  def find_free_space_in_ranges(occupied_ranges, min_page, max_page, pages_needed) do
-    # Check for gap at beginning
-    [{first_start, _, _} | _] = occupied_ranges
-
-    if first_start > min_page && first_start - min_page >= pages_needed do
-      min_page
-    else
-      # Check for gaps between ranges
-      find_gap_between_ranges(occupied_ranges, pages_needed, max_page)
-    end
-  end
-
-  def find_gap_between_ranges(ranges, pages_needed, max_page) do
-    # Pair consecutive ranges to find gaps
-    Enum.chunk_every(ranges, 2, 1, :discard)
-    |> Enum.find_value(nil, fn [{_, prev_end, _}, {next_start, _, _}] ->
-      # With exclusive end, the gap is directly next_start - prev_end
-      gap_size = next_start - prev_end
-      if gap_size >= pages_needed, do: prev_end, else: nil
-    end)
-    |> case do
-      nil ->
-        # Check for gap after last range
-        {_, last_end, _} = List.last(ranges)
-        if max_page - last_end + 1 >= pages_needed, do: last_end, else: nil
-
-      result ->
-        result
-    end
-  end
-
-  @doc """
   used for checking access permissions of a page
   """
   def binary_search_range(_ranges, _page, low, high) when low > high, do: nil

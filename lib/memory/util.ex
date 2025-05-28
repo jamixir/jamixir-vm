@@ -26,6 +26,7 @@ defmodule PVM.Memory.Util do
     end
   end
 
+  # rem twice handles negative numbers as well
   def wrap_address(%{size: size}, address) do
     rem(rem(address, size) + size, size)
   end

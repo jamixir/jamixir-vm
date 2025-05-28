@@ -7,13 +7,17 @@ defmodule PVM.Memory do
           data: %{non_neg_integer() => %{non_neg_integer() => byte()}},
           access_ranges: [{non_neg_integer(), non_neg_integer(), atom()}],
           page_size: pos_integer(),
-          size: pos_integer()
+          size: pos_integer(),
+          current_heap_pointer: pos_integer(),
+          max_heap_pointer: pos_integer()
         }
 
   defstruct data: %{},
             access_ranges: [],
             page_size: page_size(),
-            size: memory_size()
+            size: memory_size(),
+            current_heap_pointer: 0,
+            max_heap_pointer: 0
 
   # PUBLIC FUNCTIONS
   def number_of_pages(%__MODULE__{} = memory) do
@@ -118,15 +122,7 @@ defmodule PVM.Memory do
     check_permissions(memory, start_page, end_page, required_access) == :ok
   end
 
-  def find_free_memory(%__MODULE__{} = memory, pages_needed) do
-    min_page = div(min_allowed_address(), memory.page_size)
-    max_page = number_of_pages(memory) - 1
 
-    occupied_ranges =
-      Enum.filter(memory.access_ranges, fn {_, _, access} -> access != nil end)
-
-    RangeManager.find_free_space_in_ranges(occupied_ranges, min_page, max_page, pages_needed)
-  end
 
   ## Private functions
 

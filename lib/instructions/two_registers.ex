@@ -15,24 +15,43 @@ defmodule PVM.Instructions.TwoRegisters do
 
   def execute(:sbrk, program, state) do
     {r_d, r_a} = get_params(program, state.counter)
-    bytes_needed = Registers.get(state.registers, r_a)
-    pages_needed = ceil(bytes_needed / state.memory.page_size)
+    size = Registers.get(state.registers, r_a)
 
-    case Memory.find_free_memory(state.memory, pages_needed) do
-      nil ->
-        {:continue, state}
+    if size == 0 do
+      # The guest wants to know the current heap pointer
+      {:continue,
+       %{
+         state
+         | registers: Registers.set(state.registers, r_d, state.memory.current_heap_pointer)
+       }}
+    else
+      # The guest wants to allocate
+      new_heap_pointer = state.memory.current_heap_pointer + size
 
-      start_page ->
-        start_address = start_page * state.memory.page_size
+      if new_heap_pointer > state.memory.max_heap_pointer do
+        # Allocation failed
+        {:continue, %{state | registers: Registers.set(state.registers, r_d, 0)}}
+      else
+        old_heap_pointer = state.memory.current_heap_pointer
+        is_writable = Memory.check_range_access?(state.memory, old_heap_pointer, size, :write)
 
-        new_memory = Memory.set_access_by_page(state.memory, start_page, pages_needed, :write)
+        updated_memory =
+          if is_writable do
+            state.memory
+          else
+            Memory.set_access(state.memory, old_heap_pointer, size, :write)
+          end
+
+        # Update the heap pointer in the memory struct
+        updated_memory = %{updated_memory | current_heap_pointer: new_heap_pointer}
 
         {:continue,
          %{
            state
-           | memory: new_memory,
-             registers: Registers.set(state.registers, r_d, start_address)
+           | memory: updated_memory,
+             registers: Registers.set(state.registers, r_d, old_heap_pointer)
          }}
+      end
     end
   end
 
