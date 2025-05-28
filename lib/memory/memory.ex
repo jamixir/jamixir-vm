@@ -52,6 +52,8 @@ defmodule PVM.Memory do
     end
   end
 
+  def write(%__MODULE__{} = memory, _, <<>>), do: {:ok, memory}
+
   def write(%__MODULE__{} = memory, address, value) when is_binary(value) do
     wrapped_address = wrap_address(memory, address)
 
@@ -107,6 +109,11 @@ defmodule PVM.Memory do
     %__MODULE__{memory | access_ranges: new_ranges}
   end
 
+  # def check_range_access?(%__MODULE__{} = _memory, _, 0, _required_access) do
+  #   IO.puts("Checking access for zero-length range, always allowed")
+  #   true
+  # end
+
   ## Check Access functions
   def check_range_access?(%__MODULE__{} = memory, address, length, required_access) do
     wrapped_address = wrap_address(memory, address)
@@ -122,8 +129,6 @@ defmodule PVM.Memory do
     check_permissions(memory, start_page, end_page, required_access) == :ok
   end
 
-
-
   ## Private functions
 
   defp read_from_sparse(%__MODULE__{data: data} = memory, address, length) do
@@ -136,6 +141,8 @@ defmodule PVM.Memory do
     end)
     |> :binary.list_to_bin()
   end
+
+  defp check_permissions(_, 0, 0, _), do: :ok
 
   # Formula (A.9) v0.6.6
   defp check_permissions(memory, start_page, end_page, required_access) do

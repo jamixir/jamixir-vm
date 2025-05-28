@@ -17,9 +17,7 @@ defmodule PVM.Instructions.Executor do
   }
 
   def execute_instruction(opcode, program, bitmask, jump_table, start_set, state) do
-    {status, new_state} = execute_inner(opcode, program, bitmask, jump_table, start_set, state)
-    Trace.instruction_executed(opcode, state.counter, new_state)
-    {status, new_state}
+    execute_inner(opcode, program, bitmask, jump_table, start_set, state)
   end
 
   defp execute_inner(opcode, program, bitmask, jump_table, start_set, state) do

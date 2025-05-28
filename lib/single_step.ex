@@ -1,4 +1,5 @@
 defmodule PVM.SingleStep do
+  alias PVM.Trace
   alias PVM.{State, Types, Utils, Instructions.Executor, Instructions}
   use Utils
   use PVM.Instructions
@@ -24,11 +25,14 @@ defmodule PVM.SingleStep do
 
       gas_cost = Instructions.gas_cost(opcode)
 
+
       # Formula (A.7) v0.6.6
       deduct_gas = %{
         state_
         | gas: state.gas - gas_cost
       }
+
+      Trace.instruction_executed(opcode, state.counter, deduct_gas)
 
       case exit_reason do
         {:fault, page} ->
