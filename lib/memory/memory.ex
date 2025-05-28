@@ -122,15 +122,7 @@ defmodule PVM.Memory do
     check_permissions(memory, start_page, end_page, required_access) == :ok
   end
 
-  def find_free_memory(%__MODULE__{} = memory, pages_needed) do
-    min_page = div(min_allowed_address(), memory.page_size)
-    max_page = number_of_pages(memory) - 1
 
-    occupied_ranges =
-      Enum.filter(memory.access_ranges, fn {_, _, access} -> access != nil end)
-
-    RangeManager.find_free_space_in_ranges(occupied_ranges, min_page, max_page, pages_needed)
-  end
 
   ## Private functions
 
