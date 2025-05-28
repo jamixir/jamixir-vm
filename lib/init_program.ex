@@ -95,16 +95,6 @@ defmodule PVM.InitProgram do
     heap_start = boundaries.data_padding_end
     heap_end = boundaries.stack_start
 
-    IO.puts("\n=== MEMORY REGIONS CALCULATION ===")
-    IO.puts("Input sizes: o=#{o_size}, w=#{w_size}, a=#{a_size}, z=#{z}, s=#{s}")
-    IO.puts("Calculated boundaries:")
-    IO.puts("  Data padding end: #{boundaries.data_padding_end}")
-    IO.puts("  Stack start: #{boundaries.stack_start}")
-    IO.puts("  Heap start: #{heap_start}")
-    IO.puts("  Heap end: #{heap_end}")
-
-    IO.puts("Boundaries: #{inspect(boundaries)}")
-
     # notice that the nil access regions are filled in by `PreMemory.init_nil_memory()` in `construct_memory` function
     # comments below are places for easy reading
 
@@ -148,12 +138,6 @@ defmodule PVM.InitProgram do
   def construct_memory(o, w, a, z, s) do
     {regions, heap_boundaries} = memory_regions(o, w, a, z, s)
 
-    IO.puts("\n=== MEMORY CONSTRUCTION ===")
-    IO.puts("Heap boundaries calculated:")
-    IO.puts("  Heap start: #{heap_boundaries.heap_start}")
-    IO.puts("  Heap end: #{heap_boundaries.heap_end}")
-    IO.puts("  Heap size: #{heap_boundaries.heap_end - heap_boundaries.heap_start} bytes")
-
     pre_memory =
       Enum.reduce(regions, PreMemory.init_nil_memory(), fn
         {start, end_, nil, access}, mem ->
@@ -173,12 +157,6 @@ defmodule PVM.InitProgram do
       | current_heap_pointer: heap_boundaries.heap_start,
         max_heap_pointer: heap_boundaries.heap_end
     }
-
-    IO.puts("Memory struct created with:")
-    IO.puts("  Current heap pointer: #{memory.current_heap_pointer}")
-    IO.puts("  Max heap pointer: #{memory.max_heap_pointer}")
-    IO.puts("  Page size: #{memory.page_size}")
-    IO.puts("=== MEMORY CONSTRUCTION END ===\n")
 
     memory
   end
