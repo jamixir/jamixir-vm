@@ -7,7 +7,7 @@ defmodule PVM.Utils.ProgramUtilsTest do
   setup_all do
     memory = InitProgram.construct_memory("code", "data", "args", 1, 1)
     stack_addr = InitProgram.boundaries(4, 4, 4, 1, 1).stack_start
-    state = %State{memory: memory, registers: %Registers{r2: stack_addr}}
+    state = %State{memory: memory, registers: %Registers{r2: stack_addr}, gas: 1000}
     {:ok, %{memory: memory, stack_addr: stack_addr, state: state}}
   end
 

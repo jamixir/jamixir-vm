@@ -10,7 +10,7 @@ defmodule VMTest do
   setup_all do
     memory = InitProgram.construct_memory("code", "data", "args", 1, 1)
     stack_addr = InitProgram.boundaries(4, 4, 4, 1, 1).stack_start
-    state = %State{memory: memory, registers: %Registers{r2: stack_addr}}
+    state = %State{memory: memory, registers: %Registers{r2: stack_addr}, gas: 1000}
     {:ok, %{memory: memory, stack_addr: stack_addr, state: state}}
   end
 
@@ -24,7 +24,7 @@ defmodule VMTest do
       bitmask = <<224>>
 
       p = create_program(program, bitmask)
-      {exit_reason, state_} = VM.execute(p, %State{})
+      {exit_reason, state_} = VM.execute(p, %State{gas: 1000})
 
       assert exit_reason == :panic
       assert state_.counter == 0
@@ -444,7 +444,7 @@ defmodule VMTest do
       bitmask = <<146, 96>>
 
       p = create_program(program, bitmask)
-      {exit_reason, state_} = VM.execute(p, %State{})
+      {exit_reason, state_} = VM.execute(p, %State{gas: 1000})
 
       # From fallthrough
       assert exit_reason == :panic
@@ -476,7 +476,7 @@ defmodule VMTest do
       jump_table = [2, 4, 10]
 
       p = create_program(program, bitmask, jump_table)
-      {exit_reason, state_} = VM.execute(p, %State{})
+      {exit_reason, state_} = VM.execute(p, %State{gas: 1000})
 
       # From fallthrough
       assert exit_reason == :panic

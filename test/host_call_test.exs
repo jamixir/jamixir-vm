@@ -67,7 +67,7 @@ defmodule PVM.HostCallTest do
 
       initial_context = %{test: :context}
       # Set gas to 0
-      initial_state = %State{gas: -1}
+      initial_state = %State{gas: 0}
 
       {exit_reason, final_state, final_context} =
         HostCall.execute(p, initial_state, host_fn, initial_context)
