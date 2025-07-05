@@ -4,15 +4,15 @@ defmodule PVM.InitProgram do
   require Logger
   import PVM.Memory.Constants
 
-  # Formula (4.25) v0.6.6
+  # Formula (4.25) v0.7.0
   def zp, do: page_size()
-  # Formula (A.38) v0.6.6
+  # Formula (A.38) v0.7.0
   def zz, do: min_allowed_address()
-  # Formula (A.38) v0.6.6
+  # Formula (A.38) v0.7.0
   def zi, do: 0x100_0000
   def max_addr, do: memory_size()
 
-  # Formula (A.37) v0.6.6
+  # Formula (A.37) v0.7.0
   def parse_program_segments(binary) when byte_size(binary) >= 15 do
     try do
       <<o_size::24-little, w_size::24-little, z::16-little, s::24-little, o::binary-size(o_size),
@@ -26,7 +26,7 @@ defmodule PVM.InitProgram do
 
   def parse_program_segments(_), do: {:error, :insufficient_bytes}
 
-  # Formula (A.36) v0.6.6
+  # Formula (A.36) v0.7.0
   def initialize_program(program, a) do
     with {:ok, {o_size, o, w_size, w, z, s, c}} <- parse_program_segments(program) do
       # Verify condition A.37
@@ -42,16 +42,16 @@ defmodule PVM.InitProgram do
     end
   end
 
-  # Formula (A.39) v0.6.6
+  # Formula (A.39) v0.7.0
   def z(x), do: ceil(x / zz()) * zz()
   def p(x), do: ceil(x / zp()) * zp()
 
-  # Formula (A.40) v0.6.6
+  # Formula (A.40) v0.7.0
   def verify_size_constraint(o_size, w_size, z, s) do
     z(o_size) + z(w_size + z * zp()) + z(s) <= 0x1_0000_0000 - 5 * zz() - zi()
   end
 
-  # Formula (A.42) v0.6.6
+  # Formula (A.42) v0.7.0
   def initialize_registers(a) do
     %Registers{
       r0: 0xFFFF_0000,
@@ -133,7 +133,7 @@ defmodule PVM.InitProgram do
     {regions, %{heap_start: heap_start, heap_end: heap_end}}
   end
 
-  # Formula (A.41) v0.6.6
+  # Formula (A.41) v0.7.0
   @spec construct_memory(binary(), binary(), binary(), integer(), integer()) :: Memory.t()
   def construct_memory(o, w, a, z, s) do
     {regions, heap_boundaries} = memory_regions(o, w, a, z, s)

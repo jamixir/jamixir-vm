@@ -1,7 +1,7 @@
 defmodule PVM.Instructions.TwoImmediates do
   use PVM.{Encoder, Utils, Math}
   import PVM.Memory.Util
-  # Section (A.5.4) v0.6.6
+  # Section (A.5.4) v0.7.0
 
   @two_to_8 0x100
   @two_to_16 0x1_0000
@@ -30,7 +30,7 @@ defmodule PVM.Instructions.TwoImmediates do
     write_memory(state, v_x, <<v_y::64-little>>)
   end
 
-  # Formula (A.22) v0.6.6
+  # Formula (A.22) v0.7.0
   defp get_params(program, bitmask, counter) do
     l_x =
       binary_part_safe(program, counter + 1, 1)

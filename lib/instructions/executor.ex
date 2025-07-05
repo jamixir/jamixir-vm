@@ -57,7 +57,7 @@ defmodule PVM.Instructions.Executor do
     end
   end
 
-  # Formula (A.17) v0.6.6
+  # Formula (A.17) v0.7.0
   def branch(_value, false, counter, _start_set), do: {:continue, counter}
 
   def branch(value, true, counter, start_set) do
@@ -68,7 +68,7 @@ defmodule PVM.Instructions.Executor do
     end
   end
 
-  # Formula (A.18) v0.6.6
+  # Formula (A.18) v0.7.0
   def djump(a, counter, jump_table, start_set) do
     alignment_factor = 2
     {quotient, remainder} = {div(a, alignment_factor), rem(a, alignment_factor)}

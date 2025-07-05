@@ -144,7 +144,7 @@ defmodule PVM.Memory do
 
   defp check_permissions(_, 0, 0, _), do: :ok
 
-  # Formula (A.9) v0.6.6
+  # Formula (A.9) v0.7.0
   defp check_permissions(memory, start_page, end_page, required_access) do
     if start_page < 16 do
       {:error, start_page * memory.page_size}

@@ -4,7 +4,7 @@ defmodule PVM.Instructions.RegImmediateOffset do
   use PVM.Math
   alias PVM.Registers
   @type comparison_op :: :eq | :ne | :lt_u | :le_u | :ge_u | :gt_u | :lt_s | :le_s | :ge_s | :gt_s
-  # Section (A.5.8) v0.6.6
+  # Section (A.5.8) v0.7.0
   def execute(:load_imm_jump, program, bitmask, start_set, state) do
     {r_a, v_x, v_y} = get_params(program, bitmask, state.counter)
 
@@ -71,7 +71,7 @@ defmodule PVM.Instructions.RegImmediateOffset do
     end
   end
 
-  # Formula (A.29) v0.6.6
+  # Formula (A.29) v0.7.0
   defp get_params(program, bitmask, counter) do
     first_byte = binary_part_safe(program, counter + 1, 1)
     r_a = mod(:binary.first(first_byte), 16) |> min(12)

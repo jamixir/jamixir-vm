@@ -1,5 +1,5 @@
 defmodule PVM.ArgInvoc do
-  # Formula (A.43) v0.6.6
+  # Formula (A.43) v0.7.0
 
   alias PVM.{InitProgram, HostCall, State, Types, Memory}
 
@@ -39,7 +39,7 @@ defmodule PVM.ArgInvoc do
     end
   end
 
-  # Formula (A.43) v0.6.6
+  # Formula (A.43) v0.7.0
   # R Function
   defp transform_result(used_gas, :halt, state_, context_) do
     start_addr = state_.registers.r7

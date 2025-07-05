@@ -56,7 +56,7 @@ defmodule PVM.Decoder do
     end
   end
 
-  # Formula (A.2) v0.6.6
+  # Formula (A.2) v0.7.0
   def deblob(bin) do
     try do
       {program, bitmask, jump_table} = deblob!(bin)

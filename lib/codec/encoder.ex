@@ -3,7 +3,7 @@ defmodule PVM.Encoder do
   A module for encoding data structures into binary format.
   """
 
-  # Formula (C.5) v0.6.6
+  # Formula (C.5) v0.7.0
   @spec encode_little_endian(integer(), integer()) :: binary()
   def encode_little_endian(_, 0), do: <<>>
 
@@ -22,7 +22,7 @@ defmodule PVM.Encoder do
     end
   end
 
-  # Formula (C.6) v0.6.6
+  # Formula (C.6) v0.7.0
   defp encode_integer(0), do: <<0>>
 
   defp encode_integer(x) do
