@@ -17,7 +17,7 @@ defmodule PVM.Instructions.TwoRegistersTwoImmediates do
      %{state | counter: counter, registers: Registers.set(state.registers, r_a, v_x)}}
   end
 
-  # Formula (A.30) v0.6.6
+  # Formula (A.30) v0.7.0
   defp get_params(program, bitmask, counter) do
     r_a =
       binary_part_safe(program, counter + 1, 1)

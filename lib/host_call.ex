@@ -1,5 +1,5 @@
 defmodule PVM.HostCall do
-# Formula (A.34) v 0.6.6
+# Formula (A.34) v 0.7.0
   alias PVM.{State, Types, VM, Decoder}
   use PVM.Utils
 

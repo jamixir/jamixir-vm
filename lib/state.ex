@@ -1,4 +1,4 @@
-# Formula (A.6) v0.6.6
+# Formula (A.6) v0.7.0
 
 defmodule PVM.State do
   alias PVM.Registers

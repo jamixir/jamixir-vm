@@ -2,7 +2,7 @@ defmodule PVM.VM do
   use PVM.{Encoder, Instructions, Utils}
   alias PVM.{State, SingleStep, Types, Decoder}
 
-  # Formula (A.1) v0.6.6
+  # Formula (A.1) v0.7.0
   @spec execute(binary(), State.t()) :: State.t()
   @spec execute(any(), any()) ::
           {:halt | :panic | {:ecall, non_neg_integer()} | {:fault, non_neg_integer()}, any()}
