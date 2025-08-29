@@ -109,17 +109,17 @@ defmodule PVM.Memory do
     %__MODULE__{memory | access_ranges: new_ranges}
   end
 
-  # def check_range_access?(%__MODULE__{} = _memory, _, 0, _required_access) do
-  #   IO.puts("Checking access for zero-length range, always allowed")
-  #   true
-  # end
+  def check_range_access?(%__MODULE__{} = _memory, _, 0, _required_access), do: true
 
   ## Check Access functions
   def check_range_access?(%__MODULE__{} = memory, address, length, required_access) do
     wrapped_address = wrap_address(memory, address)
     {start_page, end_page} = get_page_range(memory, wrapped_address, length)
+
     check_permissions(memory, start_page, end_page, required_access) == :ok
   end
+
+  def check_pages_access?(%__MODULE__{} = _memory, _start_page, 0, _required_access), do: true
 
   def check_pages_access?(%__MODULE__{} = memory, start_page, num_pages, required_access) do
     total_pages = number_of_pages(memory)
