@@ -32,25 +32,48 @@ defmodule PVM.Utils do
   # Formula (A.5) v0.7.0
   def basic_block_starts(<<>>, <<>>), do: [0]
 
-  def basic_block_starts(program, bitmask) when is_bitstring(program) and is_bitstring(bitmask) do
-    [0] ++
-      Enum.reduce(0..(bit_size(bitmask) - 1), [], fn i, acc ->
-        <<_::size(i), bit::1, _::bits>> = bitmask
+  def basic_block_starts(program, bitmask, batch_size \\ 512)
+      when is_bitstring(program) and is_bitstring(bitmask) do
+    results = process_batches(program, bitmask, bit_size(bitmask), 0, batch_size, [])
+    [0 | Enum.reverse(results)]
+  end
 
-        case bit do
-          1 ->
-            opcode = program |> binary_part_safe(i, 1) |> :binary.first() |> op()
+  defp process_batches(_program, _bitmask, bitmask_size, pos, _batch_size, acc)
+       when pos >= bitmask_size,
+       do: acc
 
-            if Instructions.termination_instruction?(opcode) do
-              acc ++ [i + 1 + skip(i, bitmask)]
-            else
-              acc
-            end
+  defp process_batches(program, bitmask, bitmask_size, pos, batch_size, acc) do
+    chunk_size = min(batch_size, bitmask_size - pos)
+    <<_skip::size(pos), chunk::bitstring-size(chunk_size), _rest::bits>> = bitmask
 
-          0 ->
-            acc
-        end
-      end)
+    # Convert this chunk into a list of bits
+    bits = for <<bit::1 <- chunk>>, do: bit
+
+    {new_pos, new_acc} = process_bits(program, bitmask, bits, pos, acc)
+
+    # Recurse into the next batch
+    process_batches(program, bitmask, bitmask_size, new_pos, batch_size, new_acc)
+  end
+
+  defp process_bits(_program, _bitmask, [], pos, acc), do: {pos, acc}
+
+  defp process_bits(program, bitmask, [1 | rest], pos, acc) do
+    # Only check termination instructions when bit is 1
+    opcode_byte = program |> binary_part_safe(pos, 1) |> :binary.first()
+    opcode = op(opcode_byte)
+
+    new_acc =
+      if Instructions.termination_instruction?(opcode) do
+        [pos + 1 + skip(pos, bitmask) | acc]
+      else
+        acc
+      end
+
+    process_bits(program, bitmask, rest, pos + 1, new_acc)
+  end
+
+  defp process_bits(program, bitmask, [0 | rest], pos, acc) do
+    process_bits(program, bitmask, rest, pos + 1, acc)
   end
 
   @doc """
@@ -144,7 +167,8 @@ defmodule PVM.Utils do
       def next_counter(output, prev_counter, bitmask),
         do: PVM.Utils.next_counter(output, prev_counter, bitmask)
 
-      def basic_block_starts(program, bitmask), do: PVM.Utils.basic_block_starts(program, bitmask)
+      def basic_block_starts(program, bitmask, batch_size \\ 512),
+        do: PVM.Utils.basic_block_starts(program, bitmask, batch_size)
 
       def rotate(value, shift, bits, direction),
         do: PVM.Utils.rotate(value, shift, bits, direction)

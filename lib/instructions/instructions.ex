@@ -667,10 +667,9 @@ defmodule PVM.Instructions do
     @instruction_categories
   end
 
-  # Add helper function to get instruction category
-  def instruction_category(instruction) do
-    Enum.find_value(@instruction_categories, fn {category, instructions} ->
-      if instruction in instructions, do: category
-    end)
+  for {category, instructions} <- @instruction_categories do
+    for instruction <- instructions do
+      def instruction_category(unquote(instruction)), do: unquote(category)
+    end
   end
 end

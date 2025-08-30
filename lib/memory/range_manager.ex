@@ -50,12 +50,12 @@ defmodule PVM.Memory.RangeManager do
 
   def binary_search_range(ranges, page, low, high) do
     mid = div(low + high, 2)
-    {start, end_, _} = Enum.at(ranges, mid)
+    {start, end_, _} = elem(ranges, mid)
 
     cond do
       page >= start and page < end_ ->
         # Found a range containing the page
-        Enum.at(ranges, mid)
+        elem(ranges, mid)
 
       page < start ->
         # Search in the lower half
