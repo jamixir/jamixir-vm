@@ -163,8 +163,9 @@ defmodule PVM.Memory do
   end
 
   def find_access_for_page(access_ranges, page) do
+    ranges_tuple = List.to_tuple(access_ranges)
     {_, _, access} =
-      RangeManager.binary_search_range(access_ranges, page, 0, length(access_ranges) - 1)
+      RangeManager.binary_search_range(ranges_tuple, page, 0, tuple_size(ranges_tuple) - 1)
 
     access
   end
