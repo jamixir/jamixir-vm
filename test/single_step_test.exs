@@ -6,7 +6,7 @@ defmodule SingleStepTest do
   setup_all do
     memory = InitProgram.construct_memory("code", "data", "args", 1, 1)
     stack_addr = InitProgram.boundaries(4, 4, 4, 1, 1).stack_start
-    state = %State{memory: memory, registers: %Registers{r2: stack_addr}}
+    state = %State{memory: memory, registers: Registers.new(%{r2: stack_addr})}
     {:ok, %{memory: memory, stack_addr: stack_addr, state: state}}
   end
 
@@ -87,7 +87,7 @@ defmodule SingleStepTest do
       # First instruction: load_imm
       {exit_reason, state_} = SingleStep.run(program, bitmask, jump_table, start_set, state)
       assert exit_reason == :continue
-      assert Registers.get(state_.registers, 1) == 42
+      assert state_.registers[1] == 42
 
       # Second instruction: store_u8
       # state_ = %{state_ | counter: 3, registers: state_.registers}
@@ -99,7 +99,7 @@ defmodule SingleStepTest do
       # state_ = %{state_ | counter: 6, memory: state_.memory}
       {exit_reason, state_} = SingleStep.run(program, bitmask, jump_table, start_set, state_)
       assert exit_reason == :continue
-      assert Registers.get(state_.registers, 2) == 42
+      assert state_.registers[2] == 42
     end
 
     test "steps two_immediates instructions", %{state: state, stack_addr: stack_addr} do
@@ -166,7 +166,7 @@ defmodule SingleStepTest do
       # First execute load_imm
       {exit_reason, state_} = SingleStep.run(program, bitmask, jump_table, start_set, state)
       assert exit_reason == :continue
-      assert Registers.get(state_.registers, 2) == 42
+      assert state_.registers[2] == 42
 
       {exit_reason, state_} = SingleStep.run(program, bitmask, jump_table, start_set, state_)
 
@@ -175,9 +175,9 @@ defmodule SingleStepTest do
 
       assert exit_reason == :continue
       # r1 should now have r2's value
-      assert Registers.get(state_.registers, 1) == 42
+      assert state_.registers[1] == 42
       # r2 should be unchanged
-      assert Registers.get(state_.registers, 2) == 42
+      assert state_.registers[2] == 42
       # Should advance past the move_reg instruction
       assert state_.counter == 5
     end

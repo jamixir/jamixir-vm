@@ -3,14 +3,14 @@ defmodule PVM.HostCallTest do
   alias PVM.{HostCall, State, InitProgram, Registers}
   use PVM.Instructions
 
-  def create_program(program, bitmask, jump_table \\ [], z \\ 1) do
+  def create_program(program, bitmask, jump_table \\ {}, z \\ 1) do
     PVM.Encoder.encode_program(program, bitmask, jump_table, z)
   end
 
   setup_all do
     memory = InitProgram.construct_memory("code", "data", "args", 1, 1)
     stack_addr = InitProgram.boundaries(4, 4, 4, 1, 1).stack_start
-    state = %State{memory: memory, registers: %Registers{r2: stack_addr}}
+    state = %State{memory: memory, registers: Registers.new(%{r2: stack_addr})}
     {:ok, %{memory: memory, stack_addr: stack_addr, state: state}}
   end
 

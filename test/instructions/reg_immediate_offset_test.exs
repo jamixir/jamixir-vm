@@ -13,7 +13,7 @@ defmodule Instructions.RegImmediateOffsetTest do
       {exit_reason, state_} =
         RegImmediateOffset.execute(:load_imm_jump, program, bitmask, start_set, %State{})
 
-      assert state_.registers.r1 == 42
+      assert state_.registers[1] == 42
       assert state_.counter == 4
       assert exit_reason == :continue
     end
@@ -38,7 +38,7 @@ defmodule Instructions.RegImmediateOffsetTest do
 
       bitmask = <<1::1, 0::1, 0::1, 0::1, 1::1, 0::1, 0::1, 0::1, 1::1>>
       start_set = basic_block_starts(program, bitmask)
-      state = %State{registers: %Registers{r1: 42}}
+      state = %State{registers: Registers.new(%{1 => 42})}
 
       {exit_reason, state_} =
         RegImmediateOffset.execute(:branch_eq_imm, program, bitmask, start_set, state)
@@ -54,7 +54,7 @@ defmodule Instructions.RegImmediateOffsetTest do
 
       bitmask = <<1::1, 0::1, 0::1, 0::1, 1::1, 0::1, 0::1, 0::1, 1::1, 1::1>>
       start_set = basic_block_starts(program, bitmask)
-      state = %State{registers: %Registers{r1: 43}}
+      state = %State{registers: Registers.new(%{1 => 43})}
 
       {exit_reason, state_} =
         RegImmediateOffset.execute(:branch_ne_imm, program, bitmask, start_set, state)
@@ -67,7 +67,7 @@ defmodule Instructions.RegImmediateOffsetTest do
       program = <<op(:branch_lt_u_imm), 0x11, 0xFF, 5, op(:fallthrough)>>
       bitmask = <<17::5>>
       start_set = basic_block_starts(program, bitmask)
-      state = %State{registers: %Registers{r1: 0x7F}}
+      state = %State{registers: Registers.new(%{1 => 0x7F})}
 
       {exit_reason, state_} =
         RegImmediateOffset.execute(:branch_lt_u_imm, program, bitmask, start_set, state)
@@ -80,7 +80,7 @@ defmodule Instructions.RegImmediateOffsetTest do
       program = <<op(:branch_le_u_imm), 0x11, 0x80, 5, op(:fallthrough)>>
       bitmask = <<17::5>>
       start_set = basic_block_starts(program, bitmask)
-      state = %State{registers: %Registers{r1: 0x80}}
+      state = %State{registers: Registers.new(%{1 => 0x80})}
 
       {exit_reason, state_} =
         RegImmediateOffset.execute(:branch_le_u_imm, program, bitmask, start_set, state)
@@ -93,7 +93,7 @@ defmodule Instructions.RegImmediateOffsetTest do
       program = <<op(:branch_ge_u_imm), 0x11, 0x7F, 5, op(:fallthrough)>>
       bitmask = <<17::5>>
       start_set = basic_block_starts(program, bitmask)
-      state = %State{registers: %Registers{r1: 0x80}}
+      state = %State{registers: Registers.new(%{1 => 0x80})}
 
       {exit_reason, state_} =
         RegImmediateOffset.execute(:branch_ge_u_imm, program, bitmask, start_set, state)
@@ -106,7 +106,7 @@ defmodule Instructions.RegImmediateOffsetTest do
       program = <<op(:branch_gt_u_imm), 0x11, 0x7F, 5, op(:fallthrough)>>
       bitmask = <<17::5>>
       start_set = basic_block_starts(program, bitmask)
-      state = %State{registers: %Registers{r1: 0x80}}
+      state = %State{registers: Registers.new(%{1 => 0x80})}
 
       {exit_reason, state_} =
         RegImmediateOffset.execute(:branch_gt_u_imm, program, bitmask, start_set, state)
@@ -121,7 +121,7 @@ defmodule Instructions.RegImmediateOffsetTest do
       program = <<op(:branch_lt_s_imm), 0x11, 0x07, 5, op(:fallthrough)>>
       bitmask = <<17::5>>
       start_set = basic_block_starts(program, bitmask)
-      state = %State{registers: %Registers{r1: 0x04}}
+      state = %State{registers: Registers.new(%{1 => 0x04})}
 
       {exit_reason, state_} =
         RegImmediateOffset.execute(:branch_lt_s_imm, program, bitmask, start_set, state)
@@ -134,7 +134,7 @@ defmodule Instructions.RegImmediateOffsetTest do
       program = <<op(:branch_le_s_imm), 0x11, 0x08, 5, op(:fallthrough)>>
       bitmask = <<17::5>>
       start_set = basic_block_starts(program, bitmask)
-      state = %State{registers: %Registers{r1: 0x08}}
+      state = %State{registers: Registers.new(%{1 => 0x08})}
 
       {exit_reason, state_} =
         RegImmediateOffset.execute(:branch_le_s_imm, program, bitmask, start_set, state)
@@ -147,7 +147,7 @@ defmodule Instructions.RegImmediateOffsetTest do
       program = <<op(:branch_ge_s_imm), 0x11, 0x0D, 5, op(:fallthrough)>>
       bitmask = <<17::5>>
       start_set = basic_block_starts(program, bitmask)
-      state = %State{registers: %Registers{r1: 0x0F}}
+      state = %State{registers: Registers.new(%{1 => 0x0F})}
 
       {exit_reason, state_} =
         RegImmediateOffset.execute(:branch_ge_s_imm, program, bitmask, start_set, state)
@@ -160,7 +160,7 @@ defmodule Instructions.RegImmediateOffsetTest do
       program = <<op(:branch_gt_s_imm), 0x11, 0x0C, 5, op(:fallthrough)>>
       bitmask = <<17::5>>
       start_set = basic_block_starts(program, bitmask)
-      state = %State{registers: %Registers{r1: 0x0D}}
+      state = %State{registers: Registers.new(%{1 => 0x0D})}
 
       {exit_reason, state_} =
         RegImmediateOffset.execute(:branch_gt_s_imm, program, bitmask, start_set, state)
@@ -175,7 +175,7 @@ defmodule Instructions.RegImmediateOffsetTest do
       program = <<op(:branch_eq_imm), 0x21, 0xFF, 0x0F, 0x05, 0x00, op(:fallthrough)>>
       bitmask = <<33::6>>
       start_set = basic_block_starts(program, bitmask)
-      state = %State{registers: %Registers{r1: 0x0FFF}}
+      state = %State{registers: Registers.new(%{1 => 0x0FFF})}
 
       {exit_reason, state_} =
         RegImmediateOffset.execute(:branch_eq_imm, program, bitmask, start_set, state)
@@ -188,7 +188,7 @@ defmodule Instructions.RegImmediateOffsetTest do
       program = <<op(:branch_eq_imm), 0x5D, 0x2A, 0x00, 0x00, 0x00, 7, op(:fallthrough)>>
       bitmask = <<129>>
       start_set = basic_block_starts(program, bitmask)
-      state = %State{registers: %Registers{r12: 42}}
+      state = %State{registers: Registers.new(%{12 => 42})}
 
       {exit_reason, state_} =
         RegImmediateOffset.execute(:branch_eq_imm, program, bitmask, start_set, state)

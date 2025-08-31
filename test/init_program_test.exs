@@ -338,12 +338,12 @@ defmodule PVM.InitProgramTest do
       registers = InitProgram.initialize_registers(<<1, 2, 3, 4>>)
 
       # Check specific registers that should have predefined values (A.35)
-      assert Registers.get(registers, [0, 1, 7, 8]) == [
+      assert Registers.get_4(registers, 0, 1, 7, 8) == {
                0xFFFF_0000,
                0xFEFE_0000,
                0xFEFF_0000,
                4
-             ]
+             }
 
       # Check that other registers are initialized to 0
       assert Registers.get(registers, [2, 3, 4, 5, 6, 9, 10, 11, 12]) == [
@@ -393,7 +393,7 @@ defmodule PVM.InitProgramTest do
 
       # Verify we got valid components back
       assert byte_size(code) == 2 * page_size
-      assert %Registers{} = registers
+      assert %PVM.Registers{} = registers
       assert is_struct(memory, Memory)
     end
 

@@ -20,20 +20,20 @@ defmodule PVM.Math do
   # Formula (A.12) v0.7.0
   # Converts an integer to its binary (little-endian) as list
   # Example: int_to_bits(10, 1) returns [0,1,0,1,0,0,0,0]
-  @spec int_to_bits(non_neg_integer(), non_neg_integer()) :: list(0 | 1)
-  def int_to_bits(value, num_bytes) do
-    for i <- 0..(8 * num_bytes - 1), do: rem(value >>> i, 2)
-  end
+  # @spec int_to_bits(non_neg_integer(), non_neg_integer()) :: list(0 | 1)
+  # def int_to_bits(value, num_bytes) do
+  #   for i <- 0..(8 * num_bytes - 1), do: rem(value >>> i, 2)
+  # end
 
   # Formula (A.13) v0.7.0
   # Converts a list of bits back to an integer (from little-endian format)
   # Example: bits_to_int([1,0,1,0,0,0,0,0]) returns 5
-  @spec bits_to_int(list(0 | 1)) :: non_neg_integer()
-  def bits_to_int(bits) do
-    bits
-    |> Enum.with_index()
-    |> Enum.reduce(0, fn {bit, i}, acc -> acc + bit * (1 <<< i) end)
-  end
+  # @spec bits_to_int(list(0 | 1)) :: non_neg_integer()
+  # def bits_to_int(bits) do
+  #   bits
+  #   |> Enum.with_index()
+  #   |> Enum.reduce(0, fn {bit, i}, acc -> acc + bit * (1 <<< i) end)
+  # end
 
     # Formula (A.14) v0.7.0
     def leading_zeros(0, bytes), do: bytes * 8
@@ -69,8 +69,6 @@ defmodule PVM.Math do
     quote do
       def u2i(value, num_bytes), do: PVM.Math.unsigned_to_signed(value, num_bytes)
       def i2u(value, num_bytes), do: PVM.Math.signed_to_unsigned(value, num_bytes)
-      def u2b(value, num_bytes), do: PVM.Math.int_to_bits(value, num_bytes)
-      def b2u(bits), do: PVM.Math.bits_to_int(bits)
       def srem(a, b), do: PVM.Math.signed_remainder(a, b)
       def mod(a, b), do: PVM.Math.mod(a, b)
       def leading_zeros(value, bytes), do: PVM.Math.leading_zeros(value, bytes)

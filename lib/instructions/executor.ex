@@ -72,7 +72,7 @@ defmodule PVM.Instructions.Executor do
   def djump(a, counter, jump_table, start_set) do
     alignment_factor = 2
     {quotient, remainder} = {div(a, alignment_factor), rem(a, alignment_factor)}
-    jump_to = Enum.at(jump_table, quotient - 1)
+    jump_to = get_jump_target(jump_table, quotient - 1)
 
     case a do
       # 2^32 - 2^16
@@ -94,6 +94,14 @@ defmodule PVM.Instructions.Executor do
         else
           {:panic, counter}
         end
+    end
+  end
+
+  defp get_jump_target(jump_table, index) do
+    if index >= 0 and index < tuple_size(jump_table) do
+      elem(jump_table, index)
+    else
+      nil
     end
   end
 end

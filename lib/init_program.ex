@@ -53,12 +53,12 @@ defmodule PVM.InitProgram do
 
   # Formula (A.42) v0.7.0
   def initialize_registers(a) do
-    %Registers{
-      r0: 0xFFFF_0000,
-      r1: 0xFEFE_0000,
-      r7: 0xFEFF_0000,
-      r8: byte_size(a)
-    }
+    Registers.new(%{
+      0 => 0xFFFF_0000,
+      1 => 0xFEFE_0000,
+      7 => 0xFEFF_0000,
+      8 => byte_size(a)
+    })
   end
 
   def boundaries(o_size, w_size, a_size, z, s),

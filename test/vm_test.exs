@@ -3,14 +3,14 @@ defmodule VMTest do
   alias PVM.{State, Memory, VM, Registers, InitProgram}
   use PVM.{Decoder, Utils, Instructions}
 
-  def create_program(program, bitmask, jump_table \\ [], z \\ 1) do
+  def create_program(program, bitmask, jump_table \\ {}, z \\ 1) do
     PVM.Encoder.encode_program(program, bitmask, jump_table, z)
   end
 
   setup_all do
     memory = InitProgram.construct_memory("code", "data", "args", 1, 1)
     stack_addr = InitProgram.boundaries(4, 4, 4, 1, 1).stack_start
-    state = %State{memory: memory, registers: %Registers{r2: stack_addr}, gas: 1000}
+    state = %State{memory: memory, registers: Registers.new(%{r2: stack_addr}), gas: 1000}
     {:ok, %{memory: memory, stack_addr: stack_addr, state: state}}
   end
 
@@ -70,7 +70,7 @@ defmodule VMTest do
       # Mark instruction starts
       # 10010010_00000110_00000001_1001
       bitmask = <<146, 6, 1, 144>>
-      jump_table = [2, 4, 6, 8, 24, 1]
+      jump_table = {2, 4, 6, 8, 24, 1}
 
       p = create_program(program, bitmask, jump_table)
       {exit_reason, state_} = VM.execute(p, state)
@@ -79,7 +79,7 @@ defmodule VMTest do
       # Ended after fallthrough
       assert state_.counter == 0
       # From first and jumped-to load_imm
-      assert Registers.get(state_.registers, [1, 2]) == [10, 55]
+      assert Registers.get_2(state_.registers, 1, 2) == {10, 55}
 
       # Verify skipped store_imm_u8 instructions didn't execute
       assert Memory.read(state_.memory, 0x1000A, 1) == {:ok, <<0>>}
@@ -117,7 +117,7 @@ defmodule VMTest do
 
       assert exit_reason == :panic
       assert state_.counter == 0
-      assert Registers.get(state_.registers, [1, 2]) == [42, 42]
+      assert Registers.get_2(state_.registers, 1, 2) == {42, 42}
       assert Memory.read(state_.memory, stack_addr, 1) == {:ok, <<42>>}
       assert Memory.read(state_.memory, stack_addr + 10, 1) == {:ok, <<42>>}
     end
@@ -154,7 +154,7 @@ defmodule VMTest do
       # From final fallthrough
       assert exit_reason == :panic
       assert state_.counter == 0
-      assert Registers.get(state_.registers, 1) == 42
+      assert state_.registers[1] == 42
       # Verify branch was taken
       assert Memory.read(state_.memory, stack_addr, 1) == {:ok, <<99>>}
     end
@@ -190,7 +190,7 @@ defmodule VMTest do
       # From final fallthrough
       assert exit_reason == :panic
       assert state_.counter == 0
-      assert Registers.get(state_.registers, 1) == 7
+      assert state_.registers[1] == 7
       # Verify branch was BOT taken
       assert Memory.read(state_.memory, stack_addr, 1) == {:ok, <<0>>}
     end
@@ -223,7 +223,7 @@ defmodule VMTest do
       # From final fallthrough
       assert exit_reason == :panic
       assert state_.counter == 0
-      assert Registers.get(state_.registers, 1) == 42
+      assert state_.registers[1] == 42
       # Verify jump was taken
       assert Memory.read(state_.memory, stack_addr, 1) == {:ok, <<99>>}
     end
@@ -264,7 +264,7 @@ defmodule VMTest do
       # From final fallthrough
       assert exit_reason == :panic
       assert state_.counter == 0
-      assert Registers.get(state_.registers, 1) == 0xFFFF_FFFF_FFFF_FFFF
+      assert state_.registers[1] == 0xFFFF_FFFF_FFFF_FFFF
       # Verify branch was taken
       assert Memory.read(state_.memory, stack_addr, 1) == {:ok, <<77>>}
     end
@@ -353,7 +353,7 @@ defmodule VMTest do
       assert Memory.read(state_.memory, stack_addr, 4) == {:ok, <<30, 0, 0, 0>>}
       # Verify final register values
       # sum, final i value, loop end condition
-      assert Registers.get(state_.registers, [1, 2, 3]) == [30, 11, 10]
+      assert Registers.get_3(state_.registers, 1, 2, 3) == {30, 11, 10}
     end
   end
 
@@ -473,7 +473,7 @@ defmodule VMTest do
       >>
 
       bitmask = <<144, 192>>
-      jump_table = [2, 4, 10]
+      jump_table = {2, 4, 10}
 
       p = create_program(program, bitmask, jump_table)
       {exit_reason, state_} = VM.execute(p, %State{gas: 1000})
@@ -483,7 +483,7 @@ defmodule VMTest do
       # Reached fallthrough instruction
       assert state_.counter == 0
       # Verify immediate was loaded
-      assert Registers.get(state_.registers, 1) == 42
+      assert state_.registers[1] == 42
     end
   end
 end
