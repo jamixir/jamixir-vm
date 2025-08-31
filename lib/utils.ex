@@ -24,9 +24,8 @@ defmodule PVM.Utils do
   end
 
   # Formula (A.16) v0.7.0
-  def extend_to_64bit(x, n) when n > 0 and n in [0, 1, 2, 3, 4, 8],
+  def extend_to_64bit(x, n) when n in 1..4 or n == 8,
     do: x + (x >>> (8 * n - 1)) * ((1 <<< 64) - (1 <<< (8 * n)))
-
   def extend_to_64bit(x, 0), do: x
 
   # Formula (A.5) v0.7.0

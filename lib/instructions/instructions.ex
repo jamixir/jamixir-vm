@@ -627,7 +627,7 @@ defmodule PVM.Instructions do
   @doc """
   Returns true if the opcode is a termination instruction as defined in A.3
   """
-  def termination_instruction?(opcode) do
+  def termination_instruction?(opcode) when
     opcode in [
       # Trap and fallthrough
       :trap,
@@ -656,8 +656,9 @@ defmodule PVM.Instructions do
       :branch_ge_s_imm,
       :branch_gt_u_imm,
       :branch_gt_s_imm
-    ]
-  end
+    ], do: true
+
+  def termination_instruction?(_), do: false
 
   def opcode_map do
     @opcode_map
