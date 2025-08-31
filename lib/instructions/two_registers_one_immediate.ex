@@ -12,8 +12,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
   def execute(instruction, program, bitmask, state)
       when instruction in [:store_ind_u8, :store_ind_u16, :store_ind_u32, :store_ind_u64] do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
-    w_a = Registers.get(state.registers, r_a)
-    w_b = Registers.get(state.registers, r_b)
+    {w_a, w_b} = Registers.get_2(state.registers, r_a, r_b)
 
     {size, bits} =
       case instruction do
@@ -32,8 +31,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
   def execute(instruction, program, bitmask, state)
       when instruction in [:load_ind_u8, :load_ind_u16, :load_ind_u32, :load_ind_u64] do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
-    w_b = Registers.get(state.registers, r_b)
-    addr = w_b + v_x
+    addr = state.registers[r_b] + v_x
 
     size =
       case instruction do
@@ -44,7 +42,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
       end
 
     read_memory(state, addr, size, fn bytes ->
-      %{state | registers: Registers.set(state.registers, r_a, de_le(bytes, size))}
+      %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, de_le(bytes, size))}}
     end)
   end
 
@@ -52,8 +50,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
   def execute(instruction, program, bitmask, state)
       when instruction in [:load_ind_i8, :load_ind_i16, :load_ind_i32] do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
-    w_b = Registers.get(state.registers, r_b)
-    addr = w_b + v_x
+    addr = state.registers[r_b] + v_x
 
     size =
       case instruction do
@@ -73,7 +70,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
           |> u2i(size)
           |> i2u(8)
 
-        %{state | registers: Registers.set(state.registers, r_a, unsigned_8bit)}
+        %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, unsigned_8bit)}}
       end
     )
   end
@@ -82,7 +79,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
   def execute(instruction, program, bitmask, state)
       when instruction in [:add_imm_32, :mul_imm_32, :neg_add_imm_32] do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
-    w_b = Registers.get(state.registers, r_b)
+    w_b = state.registers[r_b]
 
     result =
       case instruction do
@@ -92,7 +89,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
       end
       |> to_64bit(4)
 
-    state = %{state | registers: Registers.set(state.registers, r_a, result)}
+    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, result)}}
     {:continue, state}
   end
 
@@ -100,18 +97,16 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
   def execute(instruction, program, bitmask, state)
       when instruction in [:and_imm, :xor_imm, :or_imm] do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
-    w_b = Registers.get(state.registers, r_b)
+    w_b = state.registers[r_b]
 
-    operation =
+    result =
       case instruction do
-        :and_imm -> &(&1 &&& &2)
-        :xor_imm -> &bxor(&1, &2)
-        :or_imm -> &bor(&1, &2)
+        :and_imm -> w_b &&& v_x
+        :xor_imm -> bxor(w_b, v_x)
+        :or_imm -> w_b ||| v_x
       end
 
-    result = b2u(Enum.zip_with(u2b(w_b, 8), u2b(v_x, 8), operation))
-
-    state = %{state | registers: Registers.set(state.registers, r_a, result)}
+    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, result)}}
     {:continue, state}
   end
 
@@ -119,7 +114,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
   def execute(instruction, program, bitmask, state)
       when instruction in [:set_lt_u_imm, :set_lt_s_imm, :set_gt_u_imm, :set_gt_s_imm] do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
-    w_b = Registers.get(state.registers, r_b)
+    w_b = state.registers[r_b]
 
     result =
       case instruction do
@@ -129,7 +124,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
         :set_gt_s_imm -> if u2i(w_b, 8) > u2i(v_x, 8), do: 1, else: 0
       end
 
-    state = %{state | registers: Registers.set(state.registers, r_a, result)}
+    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, result)}}
     {:continue, state}
   end
 
@@ -144,7 +139,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
              :shar_r_imm_alt_32
            ] do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
-    w_b = Registers.get(state.registers, r_b)
+    w_b = state.registers[r_b]
 
     result =
       case instruction do
@@ -173,7 +168,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
           u2i(mod(v_x, @two_32), 4) |> Bitwise.bsr(shift) |> i2u(8)
       end
 
-    state = %{state | registers: Registers.set(state.registers, r_a, result)}
+    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, result)}}
     {:continue, state}
   end
 
@@ -181,8 +176,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
   def execute(instruction, program, bitmask, state)
       when instruction in [:cmov_iz_imm, :cmov_nz_imm] do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
-    w_b = Registers.get(state.registers, r_b)
-    w_a = Registers.get(state.registers, r_a)
+    {w_a, w_b} = Registers.get_2(state.registers, r_a, r_b)
 
     result =
       case instruction do
@@ -190,7 +184,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
         :cmov_nz_imm -> if w_b != 0, do: v_x, else: w_a
       end
 
-    state = %{state | registers: Registers.set(state.registers, r_a, result)}
+    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, result)}}
     {:continue, state}
   end
 
@@ -198,7 +192,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
   def execute(instruction, program, bitmask, state)
       when instruction in [:add_imm_64, :mul_imm_64, :neg_add_imm_64] do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
-    w_b = Registers.get(state.registers, r_b)
+    w_b = state.registers[r_b]
 
     result =
       case instruction do
@@ -207,7 +201,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
         :neg_add_imm_64 -> mod(v_x + @two_64 - w_b, @two_64)
       end
 
-    state = %{state | registers: Registers.set(state.registers, r_a, result)}
+    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, result)}}
     {:continue, state}
   end
 
@@ -222,7 +216,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
              :shar_r_imm_alt_64
            ] do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
-    w_b = Registers.get(state.registers, r_b)
+    w_b = state.registers[r_b]
 
     result =
       case instruction do
@@ -251,49 +245,49 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
           u2i(v_x, 8) >>> shift |> i2u(8)
       end
 
-    state = %{state | registers: Registers.set(state.registers, r_a, result)}
+    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, result)}}
     {:continue, state}
   end
 
   # Rotation operations
   def execute(:rot_r_64_imm, program, bitmask, state) do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
-    number = Registers.get(state.registers, r_b)
+    number = state.registers[r_b]
 
     shift = mod(v_x, 64)
     result = rotate(number, shift, 64, :right)
 
-    state = %{state | registers: Registers.set(state.registers, r_a, result)}
+    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, result)}}
     {:continue, state}
   end
 
   def execute(:rot_r_64_imm_alt, program, bitmask, state) do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
-    w_b = Registers.get(state.registers, r_b)
+    w_b = state.registers[r_b]
     shift = mod(w_b, 64)
     result = rotate(v_x, shift, 64, :right)
 
-    state = %{state | registers: Registers.set(state.registers, r_a, result)}
+    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, result)}}
     {:continue, state}
   end
 
   def execute(:rot_r_32_imm, program, bitmask, state) do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
-    w_b = Registers.get(state.registers, r_b)
+    w_b = state.registers[r_b]
     shift = mod(v_x, 32)
     result = rotate(w_b, shift, 32, :right) |> Utils.extend_to_64bit(4)
 
-    state = %{state | registers: Registers.set(state.registers, r_a, result)}
+    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, result)}}
     {:continue, state}
   end
 
   def execute(:rot_r_32_imm_alt, program, bitmask, state) do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
-    w_b = Registers.get(state.registers, r_b)
+    w_b = state.registers[r_b]
     shift = mod(w_b, 32)
     result = rotate(v_x, shift, 32, :right) |> Utils.extend_to_64bit(4)
 
-    state = %{state | registers: Registers.set(state.registers, r_a, result)}
+    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, result)}}
     {:continue, state}
   end
 

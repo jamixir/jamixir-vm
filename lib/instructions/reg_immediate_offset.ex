@@ -1,8 +1,7 @@
 defmodule PVM.Instructions.RegImmediateOffset do
   use PVM.Utils
-  alias PVM.{Instructions.Executor, Registers}
+  alias PVM.{Instructions.Executor}
   use PVM.Math
-  alias PVM.Registers
   @type comparison_op :: :eq | :ne | :lt_u | :le_u | :ge_u | :gt_u | :lt_s | :le_s | :ge_s | :gt_s
   # Section (A.5.8) v0.7.0
   def execute(:load_imm_jump, program, bitmask, start_set, state) do
@@ -11,12 +10,12 @@ defmodule PVM.Instructions.RegImmediateOffset do
     {exit_reason, counter} = Executor.branch(v_y, true, state.counter, start_set)
 
     {exit_reason,
-     %{state | counter: counter, registers: Registers.set(state.registers, r_a, v_x)}}
+     %{state | counter: counter, registers: %{state.registers | r: put_elem(state.registers.r, r_a, v_x)}}}
   end
 
   def execute(instruction, program, bitmask, start_set, state) do
     {r_a, v_x, v_y} = get_params(program, bitmask, state.counter)
-    w_a = Registers.get(state.registers, r_a)
+    w_a = state.registers[r_a]
     comparison_result = compare(instruction_to_op(instruction), w_a, v_x)
 
     {exit_status, counter} = Executor.branch(v_y, comparison_result, state.counter, start_set)
@@ -56,6 +55,7 @@ defmodule PVM.Instructions.RegImmediateOffset do
     end
   end
 
+  # TODO optimize, compile time constant
   defp instruction_to_op(instruction) do
     case instruction do
       :branch_eq_imm -> :eq

@@ -72,11 +72,14 @@ defmodule PVM.Decoder do
     {z, rest} = decode_next_le(rest, 1)
     {prog_len, rest} = decode_next_integer(rest)
 
-    {jump_table, rest} = decode_jump_table(rest, jump_len, z)
+    {jump_table_list, rest} = decode_jump_table(rest, jump_len, z)
 
     <<program::binary-size(prog_len), bitmask::bitstring>> = rest
 
     bitmask = reverse_bitmask(bitmask, byte_size(program))
+
+    # Convert jump table to tuple for O(1) access
+    jump_table = List.to_tuple(jump_table_list)
 
     {program, bitmask, jump_table}
   end

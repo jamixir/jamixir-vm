@@ -1,6 +1,6 @@
 defmodule PVM.Instructions.RegImmediate do
   use PVM.{Decoder, Encoder, Utils, Math}
-  alias PVM.{Instructions.Executor, Registers}
+  alias PVM.{Instructions.Executor}
   import PVM.Memory.Util
 
   @two_to_8 0x100
@@ -15,14 +15,14 @@ defmodule PVM.Instructions.RegImmediate do
 
     <<value::64-little>> = binary_part_safe(program, state.counter + 2, 8)
 
-    state = %{state | registers: Registers.set(state.registers, register_index, value)}
+    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, register_index, value)}}
     {:continue, state}
   end
 
   # Section (A.5.6) v0.7.0
   def execute(:jump_ind, program, bitmask, jump_table, start_set, state) do
     {register_index, addr} = get_params(program, bitmask, state.counter)
-    register_value = Registers.get(state.registers, register_index)
+    register_value = state.registers[register_index]
     target = mod(register_value + addr, 0x1_0000_0000)
 
     {exit_status, counter} =
@@ -39,7 +39,7 @@ defmodule PVM.Instructions.RegImmediate do
   def execute(:load_imm, program, bitmask, _jump_table, _start_set, state) do
     {register_index, value} = get_params(program, bitmask, state.counter)
 
-    state = %{state | registers: Registers.set(state.registers, register_index, value)}
+    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, register_index, value)}}
     {:continue, state}
   end
 
@@ -52,7 +52,7 @@ defmodule PVM.Instructions.RegImmediate do
       1,
       &%{
         state
-        | registers: Registers.set(state.registers, register_index, :binary.first(&1))
+        | registers: %{state.registers | r: put_elem(state.registers.r, register_index, :binary.first(&1))}
       }
     )
   end
@@ -67,7 +67,7 @@ defmodule PVM.Instructions.RegImmediate do
 
       %{
         state
-        | registers: Registers.set(state.registers, register_index, signed_value)
+        | registers: %{state.registers | r: put_elem(state.registers.r, register_index, signed_value)}
       }
     end)
   end
@@ -78,7 +78,7 @@ defmodule PVM.Instructions.RegImmediate do
     read_memory(state, addr, 2, fn <<v::16-little>> ->
       %{
         state
-        | registers: Registers.set(state.registers, register_index, v)
+        | registers: %{state.registers | r: put_elem(state.registers.r, register_index, v)}
       }
     end)
   end
@@ -91,7 +91,7 @@ defmodule PVM.Instructions.RegImmediate do
 
       %{
         state
-        | registers: Registers.set(state.registers, register_index, signed_value)
+        | registers: %{state.registers | r: put_elem(state.registers.r, register_index, signed_value)}
       }
     end)
   end
@@ -102,7 +102,7 @@ defmodule PVM.Instructions.RegImmediate do
     read_memory(state, addr, 4, fn <<v::32-little>> ->
       %{
         state
-        | registers: Registers.set(state.registers, register_index, v)
+        | registers: %{state.registers | r: put_elem(state.registers.r, register_index, v)}
       }
     end)
   end
@@ -115,7 +115,7 @@ defmodule PVM.Instructions.RegImmediate do
 
       %{
         state
-        | registers: Registers.set(state.registers, register_index, signed_value)
+        | registers: %{state.registers | r: put_elem(state.registers.r, register_index, signed_value)}
       }
     end)
   end
@@ -126,14 +126,14 @@ defmodule PVM.Instructions.RegImmediate do
     read_memory(state, addr, 8, fn <<v::64-little>> ->
       %{
         state
-        | registers: Registers.set(state.registers, register_index, v)
+        | registers: %{state.registers | r: put_elem(state.registers.r, register_index, v)}
       }
     end)
   end
 
   def execute(:store_u8, program, bitmask, _jump_table, _start_set, state) do
     {register_index, addr} = get_params(program, bitmask, state.counter)
-    value = Registers.get(state.registers, register_index)
+    value = state.registers[register_index]
     stored_value = mod(value, @two_to_8)
 
     write_memory(state, addr, <<stored_value>>)
@@ -141,7 +141,7 @@ defmodule PVM.Instructions.RegImmediate do
 
   def execute(:store_u16, program, bitmask, _jump_table, _start_set, state) do
     {register_index, addr} = get_params(program, bitmask, state.counter)
-    value = Registers.get(state.registers, register_index)
+    value = state.registers[register_index]
     stored_value = mod(value, @two_to_16)
 
     write_memory(state, addr, <<stored_value::16-little>>)
@@ -149,7 +149,7 @@ defmodule PVM.Instructions.RegImmediate do
 
   def execute(:store_u32, program, bitmask, _jump_table, _start_set, state) do
     {register_index, addr} = get_params(program, bitmask, state.counter)
-    value = Registers.get(state.registers, register_index)
+    value = state.registers[register_index]
     stored_value = mod(value, @two_to_32)
 
     write_memory(state, addr, <<stored_value::32-little>>)
@@ -157,7 +157,7 @@ defmodule PVM.Instructions.RegImmediate do
 
   def execute(:store_u64, program, bitmask, _jump_table, _start_set, state) do
     {register_index, addr} = get_params(program, bitmask, state.counter)
-    value = Registers.get(state.registers, register_index)
+    value = state.registers[register_index]
 
     write_memory(state, addr, <<value::64-little>>)
   end

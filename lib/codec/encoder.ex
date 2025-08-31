@@ -36,14 +36,16 @@ defmodule PVM.Encoder do
 
   # Encode full program blob according to p = E(|j|) ∘ E(z) ∘ E(|c|) ∘ E(j) ∘ E(c) ∘ E(k)
   def encode_program(program, bitmask, jump_table, z) do
+    jump_table_list = Tuple.to_list(jump_table)
+
     # Encode jump table - each entry needs to be encoded as an integer
-    encoded_jump = Enum.map(jump_table, fn v -> encode_le(v, z) end)
+    encoded_jump = Enum.map(jump_table_list, fn v -> encode_le(v, z) end)
 
     bitmask = PVM.Decoder.reverse_bitmask(bitmask)
 
     # Concatenate in specified order: |j| ∘ z ∘ |c| ∘ j ∘ c ∘ k
     <<
-      encode_integer(length(jump_table))::binary,
+      encode_integer(length(jump_table_list))::binary,
       encode_le(z, 1)::binary,
       encode_integer(byte_size(program))::binary,
       Enum.into(encoded_jump, <<>>)::binary,

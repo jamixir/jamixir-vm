@@ -35,7 +35,7 @@ defmodule PVM.Utils do
   def basic_block_starts(program, bitmask, batch_size \\ 512)
       when is_bitstring(program) and is_bitstring(bitmask) do
     results = process_batches(program, bitmask, bit_size(bitmask), 0, batch_size, [])
-    [0 | Enum.reverse(results)]
+    [0 | reverse_list(results)]
   end
 
   defp process_batches(_program, _bitmask, bitmask_size, pos, _batch_size, acc)
@@ -177,4 +177,8 @@ defmodule PVM.Utils do
         do: PVM.Utils.binary_part_safe(binary, n, count)
     end
   end
+
+  defp reverse_list(list), do: reverse_list(list, [])
+  defp reverse_list([], acc), do: acc
+  defp reverse_list([h | t], acc), do: reverse_list(t, [h | acc])
 end

@@ -14,7 +14,7 @@ defmodule Instructions.NoArgsTest do
       initial_state = %PVM.State{
         counter: 1,
         gas: 100,
-        registers: %Registers{r0: 0, r1: 1, r2: 2}
+        registers: Registers.new(%{0 => 0, 1 => 1, 2 => 2})
       }
 
       {exit_reason, state_} = NoArgs.execute(:fallthrough, initial_state)

@@ -1,6 +1,5 @@
 defmodule PVM.Instructions.RegTwoImm do
   use PVM.{Decoder, Encoder, Utils, Math}
-  alias PVM.Registers
   import PVM.Memory.Util
   # Section (A.5.7) v0.7.0
 
@@ -10,7 +9,7 @@ defmodule PVM.Instructions.RegTwoImm do
 
   def execute(:store_imm_ind_u8, program, bitmask, state) do
     {r_a, v_x, v_y} = get_params(program, bitmask, state.counter)
-    w_a = Registers.get(state.registers, r_a)
+    w_a = state.registers[r_a]
     stored_value = mod(v_y, @two_to_8)
     target_addr = w_a + v_x
 
@@ -19,7 +18,7 @@ defmodule PVM.Instructions.RegTwoImm do
 
   def execute(:store_imm_ind_u16, program, bitmask, state) do
     {r_a, v_x, v_y} = get_params(program, bitmask, state.counter)
-    w_a = Registers.get(state.registers, r_a)
+    w_a = state.registers[r_a]
     stored_value = mod(v_y, @two_to_16)
     target_addr = w_a + v_x
 
@@ -28,7 +27,7 @@ defmodule PVM.Instructions.RegTwoImm do
 
   def execute(:store_imm_ind_u32, program, bitmask, state) do
     {r_a, v_x, v_y} = get_params(program, bitmask, state.counter)
-    w_a = Registers.get(state.registers, r_a)
+    w_a = state.registers[r_a]
     stored_value = mod(v_y, @two_to_32)
     target_addr = w_a + v_x
 
@@ -37,7 +36,7 @@ defmodule PVM.Instructions.RegTwoImm do
 
   def execute(:store_imm_ind_u64, program, bitmask, state) do
     {r_a, v_x, v_y} = get_params(program, bitmask, state.counter)
-    w_a = Registers.get(state.registers, r_a)
+    w_a = state.registers[r_a]
     target_addr = w_a + v_x
 
     write_memory(state, target_addr, <<v_y::64-little>>)

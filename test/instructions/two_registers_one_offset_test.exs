@@ -9,7 +9,7 @@ defmodule Instructions.TwoRegistersOneOffsetTest do
       bitmask = <<9::4>>
       start_set = basic_block_starts(program, bitmask)
 
-      state = %State{registers: %Registers{r1: 42, r2: 42}}
+      state = %State{registers: Registers.new(%{r1: 42, r2: 42})}
 
       {exit_status, _} =
         TwoRegistersOneOffset.execute(:branch_eq, program, bitmask, start_set, state)
@@ -21,7 +21,7 @@ defmodule Instructions.TwoRegistersOneOffsetTest do
       program = <<op(:branch_ne), 0x21, 4, op(:fallthrough)>>
       bitmask = <<9::4>>
       start_set = basic_block_starts(program, bitmask)
-      state = %State{registers: %Registers{r1: 42, r2: 43}}
+      state = %State{registers: Registers.new(%{r1: 42, r2: 43})}
 
       {exit_status, _} =
         TwoRegistersOneOffset.execute(:branch_ne, program, bitmask, start_set, state)
@@ -33,7 +33,7 @@ defmodule Instructions.TwoRegistersOneOffsetTest do
       program = <<op(:branch_lt_u), 0x21, 4, op(:fallthrough)>>
       bitmask = <<9::4>>
       start_set = basic_block_starts(program, bitmask)
-      state = %State{registers: %Registers{r1: 0x7F, r2: 0xFF}}
+      state = %State{registers: Registers.new(%{r1: 0x7F, r2: 0xFF})}
 
       {exit_status, _} =
         TwoRegistersOneOffset.execute(:branch_lt_u, program, bitmask, start_set, state)
@@ -45,7 +45,7 @@ defmodule Instructions.TwoRegistersOneOffsetTest do
       program = <<op(:branch_lt_s), 0x21, 4, op(:fallthrough)>>
       bitmask = <<9::4>>
       start_set = basic_block_starts(program, bitmask)
-      state = %State{registers: %Registers{r1: 0xFFFF_0000_0000_0001, r2: 0xFF00_0000_0000_00002}}
+      state = %State{registers: Registers.new(%{r1: 0xFFFF_0000_0000_0001, r2: 0xFF00_0000_0000_00002})}
 
       {exit_status, _} =
         TwoRegistersOneOffset.execute(:branch_lt_s, program, bitmask, start_set, state)
@@ -57,7 +57,7 @@ defmodule Instructions.TwoRegistersOneOffsetTest do
       program = <<op(:branch_ge_u), 0x21, 4, op(:fallthrough)>>
       bitmask = <<9::4>>
       start_set = basic_block_starts(program, bitmask)
-      state = %State{registers: %Registers{r1: 0xFF, r2: 0x7F}}
+      state = %State{registers: Registers.new(%{r1: 0xFF, r2: 0x7F})}
 
       {exit_status, _} =
         TwoRegistersOneOffset.execute(:branch_ge_u, program, bitmask, start_set, state)
@@ -69,7 +69,7 @@ defmodule Instructions.TwoRegistersOneOffsetTest do
       program = <<op(:branch_ge_s), 0x21, 4, op(:fallthrough)>>
       bitmask = <<9::4>>
       start_set = basic_block_starts(program, bitmask)
-      state = %State{registers: %Registers{r1: 0xFF00_0000_0000_00002, r2: 0xFFFF_0000_0000_0001}}
+      state = %State{registers: Registers.new(%{r1: 0xFF00_0000_0000_00002, r2: 0xFFFF_0000_0000_0001})}
 
       {exit_status, _} =
         TwoRegistersOneOffset.execute(:branch_ge_s, program, bitmask, start_set, state)
@@ -86,7 +86,7 @@ defmodule Instructions.TwoRegistersOneOffsetTest do
 
       bitmask = <<79::7>>
       start_set = basic_block_starts(program, bitmask)
-      state = %State{registers: %Registers{r12: 42}}
+      state = %State{registers: Registers.new(%{r12: 42})}
 
       {exit_status, _} =
         TwoRegistersOneOffset.execute(:branch_eq, program, bitmask, start_set, state)
@@ -98,7 +98,7 @@ defmodule Instructions.TwoRegistersOneOffsetTest do
       program = <<op(:branch_eq), 0x21, 0x05, 0x00, 0x00, 0x00, op(:fallthrough)>>
       bitmask = <<33::6>>
       start_set = basic_block_starts(program, bitmask)
-      state = %State{registers: %Registers{r1: 42, r2: 42}}
+      state = %State{registers: Registers.new(%{r1: 42, r2: 42})}
 
       {exit_status, _} =
         TwoRegistersOneOffset.execute(:branch_eq, program, bitmask, start_set, state)
@@ -111,7 +111,7 @@ defmodule Instructions.TwoRegistersOneOffsetTest do
       bitmask = <<9::4>>
       start_set = basic_block_starts(program, bitmask)
 
-      state = %State{registers: %Registers{r1: 42, r2: 42}}
+      state = %State{registers: Registers.new(%{r1: 42, r2: 42})}
 
       {exit_status, _} =
         TwoRegistersOneOffset.execute(:branch_eq, program, bitmask, start_set, state)

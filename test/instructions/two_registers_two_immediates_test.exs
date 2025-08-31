@@ -21,10 +21,10 @@ defmodule Instructions.TwoRegistersTwoImmediatesTest do
       # Mark instruction starts
       bitmask = <<33::6>>
       start_set = basic_block_starts(program, bitmask)
-      jump_table = [2, 4, 6, 8, 10]
+      jump_table = {2, 4, 6, 8, 10}
 
       # Set up register 2 with base address 8
-      state = %State{registers: %Registers{r2: 5}}
+      state = %State{registers: Registers.new(%{2 => 5})}
 
       {exit_status, state} =
         TwoRegistersTwoImmediates.execute(
@@ -37,7 +37,7 @@ defmodule Instructions.TwoRegistersTwoImmediatesTest do
         )
 
       # Check immediate value was loaded
-      assert state.registers.r1 == 42
+      assert state.registers[1] == 42
       #  a will be 1 + 5 = 6
       # we will jimp to counter = jump_table[a / 2 -1] = jump_table[3 -1] = 6
 
@@ -49,10 +49,10 @@ defmodule Instructions.TwoRegistersTwoImmediatesTest do
       program = <<op(:load_imm_jump_ind), 0x21, 1, 42, 1>>
       bitmask = <<16::5>>
       start_set = basic_block_starts(program, bitmask)
-      jump_table = [2, 4, 6, 8, 10]
+      jump_table = {2, 4, 6, 8, 10}
 
       # Set register to create unaligned target (odd number)
-      state = %State{registers: %Registers{r2: 2}}
+      state = %State{registers: Registers.new(%{2 => 2})}
 
       {exit_status, state} =
         TwoRegistersTwoImmediates.execute(
@@ -64,7 +64,7 @@ defmodule Instructions.TwoRegistersTwoImmediatesTest do
           state
         )
 
-      assert state.registers.r1 == 42
+      assert state.registers[1] == 42
       assert exit_status == :panic
       assert state.counter == 0
     end

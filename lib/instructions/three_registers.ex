@@ -23,7 +23,7 @@ defmodule PVM.Instructions.ThreeRegisters do
       |> mod(@two_32)
       |> to_64bit(4)
 
-    state = %{state | registers: Registers.set(state.registers, r_d, result)}
+    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_d, result)}}
     {:continue, state}
   end
 
@@ -61,7 +61,7 @@ defmodule PVM.Instructions.ThreeRegisters do
           if b == -1 and a == -1 * (1 <<< 31), do: 0, else: i2u(srem(a, b), 8)
       end
 
-    state = %{state | registers: Registers.set(state.registers, r_d, result)}
+    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_d, result)}}
     {:continue, state}
   end
 
@@ -78,7 +78,7 @@ defmodule PVM.Instructions.ThreeRegisters do
         :shar_r_32 -> mod(w_a, @two_32) |> u2i(4) |> Bitwise.bsr(shift) |> i2u(8)
       end
 
-    state = %{state | registers: Registers.set(state.registers, r_d, result)}
+    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_d, result)}}
     {:continue, state}
   end
 
@@ -95,7 +95,7 @@ defmodule PVM.Instructions.ThreeRegisters do
       end
       |> mod(@two_64)
 
-    state = %{state | registers: Registers.set(state.registers, r_d, result)}
+    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_d, result)}}
     {:continue, state}
   end
 
@@ -127,7 +127,7 @@ defmodule PVM.Instructions.ThreeRegisters do
             else: srem(u2i(w_a, 8), u2i(w_b, 8)) |> i2u(8)
       end
 
-    state = %{state | registers: Registers.set(state.registers, r_d, result)}
+    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_d, result)}}
     {:continue, state}
   end
 
@@ -144,7 +144,7 @@ defmodule PVM.Instructions.ThreeRegisters do
         :shar_r_64 -> u2i(w_a, 8) >>> shift |> i2u(8)
       end
 
-    state = %{state | registers: Registers.set(state.registers, r_d, result)}
+    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_d, result)}}
     {:continue, state}
   end
 
@@ -153,16 +153,14 @@ defmodule PVM.Instructions.ThreeRegisters do
       when instruction in [:and, :xor, :or] do
     {w_a, w_b, r_d} = get_params(program, state)
 
-    operation =
+    result =
       case instruction do
-        :and -> &(&1 &&& &2)
-        :xor -> &bxor(&1, &2)
-        :or -> &bor(&1, &2)
+        :and -> w_a &&& w_b
+        :xor -> bxor(w_a, w_b)
+        :or -> w_a ||| w_b
       end
 
-    result = b2u(Enum.zip_with(u2b(w_a, 8), u2b(w_b, 8), operation))
-
-    state = %{state | registers: Registers.set(state.registers, r_d, result)}
+    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_d, result)}}
     {:continue, state}
   end
 
@@ -171,17 +169,15 @@ defmodule PVM.Instructions.ThreeRegisters do
       when instruction in [:and_inv, :or_inv, :xnor] do
     {w_a, w_b, r_d} = get_params(program, state)
 
-    operation =
+    result =
       case instruction do
-        :and_inv -> fn x, y -> x &&& 1 - y end
-        :or_inv -> fn x, y -> x ||| 1 - y end
-        # NOT XOR = 1 - (x XOR y)
-        :xnor -> fn x, y -> 1 - bxor(x, y) end
+        :and_inv -> w_a &&& bxor(@max_64, w_b)
+        :or_inv -> w_a ||| bxor(@max_64, w_b)
+        # NOT XOR = 64-bit bitwise NOT of XOR
+        :xnor -> bxor(@max_64, bxor(w_a, w_b))
       end
 
-    result = b2u(Enum.zip_with(u2b(w_a, 8), u2b(w_b, 8), operation))
-
-    state = %{state | registers: Registers.set(state.registers, r_d, result)}
+    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_d, result)}}
     {:continue, state}
   end
 
@@ -202,7 +198,7 @@ defmodule PVM.Instructions.ThreeRegisters do
           (u2i(w_a, 8) * w_b) |> Bitwise.bsr(64) |> i2u(8)
       end
 
-    state = %{state | registers: Registers.set(state.registers, r_d, result)}
+    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_d, result)}}
     {:continue, state}
   end
 
@@ -217,7 +213,7 @@ defmodule PVM.Instructions.ThreeRegisters do
         :set_lt_s -> if(u2i(w_a, 8) < u2i(w_b, 8), do: 1, else: 0)
       end
 
-    state = %{state | registers: Registers.set(state.registers, r_d, result)}
+    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_d, result)}}
     {:continue, state}
   end
 
@@ -225,7 +221,7 @@ defmodule PVM.Instructions.ThreeRegisters do
   def execute(instruction, program, state)
       when instruction in [:cmov_iz, :cmov_nz] do
     {w_a, w_b, r_d} = get_params(program, state)
-    w_d = Registers.get(state.registers, r_d)
+    w_d = state.registers[r_d]
 
     result =
       case instruction do
@@ -233,7 +229,7 @@ defmodule PVM.Instructions.ThreeRegisters do
         :cmov_nz -> if(w_b != 0, do: w_a, else: w_d)
       end
 
-    state = %{state | registers: Registers.set(state.registers, r_d, result)}
+    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_d, result)}}
     {:continue, state}
   end
 
@@ -253,7 +249,7 @@ defmodule PVM.Instructions.ThreeRegisters do
     result = rotate(w_a, w_b, bits, direction)
     result = if bits == 32, do: to_64bit(result, 4), else: result
 
-    state = %{state | registers: Registers.set(state.registers, r_d, result)}
+    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_d, result)}}
     {:continue, state}
   end
 
@@ -274,7 +270,7 @@ defmodule PVM.Instructions.ThreeRegisters do
         :min_u -> min(w_a, w_b)
       end
 
-    state = %{state | registers: Registers.set(state.registers, r_d, result)}
+    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_d, result)}}
     {:continue, state}
   end
 
@@ -287,8 +283,7 @@ defmodule PVM.Instructions.ThreeRegisters do
     r_b = min(12, :binary.first(byte1) >>> 4)
     r_d = min(12, :binary.first(byte2))
 
-    w_a = Registers.get(state.registers, r_a)
-    w_b = Registers.get(state.registers, r_b)
+    {w_a, w_b} = Registers.get_2(state.registers, r_a, r_b)
 
     {w_a, w_b, r_d}
   end

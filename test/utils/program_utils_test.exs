@@ -7,14 +7,14 @@ defmodule PVM.Utils.ProgramUtilsTest do
   setup_all do
     memory = InitProgram.construct_memory("code", "data", "args", 1, 1)
     stack_addr = InitProgram.boundaries(4, 4, 4, 1, 1).stack_start
-    state = %State{memory: memory, registers: %Registers{r2: stack_addr}, gas: 1000}
+    state = %State{memory: memory, registers: Registers.new(%{r2: stack_addr}), gas: 1000}
     {:ok, %{memory: memory, stack_addr: stack_addr, state: state}}
   end
 
   describe "halt helpers" do
     test "create_halt_program creates minimal halting program" do
       {program, bitmask} = ProgramUtils.create_halt_program()
-      p = PVM.Encoder.encode_program(program, bitmask, [], 1)
+      p = PVM.Encoder.encode_program(program, bitmask, {}, 1)
       {exit_reason, state} = VM.execute(p, %State{})
       assert exit_reason == :halt
       assert state.counter == 0
@@ -79,13 +79,13 @@ defmodule PVM.Utils.ProgramUtilsTest do
       base_bitmask = <<146, 76, 72, 153, 65>>
 
       {program, bitmask} = ProgramUtils.append_halt(base_program, base_bitmask)
-      p = PVM.Encoder.encode_program(program, bitmask, [], 1)
+      p = PVM.Encoder.encode_program(program, bitmask, {}, 1)
       {exit_reason, state} = VM.execute(p, state)
 
       # Should halt and have executed the original instructions
       assert exit_reason == :halt
       assert state.counter == 0
-      assert Registers.get(state.registers, [1, 2, 3]) == [30, 11, 10]
+      assert Registers.get_3(state.registers, 1, 2, 3) == {30, 11, 10}
       assert Memory.read!(state.memory, stack_addr, 4) == <<30, 0, 0, 0>>
     end
   end
