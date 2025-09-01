@@ -1,6 +1,5 @@
 defmodule PVM.Instructions.Executor do
   alias PVM.Instructions
-  alias PVM.Trace
 
   alias PVM.Instructions.{
     NoArgs,

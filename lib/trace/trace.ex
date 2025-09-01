@@ -57,34 +57,6 @@ defmodule PVM.Trace do
 
   defp instruction_str(opcode), do: to_string(opcode) |> String.upcase() |> String.pad_trailing(20)
 
-  defp pvm_hash(%PVM.State{} = state) do
-    registers =
-      PVM.Registers.to_list(state.registers) |> Enum.map(&e_le(&1, 8)) |> Enum.join(<<>>)
-
-    pages = PVM.Memory.Util.pages_with_data(state.memory) |> Enum.sort()
-
-    # Create a binary with each page's address and content
-    pages_binary =
-      pages
-      |> Enum.map(fn page_num ->
-        page_content = PVM.Memory.Util.get_page_binary(state.memory, page_num)
-
-        <<page_num::32-little, page_content::binary>>
-      end)
-      |> Enum.join(<<>>)
-
-    bin = <<registers::binary, state.gas::64-little, pages_binary::binary>>
-
-    # 4. Compute Blake2b hash of the binary data
-    hash = Blake2.hash2b(bin, 32)
-
-    # 5. Format hash as a shortened string like "9724..2f0e"
-    prefix = Base.encode16(binary_part(hash, 0, 2), case: :lower)
-    suffix = Base.encode16(binary_part(hash, byte_size(hash), -2), case: :lower)
-
-    "#{prefix}..#{suffix}"
-  end
-
   def close_trace_file do
     if enabled?() do
       HTML.close(Process.get(:trace_html_file))
