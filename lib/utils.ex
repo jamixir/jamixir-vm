@@ -3,38 +3,75 @@ defmodule PVM.Utils do
   import Bitwise
   alias PVM.Instructions
 
+  @bit_positions (for byte <- 0..255 do
+                    cond do
+                      (byte &&& 0x80) != 0 -> 0
+                      (byte &&& 0x40) != 0 -> 1
+                      (byte &&& 0x20) != 0 -> 2
+                      (byte &&& 0x10) != 0 -> 3
+                      (byte &&& 0x08) != 0 -> 4
+                      (byte &&& 0x04) != 0 -> 5
+                      (byte &&& 0x02) != 0 -> 6
+                      (byte &&& 0x01) != 0 -> 7
+                      # This shouldn't happen since we only call when byte != 0
+                      true -> nil
+                    end
+                  end)
+                 |> List.to_tuple()
+
   # Formula (A.3) v0.7.0
   def skip(i, bitmask) do
     l = bit_size(bitmask)
-    do_skip(i + 1, bitmask, 0, l)
-  end
+    start_pos = i + 1
 
-  # Binary version
-  defp do_skip(_current_pos, _bitmask, count, _l) when count >= 24, do: 24
-
-  defp do_skip(current_pos, _bitmask, count, l) when current_pos >= l, do: count
-
-  defp do_skip(current_pos, bitmask, count, l) do
-    <<_::size(current_pos), bit::1, _::bits>> = bitmask
-
-    case bit do
-      1 -> count
-      0 -> do_skip(current_pos + 1, bitmask, count + 1, l)
+    if start_pos >= l do
+      0
+    else
+      <<_::size(start_pos), rest::bitstring>> = bitmask
+      do_skip(rest, 0, min(24, bit_size(rest)))
     end
   end
+
+  defp do_skip(<<>>, count, _max_count), do: count
+  defp do_skip(_bits, count, max_count) when count >= max_count, do: max_count
+
+  # process byte (8 bits) at a time
+  defp do_skip(bits, count, max_count)
+       when bit_size(bits) >= 8 and count + 8 <= max_count do
+    <<byte::8, rest::bitstring>> = bits
+
+    case byte do
+      0 ->
+        do_skip(rest, count + 8, max_count)
+
+      _ ->
+        # Found a 1 bit in this byte, find exactly which bit
+        count + find_first_bit_in_byte(byte)
+    end
+  end
+
+  # if less than 8 bits remain, fallback to bit-by-bit
+  defp do_skip(<<1::1, _::bitstring>>, count, _max_count), do: count
+
+  defp do_skip(<<0::1, rest::bitstring>>, count, max_count) do
+    do_skip(rest, count + 1, max_count)
+  end
+
+  defp find_first_bit_in_byte(byte), do: elem(@bit_positions, byte)
 
   # Formula (A.16) v0.7.0
   def extend_to_64bit(x, n) when n in 1..4 or n == 8,
     do: x + (x >>> (8 * n - 1)) * ((1 <<< 64) - (1 <<< (8 * n)))
+
   def extend_to_64bit(x, 0), do: x
 
   # Formula (A.5) v0.7.0
-  def basic_block_starts(<<>>, <<>>), do: [0]
+  def basic_block_starts(<<>>, <<>>), do: %{0 => nil}
 
   def basic_block_starts(program, bitmask, batch_size \\ 512)
       when is_bitstring(program) and is_bitstring(bitmask) do
-    results = process_batches(program, bitmask, bit_size(bitmask), 0, batch_size, [])
-    [0 | reverse_list(results)]
+    initial_map = %{0 => nil}
+    process_batches(program, bitmask, bit_size(bitmask), 0, batch_size, initial_map)
   end
 
   defp process_batches(_program, _bitmask, bitmask_size, pos, _batch_size, acc)
@@ -63,7 +100,7 @@ defmodule PVM.Utils do
 
     new_acc =
       if Instructions.termination_instruction?(opcode) do
-        [pos + 1 + skip(pos, bitmask) | acc]
+        Map.put(acc, pos + 1 + skip(pos, bitmask), nil)
       else
         acc
       end
@@ -176,8 +213,4 @@ defmodule PVM.Utils do
         do: PVM.Utils.binary_part_safe(binary, n, count)
     end
   end
-
-  defp reverse_list(list), do: reverse_list(list, [])
-  defp reverse_list([], acc), do: acc
-  defp reverse_list([h | t], acc), do: reverse_list(t, [h | acc])
 end
