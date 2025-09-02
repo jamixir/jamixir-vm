@@ -3,37 +3,63 @@ defmodule PVM.Instructions.TwoRegistersOneOffset do
   alias PVM.{Instructions.Executor, Registers}
   use PVM.Math
 
-  def execute(instruction, program, bitmask, start_set, state) do
+  def execute(:branch_eq, program, bitmask, start_set, state) do
     {w_a, w_b, v_x} = get_params(program, bitmask, state)
-
-    comparison_result = instruction_to_op(instruction, w_a, w_b)
-
-    {exit_status, counter} = Executor.branch(v_x, comparison_result, state.counter, start_set)
+    {exit_status, counter} = Executor.branch(v_x, w_a == w_b, state.counter, start_set)
     {exit_status, %{state | counter: counter}}
   end
 
-  defp instruction_to_op(instruction, w_a, w_b) do
-    case instruction do
-      :branch_eq -> w_a == w_b
-      :branch_ne -> w_a != w_b
-      :branch_lt_u -> w_a < w_b
-      :branch_lt_s -> u2i(w_a, 8) < u2i(w_b, 8)
-      :branch_ge_u -> w_a >= w_b
-      :branch_ge_s -> u2i(w_a, 8) >= u2i(w_b, 8)
-    end
+  def execute(:branch_ne, program, bitmask, start_set, state) do
+    {w_a, w_b, v_x} = get_params(program, bitmask, state)
+    {exit_status, counter} = Executor.branch(v_x, w_a != w_b, state.counter, start_set)
+    {exit_status, %{state | counter: counter}}
+  end
+
+  def execute(:branch_lt_u, program, bitmask, start_set, state) do
+    {w_a, w_b, v_x} = get_params(program, bitmask, state)
+    {exit_status, counter} = Executor.branch(v_x, w_a < w_b, state.counter, start_set)
+    {exit_status, %{state | counter: counter}}
+  end
+
+  def execute(:branch_lt_s, program, bitmask, start_set, state) do
+    {w_a, w_b, v_x} = get_params(program, bitmask, state)
+
+    {exit_status, counter} =
+      Executor.branch(v_x, u2i(w_a, 8) < u2i(w_b, 8), state.counter, start_set)
+
+    {exit_status, %{state | counter: counter}}
+  end
+
+  def execute(:branch_ge_u, program, bitmask, start_set, state) do
+    {w_a, w_b, v_x} = get_params(program, bitmask, state)
+    {exit_status, counter} = Executor.branch(v_x, w_a >= w_b, state.counter, start_set)
+    {exit_status, %{state | counter: counter}}
+  end
+
+  def execute(:branch_ge_s, program, bitmask, start_set, state) do
+    {w_a, w_b, v_x} = get_params(program, bitmask, state)
+
+    {exit_status, counter} =
+      Executor.branch(v_x, u2i(w_a, 8) >= u2i(w_b, 8), state.counter, start_set)
+
+    {exit_status, %{state | counter: counter}}
   end
 
   # Formula (A.24)
   defp get_params(program, bitmask, state) do
-    r_a =
+    <<r_a_byte>> =
       binary_part_safe(program, state.counter + 1, 1)
-      |> :binary.first()
+
+    r_a =
+      r_a_byte
       |> mod(16)
       |> min(12)
 
-    r_b =
+    <<r_b_byte>> =
       binary_part_safe(program, state.counter + 1, 1)
-      |> :binary.first()
+
+    r_b =
+      r_b_byte
       |> Bitwise.bsr(4)
       |> min(12)
 
