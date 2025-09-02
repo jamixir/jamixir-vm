@@ -60,7 +60,7 @@ defmodule PVM.Instructions.Executor do
   def branch(_value, false, counter, _start_set), do: {:continue, counter}
 
   def branch(value, true, counter, start_set) do
-    if value in start_set do
+    if Map.has_key?(start_set, value) do
       {:continue, value}
     else
       {:panic, counter}
@@ -88,7 +88,7 @@ defmodule PVM.Instructions.Executor do
         {:panic, counter}
 
       _ ->
-        if jump_to in start_set do
+        if Map.has_key?(start_set, jump_to) do
           {:continue, jump_to}
         else
           {:panic, counter}

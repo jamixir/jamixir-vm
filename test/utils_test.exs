@@ -105,7 +105,7 @@ defmodule UtilsTest do
 
       starts = basic_block_starts(program, bitmask)
       # 0, after trap, after fallthrough (in program order)
-      assert starts == [0, 1, 2]
+      assert starts == %{0 => nil, 1 => nil, 2 => nil}
     end
 
     test "handles jumps and branches" do
@@ -126,12 +126,12 @@ defmodule UtilsTest do
 
       starts = basic_block_starts(program, bitmask)
       # 0, after jump, after branch_eq (in program order)
-      assert starts == [0, 3, 6]
+      assert starts == %{0 => nil, 3 => nil, 6 => nil}
     end
 
     test "empty program has only 0" do
       starts = basic_block_starts(<<>>, <<>>)
-      assert starts == [0]
+      assert starts == %{0 => nil}
     end
 
     test "no termination instructions only has 0" do
@@ -140,7 +140,7 @@ defmodule UtilsTest do
       bitmask = <<4::3>>
 
       starts = basic_block_starts(program, bitmask)
-      assert starts == [0]
+      assert starts == %{0 => nil}
     end
 
     test "preserves order of termination instructions" do
@@ -160,7 +160,7 @@ defmodule UtilsTest do
 
       starts = basic_block_starts(program, bitmask)
       # Order matches program order
-      assert starts == [0, 1, 2, 5]
+      assert starts == %{0 => nil, 1 => nil, 2 => nil, 5 => nil}
     end
   end
 end
