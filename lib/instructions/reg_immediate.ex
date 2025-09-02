@@ -15,7 +15,11 @@ defmodule PVM.Instructions.RegImmediate do
 
     <<value::64-little>> = binary_part_safe(program, state.counter + 2, 8)
 
-    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, register_index, value)}}
+    state = %{
+      state
+      | registers: %{state.registers | r: put_elem(state.registers.r, register_index, value)}
+    }
+
     {:continue, state}
   end
 
@@ -39,7 +43,11 @@ defmodule PVM.Instructions.RegImmediate do
   def execute(:load_imm, program, bitmask, _jump_table, _start_set, state) do
     {register_index, value} = get_params(program, bitmask, state.counter)
 
-    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, register_index, value)}}
+    state = %{
+      state
+      | registers: %{state.registers | r: put_elem(state.registers.r, register_index, value)}
+    }
+
     {:continue, state}
   end
 
@@ -52,7 +60,10 @@ defmodule PVM.Instructions.RegImmediate do
       1,
       &%{
         state
-        | registers: %{state.registers | r: put_elem(state.registers.r, register_index, :binary.first(&1))}
+        | registers: %{
+            state.registers
+            | r: put_elem(state.registers.r, register_index, :binary.first(&1))
+          }
       }
     )
   end
@@ -60,14 +71,15 @@ defmodule PVM.Instructions.RegImmediate do
   def execute(:load_i8, program, bitmask, _jump_table, _start_set, state) do
     {register_index, addr} = get_params(program, bitmask, state.counter)
 
-    read_memory(state, addr, 1, fn value ->
-      signed_value =
-        :binary.first(value)
-        |> to_64bit(1)
+    read_memory(state, addr, 1, fn <<value>> ->
+      signed_value = to_64bit(value, 1)
 
       %{
         state
-        | registers: %{state.registers | r: put_elem(state.registers.r, register_index, signed_value)}
+        | registers: %{
+            state.registers
+            | r: put_elem(state.registers.r, register_index, signed_value)
+          }
       }
     end)
   end
@@ -91,7 +103,10 @@ defmodule PVM.Instructions.RegImmediate do
 
       %{
         state
-        | registers: %{state.registers | r: put_elem(state.registers.r, register_index, signed_value)}
+        | registers: %{
+            state.registers
+            | r: put_elem(state.registers.r, register_index, signed_value)
+          }
       }
     end)
   end
@@ -115,7 +130,10 @@ defmodule PVM.Instructions.RegImmediate do
 
       %{
         state
-        | registers: %{state.registers | r: put_elem(state.registers.r, register_index, signed_value)}
+        | registers: %{
+            state.registers
+            | r: put_elem(state.registers.r, register_index, signed_value)
+          }
       }
     end)
   end

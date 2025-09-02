@@ -19,21 +19,24 @@ defmodule PVM.Instructions.TwoRegistersTwoImmediates do
 
   # Formula (A.30) v0.7.0
   defp get_params(program, bitmask, counter) do
-    r_a =
+    <<r_a_byte>> =
       binary_part_safe(program, counter + 1, 1)
-      |> :binary.first()
+
+      r_a = r_a_byte
       |> mod(16)
       |> min(12)
 
-    r_b =
+    <<r_b_byte>> =
       binary_part_safe(program, counter + 1, 1)
-      |> :binary.first()
+
+      r_b = r_b_byte
       |> Bitwise.bsr(4)
       |> min(12)
 
-    l_x =
+    <<l_x_byte>> =
       binary_part_safe(program, counter + 2, 1)
-      |> :binary.first()
+
+      l_x = l_x_byte
       |> mod(8)
       |> min(4)
 

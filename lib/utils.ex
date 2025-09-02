@@ -95,7 +95,7 @@ defmodule PVM.Utils do
 
   defp process_bits(program, bitmask, [1 | rest], pos, acc) do
     # Only check termination instructions when bit is 1
-    opcode_byte = program |> binary_part_safe(pos, 1) |> :binary.first()
+    <<opcode_byte>> = program |> binary_part_safe(pos, 1)
     opcode = op(opcode_byte)
 
     new_acc =
@@ -187,6 +187,10 @@ defmodule PVM.Utils do
         <<0::size(count * 8)>>
     end
   end
+
+  @compile {:inline, bool_to_int: 1}
+  def bool_to_int(true), do: 1
+  def bool_to_int(false), do: 0
 
   defmacro __using__(_) do
     quote do
