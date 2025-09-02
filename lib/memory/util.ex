@@ -1,4 +1,7 @@
 defmodule PVM.Memory.Util do
+  import Bitwise
+  alias PVM.Math
+
   def write_memory(state, addr, value) do
     case PVM.Memory.write(state.memory, addr, value) do
       {:error, {:fault, fault_addr}} ->
@@ -28,7 +31,7 @@ defmodule PVM.Memory.Util do
 
   # rem twice handles negative numbers as well
   def wrap_address(%{size: size}, address) do
-    rem(rem(address, size) + size, size)
+    Math.mod(address, size)# + size, size)
   end
 
   def write_to_sparse(memory, address, value) do
@@ -39,8 +42,9 @@ defmodule PVM.Memory.Util do
       wrapped_addr = wrap_address(memory, address + index)
       {page_num, page_offset} = page_address(memory, wrapped_addr)
 
-      updated_page = Map.get(acc, page_num, %{}) |> Map.put(page_offset, byte)
-      Map.put(acc, page_num, updated_page)
+      existing_page =  Map.get(acc, page_num, :atomics.new(4096, []))
+      :atomics.put(existing_page, page_offset + 1, byte)
+      Map.put(acc, page_num, existing_page)
     end)
   end
 
@@ -52,8 +56,10 @@ defmodule PVM.Memory.Util do
     {start_page, end_page}
   end
 
+  def page_address(%{page_size: 4096}, address), do: {address >>> 12, Math.mod(address, 4096)}
+
   def page_address(memory, address),
-    do: {div(address, memory.page_size), rem(address, memory.page_size)}
+    do: {div(address, memory.page_size), Math.mod(address, memory.page_size)}
 
   def pages_with_data(%{data: data}) do
     Map.keys(data)

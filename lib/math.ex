@@ -58,6 +58,7 @@ defmodule PVM.Math do
   def mod(value, 0x1_0000_0000), do: value &&& 0xFFFFFFFF
   # 2^64
   def mod(value, 0x1_0000_0000_0000_0000), do: value &&& 0xFFFF_FFFF_FFFF_FFFF
+  def mod(value, 4096), do: value &&& 4095
 
   # Handle other powers of 2
   def mod(value, divisor) when is_power_of_2(divisor), do: value &&& divisor - 1

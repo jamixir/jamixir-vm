@@ -137,7 +137,8 @@ defmodule PVM.Memory do
 
       case Map.get(data, page_num) do
         nil -> 0
-        existing -> Map.get(existing, page_offset, 0)
+        page when is_map(page) -> Map.get(page, page_offset, 0)
+        page -> :atomics.get(page, page_offset + 1)
       end
     end)
     |> :binary.list_to_bin()
