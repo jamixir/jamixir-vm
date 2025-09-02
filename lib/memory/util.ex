@@ -1,4 +1,6 @@
 defmodule PVM.Memory.Util do
+  import PVM.Math
+
   def write_memory(state, addr, value) do
     case PVM.Memory.write(state.memory, addr, value) do
       {:error, {:fault, fault_addr}} ->
@@ -26,10 +28,7 @@ defmodule PVM.Memory.Util do
     end
   end
 
-  # rem twice handles negative numbers as well
-  def wrap_address(%{size: size}, address) do
-    rem(rem(address, size) + size, size)
-  end
+  def wrap_address(%{size: size}, address), do:  mod(address, size)
 
   def write_to_sparse(memory, address, value) do
     value
@@ -45,15 +44,15 @@ defmodule PVM.Memory.Util do
   end
 
   def get_page_range(%{page_size: page_size} = memory, start_address, length) do
-    start_page = div(start_address, page_size)
+    start_page = div_p2(start_address, page_size)
     end_address = wrap_address(memory, start_address + max(0, length - 1))
-    end_page = div(end_address, page_size)
+    end_page = div_p2(end_address, page_size)
 
     {start_page, end_page}
   end
 
   def page_address(memory, address),
-    do: {div(address, memory.page_size), rem(address, memory.page_size)}
+    do: {div_p2(address, memory.page_size), mod(address, memory.page_size)}
 
   def pages_with_data(%{data: data}) do
     Map.keys(data)

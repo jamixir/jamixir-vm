@@ -3,6 +3,7 @@ defmodule PVM.Decoder do
   A module for decoding binary data into data structures.
   """
   import Bitwise
+  use PVM.Math
 
   defp decode_little_endian(binary, l) do
     case binary do
@@ -98,7 +99,7 @@ defmodule PVM.Decoder do
   # Add a trap bit at the specified position
   defp add_trap_bit(bitmask, trap_position) do
     # Calculate which byte and bit position we need to modify
-    byte_index = div(trap_position - 1, 8)
+    byte_index = div_p2(trap_position - 1, 8)
     # 0-based position from MSB
     bit_position = 7 - rem(trap_position - 1, 8)
 

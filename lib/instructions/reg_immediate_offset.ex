@@ -103,7 +103,7 @@ defmodule PVM.Instructions.RegImmediateOffset do
   defp get_params(program, bitmask, counter) do
     <<first_byte>> = binary_part_safe(program, counter + 1, 1)
     r_a = mod(first_byte, 16) |> min(12)
-    l_x = first_byte |> div(16) |> mod(8) |> min(4)
+    l_x = first_byte |> div_p2(16) |> mod(8) |> min(4)
     l_y = (skip(counter, bitmask) - l_x - 1) |> max(0) |> min(4)
 
     v_x = decode_and_extend(program, counter + 2, l_x)

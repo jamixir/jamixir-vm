@@ -1,5 +1,6 @@
 defmodule PVM.Memory do
   import PVM.Memory.{Constants, Util}
+  import PVM.Math
   alias PVM.Memory.RangeManager
 
   @type t :: %__MODULE__{
@@ -21,7 +22,7 @@ defmodule PVM.Memory do
 
   # PUBLIC FUNCTIONS
   def number_of_pages(%__MODULE__{} = memory) do
-    div(memory.size, memory.page_size)
+    div_p2(memory.size, memory.page_size)
   end
 
   ## Read/Write functions
@@ -100,8 +101,8 @@ defmodule PVM.Memory do
 
   def set_access_by_page(%__MODULE__{} = memory, start_page, num_pages, access_type) do
     total_pages = number_of_pages(memory)
-    start_page = rem(start_page, total_pages)
-    end_page = max(start_page, rem(start_page + num_pages, total_pages))
+    start_page = mod(start_page, total_pages)
+    end_page = max(start_page, mod(start_page + num_pages, total_pages))
 
     new_ranges =
       RangeManager.add_range(memory.access_ranges, start_page, end_page, access_type)
@@ -123,8 +124,8 @@ defmodule PVM.Memory do
 
   def check_pages_access?(%__MODULE__{} = memory, start_page, num_pages, required_access) do
     total_pages = number_of_pages(memory)
-    start_page = rem(start_page, total_pages)
-    end_page = rem(start_page - 1 + num_pages, total_pages)
+    start_page = mod(start_page, total_pages)
+    end_page = mod(start_page - 1 + num_pages, total_pages)
 
     check_permissions(memory, start_page, end_page, required_access) == :ok
   end

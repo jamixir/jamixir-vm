@@ -35,13 +35,14 @@ defmodule PVM.Math do
   #   |> Enum.reduce(0, fn {bit, i}, acc -> acc + bit * (1 <<< i) end)
   # end
 
-    # Formula (A.14) v0.7.0
-    def leading_zeros(0, bytes), do: bytes * 8
-    def leading_zeros(value, bytes) do
-      bits = bytes * 8
-      value = mod(value, 1 <<< bits)
-      bits - length(Integer.digits(value, 2))
-    end
+  # Formula (A.14) v0.7.0
+  def leading_zeros(0, bytes), do: bytes * 8
+
+  def leading_zeros(value, bytes) do
+    bits = bytes * 8
+    value = mod(value, 1 <<< bits)
+    bits - length(Integer.digits(value, 2))
+  end
 
   # Formula (A.32) v0.7.0
   @spec signed_remainder(integer(), integer()) :: integer()
@@ -50,6 +51,8 @@ defmodule PVM.Math do
 
   # Efficient modulo operation using bitwise AND for powers of 2
   @spec mod(integer(), integer()) :: integer()
+  # 2
+  def mod(value, 2), do: value &&& 0x1
   # 2^8
   def mod(value, 0x100), do: value &&& 0xFF
   # 2^16
@@ -58,12 +61,27 @@ defmodule PVM.Math do
   def mod(value, 0x1_0000_0000), do: value &&& 0xFFFFFFFF
   # 2^64
   def mod(value, 0x1_0000_0000_0000_0000), do: value &&& 0xFFFF_FFFF_FFFF_FFFF
-
   # Handle other powers of 2
   def mod(value, divisor) when is_power_of_2(divisor), do: value &&& divisor - 1
-
   # Fall back to regular remainder for non-powers of 2
   def mod(value, divisor), do: rem(value, divisor)
+
+  def div_p2(value, 2) when value > 0, do: value >>> 1
+  # 2^3
+  def div_p2(value, 8) when value > 0, do: value >>> 3
+  # 2^4
+  def div_p2(value, 16) when value > 0, do: value >>> 4
+  # 2^8
+  def div_p2(value, 0x100) when value > 0, do: value >>> 8
+  # 2^12
+  def div_p2(value, 4_096) when value > 0, do: value >>> 12
+  # 2^16
+  def div_p2(value, 0x10000) when value > 0, do: value >>> 16
+  # 2^16
+  def div_p2(value, 0x1_0000_0000) when value > 0, do: value >>> 32
+  # 2^64
+  def div_p2(value, 0x1_0000_0000_0000_0000) when value > 0, do: value >>> 6
+  def div_p2(value, divisor), do: div(value, divisor)
 
   defmacro __using__(_) do
     quote do
@@ -71,6 +89,7 @@ defmodule PVM.Math do
       def i2u(value, num_bytes), do: PVM.Math.signed_to_unsigned(value, num_bytes)
       def srem(a, b), do: PVM.Math.signed_remainder(a, b)
       def mod(a, b), do: PVM.Math.mod(a, b)
+      def div_p2(a, b), do: PVM.Math.div_p2(a, b)
       def leading_zeros(value, bytes), do: PVM.Math.leading_zeros(value, bytes)
     end
   end

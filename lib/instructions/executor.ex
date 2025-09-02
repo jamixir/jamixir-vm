@@ -5,6 +5,7 @@ defmodule PVM.Instructions.Executor do
     :trap,
     :fallthrough
   ])
+  use PVM.Math
 
   one_immediate_direct_dispatch([
     :ecalli,
@@ -187,7 +188,7 @@ defmodule PVM.Instructions.Executor do
   # Formula (A.18) v0.7.0
   def djump(a, counter, jump_table, start_set) do
     alignment_factor = 2
-    {quotient, remainder} = {div(a, alignment_factor), rem(a, alignment_factor)}
+    {quotient, remainder} = {div_p2(a, alignment_factor), mod(a, alignment_factor)}
     jump_to = get_jump_target(jump_table, quotient - 1)
 
     case a do

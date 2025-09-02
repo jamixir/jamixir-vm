@@ -2,6 +2,7 @@ defmodule PVM.Encoder do
   @moduledoc """
   A module for encoding data structures into binary format.
   """
+  use PVM.Math
 
   # Formula (C.5) v0.7.0
   @spec encode_little_endian(integer(), integer()) :: binary()
@@ -30,7 +31,7 @@ defmodule PVM.Encoder do
 
     case exists_l_in_n8(x) do
       nil -> <<2 ** 8 - 1>> <> <<x::64-little>>
-      l -> <<2 ** 8 - 2 ** (8 - l) + div(x, 2 ** (8 * l))>> <> encode_le(rem(x, 2 ** (8 * l)), l)
+      l -> <<2 ** 8 - 2 ** (8 - l) + div_p2(x, 2 ** (8 * l))>> <> encode_le(mod(x, 2 ** (8 * l)), l)
     end
   end
 
