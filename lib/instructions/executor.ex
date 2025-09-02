@@ -198,7 +198,7 @@ defmodule PVM.Instructions.Executor do
       0 ->
         {:panic, counter}
 
-      a when a > length(jump_table) * alignment_factor ->
+      a when a > tuple_size(jump_table) * alignment_factor ->
         {:panic, counter}
 
       _ when remainder != 0 ->
