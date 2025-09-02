@@ -11,17 +11,23 @@ defmodule PVM.Registers do
 
   @spec new(map()) :: t()
   def new(updates) when is_map(updates) do
-    tuple =
-      Enum.reduce(updates, @default_tuple, fn {reg, val}, acc ->
-        if is_integer(reg) and reg in 0..12 do
-          put_elem(acc, reg, val)
-        else
-          # Skip invalid register indices
-          acc
-        end
-      end)
-
-    %__MODULE__{r: tuple}
+    %__MODULE__{
+      r: {
+        Map.get(updates, 0, 0),
+        Map.get(updates, 1, 0),
+        Map.get(updates, 2, 0),
+        Map.get(updates, 3, 0),
+        Map.get(updates, 4, 0),
+        Map.get(updates, 5, 0),
+        Map.get(updates, 6, 0),
+        Map.get(updates, 7, 0),
+        Map.get(updates, 8, 0),
+        Map.get(updates, 9, 0),
+        Map.get(updates, 10, 0),
+        Map.get(updates, 11, 0),
+        Map.get(updates, 12, 0)
+      }
+    }
   end
 
   @spec from_list([integer()]) :: t()
