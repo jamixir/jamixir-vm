@@ -1,4 +1,7 @@
 defmodule PVM.Memory.Util do
+  import Bitwise
+  alias PVM.Math
+
   def write_memory(state, addr, value) do
     case PVM.Memory.write(state.memory, addr, value) do
       {:error, {:fault, fault_addr}} ->
@@ -31,17 +34,50 @@ defmodule PVM.Memory.Util do
     rem(rem(address, size) + size, size)
   end
 
-  def write_to_sparse(memory, address, value) do
-    value
-    |> :binary.bin_to_list()
-    |> Enum.with_index()
-    |> Enum.reduce(memory.data, fn {byte, index}, acc ->
-      wrapped_addr = wrap_address(memory, address + index)
-      {page_num, page_offset} = page_address(memory, wrapped_addr)
+  defguard start_of_page(address, page_size) when (address &&& page_size - 1) == 0
 
-      updated_page = Map.get(acc, page_num, %{}) |> Map.put(page_offset, byte)
-      Map.put(acc, page_num, updated_page)
-    end)
+  def write_to_sparse(memory, _, <<>>), do: memory
+  # case when address is page-aligned and value is at least a full page
+  def write_to_sparse(%{page_size: page_size} = memory, address, value)
+      when start_of_page(address, page_size) and byte_size(value) >= page_size do
+    <<p1_value::binary-size(page_size), rest_value::binary>> = value
+    new_data = Map.put(memory.data, div(address, page_size), p1_value)
+    write_to_sparse(%{memory | data: new_data}, address + page_size, rest_value)
+  end
+
+  @empty_page <<0::4096*8>>
+  # last chunk which is less than a full page
+  def write_to_sparse(%{page_size: page_size} = memory, address, value)
+      when start_of_page(address, page_size) and byte_size(value) < page_size do
+    page_num = address >>> 12
+    current_page_value = Map.get(memory.data, page_num, @empty_page)
+    last_part = binary_slice(current_page_value, byte_size(value), page_size)
+    new_page_value = value <> last_part
+    Map.put(memory.data, page_num, new_page_value)
+  end
+
+  # case when address is not page-aligned and ends on the first page
+  def write_to_sparse(%{page_size: page_size} = memory, address, value)
+      when not start_of_page(address, page_size) do
+      page_num = address >>> 12
+      end_page_num = (address + byte_size(value) - 1) >>> 12
+    if page_num == end_page_num do
+      offset = Math.mod(address, page_size)
+      current_page_value = Map.get(memory.data, page_num, @empty_page)
+      first_part = binary_slice(current_page_value, 0, offset)
+      last_part = binary_slice(current_page_value, offset + byte_size(value), page_size)
+      new_page_value = first_part <> value <> last_part
+      Map.put(memory.data, page_num, new_page_value)
+    else
+      # case when address is not page-aligned and ends after first page
+      offset = Math.mod(address, page_size)
+      current_page_value = Map.get(memory.data, page_num, @empty_page)
+      first_part = binary_slice(current_page_value, 0, offset)
+      <<last_part::binary-size(page_size - offset), rest::binary>> = value
+      new_page_value = first_part <> last_part
+      new_data = Map.put(memory.data, page_num, new_page_value)
+      write_to_sparse(%{memory | data: new_data}, address - offset + page_size, rest)
+    end
   end
 
   def get_page_range(%{page_size: page_size} = memory, start_address, length) do

@@ -38,10 +38,8 @@ defmodule PVM.PreMemoryTest do
       assert Map.has_key?(updated.data, page_num)
 
       page = updated.data[page_num]
-      assert page[0] == 1
-      assert page[1] == 2
-      assert page[2] == 3
-      assert page[3] == 4
+      assert byte_size(page) == pre_memory.page_size
+      assert page == <<1, 2, 3, 4, 0::size(8*(pre_memory.page_size - 4))>>
     end
   end
 
