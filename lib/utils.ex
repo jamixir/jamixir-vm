@@ -82,18 +82,15 @@ defmodule PVM.Utils do
     chunk_size = min(batch_size, bitmask_size - pos)
     <<_skip::size(pos), chunk::bitstring-size(chunk_size), _rest::bits>> = bitmask
 
-    # Convert this chunk into a list of bits
-    bits = for <<bit::1 <- chunk>>, do: bit
-
-    {new_pos, new_acc} = process_bits(program, bitmask, bits, pos, acc)
+    {new_pos, new_acc} = process_bits(program, bitmask, chunk, pos, acc)
 
     # Recurse into the next batch
     process_batches(program, bitmask, bitmask_size, new_pos, batch_size, new_acc)
   end
 
-  defp process_bits(_program, _bitmask, [], pos, acc), do: {pos, acc}
+  defp process_bits(_program, _bitmask, <<>>, pos, acc), do: {pos, acc}
 
-  defp process_bits(program, bitmask, [1 | rest], pos, acc) do
+  defp process_bits(program, bitmask, <<1::1, rest::bitstring>>, pos, acc) do
     # Only check termination instructions when bit is 1
     <<opcode_byte>> = program |> binary_part_safe(pos, 1)
     opcode = op(opcode_byte)
@@ -108,7 +105,7 @@ defmodule PVM.Utils do
     process_bits(program, bitmask, rest, pos + 1, new_acc)
   end
 
-  defp process_bits(program, bitmask, [0 | rest], pos, acc) do
+  defp process_bits(program, bitmask, <<0::1, rest::bitstring>>, pos, acc) do
     process_bits(program, bitmask, rest, pos + 1, acc)
   end
 
