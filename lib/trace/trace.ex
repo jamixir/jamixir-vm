@@ -6,6 +6,18 @@ defmodule PVM.Trace do
   @default_log_file "pvm_trace.log"
 
   def enabled? do
+    case Process.get(:trace_enabled) do
+      nil ->
+        enabled = is_trace_enabled?()
+        Process.put(:trace_enabled, enabled)
+        enabled
+
+      cached_enabled ->
+        cached_enabled
+    end
+  end
+
+  defp is_trace_enabled? do
     # Check if trace was enabled via config
     config_enabled = Application.get_env(:pvm, :trace, false)
 
