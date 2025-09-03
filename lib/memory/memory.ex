@@ -137,7 +137,15 @@ defmodule PVM.Memory do
 
       case Map.get(data, page_num) do
         nil -> 0
-        page when is_map(page) -> Map.get(page, page_offset, 0)
+        {p, byte} when p == page_offset -> byte
+        {_, _} -> 0
+        array when is_tuple(array) ->
+          case :array.get(page_offset, array) do
+            :undefined -> 0
+            a -> a
+          end
+        page when is_map(page) ->
+          Map.get(page, page_offset, 0)
         page -> :atomics.get(page, page_offset + 1)
       end
     end)

@@ -31,10 +31,12 @@ defmodule PVM.Memory.Util do
 
   # rem twice handles negative numbers as well
   def wrap_address(%{size: size}, address) do
-    Math.mod(address, size)# + size, size)
+    # + size, size)
+    Math.mod(address, size)
   end
 
   def write_to_sparse(memory, address, value) do
+    # IO.inspect("sparse write #{byte_size(value)} bytes to #{address}")
     value
     |> :binary.bin_to_list()
     |> Enum.with_index()
@@ -42,9 +44,39 @@ defmodule PVM.Memory.Util do
       wrapped_addr = wrap_address(memory, address + index)
       {page_num, page_offset} = page_address(memory, wrapped_addr)
 
-      existing_page =  Map.get(acc, page_num, :atomics.new(4096, []))
-      :atomics.put(existing_page, page_offset + 1, byte)
-      Map.put(acc, page_num, existing_page)
+      case Map.get(acc, page_num) do
+        nil ->
+          put_in(acc, [page_num], {page_offset, byte})
+
+        map when is_map(map) and map_size(map) < 16 ->
+          put_in(acc, [page_num, page_offset], byte)
+
+        map when is_map(map) and map_size(map) >= 16 ->
+          new_page =
+            for {k, v} <- map, reduce: :array.new(4096) do
+              array -> :array.set(k, v, array)
+            end
+
+          new_page = :array.set(page_offset, byte, new_page)
+          #   new_page = :atomics.new(4096, [])
+          #   for {k, v} <- map, do: :atomics.put(new_page, k + 1, v)
+          #   :atomics.put(new_page, page_offset + 1, byte)
+          Map.put(acc, page_num, new_page)
+
+        {^page_offset, _} ->
+          Map.put(acc, page_num, {page_offset, byte})
+
+        {other_offset, other_byte} ->
+          Map.put(acc, page_num, %{other_offset => other_byte, page_offset => byte})
+
+        array when is_tuple(array) ->
+          new_page = :array.set(page_offset, byte, array)
+          Map.put(acc, page_num, new_page)
+
+          # atomic_page ->
+          #   :atomics.put(atomic_page, page_offset + 1, byte)
+          #   Map.put(acc, page_num, atomic_page)
+      end
     end)
   end
 
