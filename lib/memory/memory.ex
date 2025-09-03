@@ -130,14 +130,15 @@ defmodule PVM.Memory do
   end
 
   ## Private functions
-
   defp read_from_sparse(%__MODULE__{data: data} = memory, address, length) do
     0..(length - 1)
     |> Enum.map(fn offset ->
-      wrapped_addr = wrap_address(memory, address + offset)
-      {page_num, page_offset} = page_address(memory, wrapped_addr)
+      {page_num, page_offset} = page_address(memory, address + offset)
 
-      Map.get(data, page_num, %{}) |> Map.get(page_offset, 0)
+      case Map.get(data, page_num) do
+        nil -> 0
+        existing -> Map.get(existing, page_offset, 0)
+      end
     end)
     |> :binary.list_to_bin()
   end
