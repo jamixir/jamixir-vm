@@ -2,6 +2,17 @@ defmodule PVM.Memory do
   import PVM.Memory.{Constants, Util}
   alias PVM.Memory.RangeManager
 
+  defp maybe_profile(fun) do
+    try do
+      if Code.ensure_loaded?(PVM.MemoryProfiler) and apply(PVM.MemoryProfiler, :enabled?, []) do
+        fun.()
+      end
+    rescue
+      UndefinedFunctionError -> :ok
+      _ -> :ok
+    end
+  end
+
   @type t :: %__MODULE__{
           # Page => {Offset => Byte}
           data: %{non_neg_integer() => %{non_neg_integer() => byte()}},
@@ -27,9 +38,11 @@ defmodule PVM.Memory do
   ## Read/Write functions
 
   def read(%__MODULE__{} = memory, address, length) do
+    start_time = System.monotonic_time(:microsecond)
+
     wrapped_address = wrap_address(memory, address)
 
-    if wrapped_address < min_allowed_address() do
+    result = if wrapped_address < min_allowed_address() do
       {:error, :panic}
     else
       {start_page, end_page} = get_page_range(memory, wrapped_address, length)
@@ -43,6 +56,23 @@ defmodule PVM.Memory do
           {:error, {:fault, page}}
       end
     end
+
+    # Record profiling data
+    end_time = System.monotonic_time(:microsecond)
+    execution_time = end_time - start_time
+
+    bytes_read = case result do
+      {:ok, data} -> byte_size(data)
+      _ -> 0
+    end
+
+    success = match?({:ok, _}, result)
+
+    maybe_profile(fn ->
+      apply(PVM.MemoryProfiler, :record_read, [success, bytes_read, execution_time])
+    end)
+
+    result
   end
 
   def read!(%__MODULE__{} = memory, address, length) do
@@ -55,9 +85,11 @@ defmodule PVM.Memory do
   def write(%__MODULE__{} = memory, _, <<>>), do: {:ok, memory}
 
   def write(%__MODULE__{} = memory, address, value) when is_binary(value) do
+    start_time = System.monotonic_time(:microsecond)
+
     wrapped_address = wrap_address(memory, address)
 
-    if wrapped_address < min_allowed_address() do
+    result = if wrapped_address < min_allowed_address() do
       {:error, :panic}
     else
       length = byte_size(value)
@@ -73,6 +105,19 @@ defmodule PVM.Memory do
           {:error, {:fault, page}}
       end
     end
+
+    # Record profiling data
+    end_time = System.monotonic_time(:microsecond)
+    execution_time = end_time - start_time
+
+    bytes_written = byte_size(value)
+    success = match?({:ok, _}, result)
+
+    maybe_profile(fn ->
+      apply(PVM.MemoryProfiler, :record_write, [success, bytes_written, execution_time])
+    end)
+
+    result
   end
 
   def write!(%__MODULE__{} = memory, address, value) do
@@ -85,6 +130,8 @@ defmodule PVM.Memory do
   ## SET Access functions
 
   def set_access(%__MODULE__{} = memory, address, length, access_type) do
+    start_time = System.monotonic_time(:microsecond)
+
     {start_page, end_page} = get_page_range(memory, address, length)
 
     num_pages =
@@ -95,7 +142,17 @@ defmodule PVM.Memory do
         number_of_pages(memory) - start_page + end_page + 1
       end
 
-    set_access_by_page(memory, start_page, num_pages, access_type)
+    result = set_access_by_page(memory, start_page, num_pages, access_type)
+
+    # Record profiling data
+    end_time = System.monotonic_time(:microsecond)
+    execution_time = end_time - start_time
+
+    maybe_profile(fn ->
+      apply(PVM.MemoryProfiler, :record_set_access, [access_type, execution_time])
+    end)
+
+    result
   end
 
   def set_access_by_page(%__MODULE__{} = memory, start_page, num_pages, access_type) do
@@ -113,20 +170,44 @@ defmodule PVM.Memory do
 
   ## Check Access functions
   def check_range_access?(%__MODULE__{} = memory, address, length, required_access) do
+    start_time = System.monotonic_time(:microsecond)
+
     wrapped_address = wrap_address(memory, address)
     {start_page, end_page} = get_page_range(memory, wrapped_address, length)
 
-    check_permissions(memory, start_page, end_page, required_access) == :ok
+    result = check_permissions(memory, start_page, end_page, required_access) == :ok
+
+    # Record profiling data
+    end_time = System.monotonic_time(:microsecond)
+    execution_time = end_time - start_time
+
+    maybe_profile(fn ->
+      apply(PVM.MemoryProfiler, :record_check_access, [required_access, execution_time])
+    end)
+
+    result
   end
 
   def check_pages_access?(%__MODULE__{} = _memory, _start_page, 0, _required_access), do: true
 
   def check_pages_access?(%__MODULE__{} = memory, start_page, num_pages, required_access) do
+    start_time = System.monotonic_time(:microsecond)
+
     total_pages = number_of_pages(memory)
     start_page = rem(start_page, total_pages)
     end_page = rem(start_page - 1 + num_pages, total_pages)
 
-    check_permissions(memory, start_page, end_page, required_access) == :ok
+    result = check_permissions(memory, start_page, end_page, required_access) == :ok
+
+    # Record profiling data
+    end_time = System.monotonic_time(:microsecond)
+    execution_time = end_time - start_time
+
+    maybe_profile(fn ->
+      apply(PVM.MemoryProfiler, :record_check_access, [required_access, execution_time])
+    end)
+
+    result
   end
 
   ## Private functions
