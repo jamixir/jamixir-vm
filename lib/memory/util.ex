@@ -48,10 +48,16 @@ defmodule PVM.Memory.Util do
         nil ->
           put_in(acc, [page_num], {page_offset, byte})
 
-        map when is_map(map) and map_size(map) < 16 ->
+        {^page_offset, _} ->
+          Map.put(acc, page_num, {page_offset, byte})
+
+        {other_offset, other_byte} ->
+          Map.put(acc, page_num, %{other_offset => other_byte, page_offset => byte})
+
+        map when is_map(map) and map_size(map) < 32 ->
           put_in(acc, [page_num, page_offset], byte)
 
-        map when is_map(map) and map_size(map) >= 16 ->
+        map when is_map(map) and map_size(map) >= 32 ->
           new_page =
             for {k, v} <- map, reduce: :array.new(4096) do
               array -> :array.set(k, v, array)
@@ -62,12 +68,6 @@ defmodule PVM.Memory.Util do
           #   for {k, v} <- map, do: :atomics.put(new_page, k + 1, v)
           #   :atomics.put(new_page, page_offset + 1, byte)
           Map.put(acc, page_num, new_page)
-
-        {^page_offset, _} ->
-          Map.put(acc, page_num, {page_offset, byte})
-
-        {other_offset, other_byte} ->
-          Map.put(acc, page_num, %{other_offset => other_byte, page_offset => byte})
 
         array when is_tuple(array) ->
           new_page = :array.set(page_offset, byte, array)
