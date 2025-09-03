@@ -59,7 +59,7 @@ defmodule PVM.Memory.Util do
 
         map when is_map(map) and map_size(map) >= 32 ->
           new_page =
-            for {k, v} <- map, reduce: :array.new(4096) do
+            for {k, v} <- map, reduce: :array.new(4096, [default: 0]) do
               array -> :array.set(k, v, array)
             end
 
