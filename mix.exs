@@ -35,7 +35,9 @@ defmodule JamixirVM.MixProject do
   defp deps do
     [
       {:jason, "~> 1.4"},
-      {:blake2, "~> 1.0"}
+      {:blake2, "~> 1.0"},
+      {:benchee, "~> 1.0", only: [:dev, :test]},
+      {:benchee_html, "~> 1.0", only: [:dev, :test]}
     ]
   end
 
