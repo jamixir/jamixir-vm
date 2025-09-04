@@ -1,6 +1,7 @@
 defmodule PVM.Memory do
   import PVM.Memory.{Constants, Util}
   alias PVM.Memory.RangeManager
+  import Bitwise, only: [ >>>: 2 ]
 
   @type t :: %__MODULE__{
           # Page => {Offset => Byte}
@@ -18,17 +19,48 @@ defmodule PVM.Memory do
             current_heap_pointer: 0,
             max_heap_pointer: 0
 
+
+  @page_size page_size()
+  @size memory_size()
+  @number_of_pages @size >>> 12
+  @min_allowed_address min_allowed_address()
+
+  @empty_page :binary.copy(<<0>>, @page_size)
+
+
+
+  # Compile-time zero binaries for common lengths (1-32)
+  @zero_binaries (for i <- 1..32, into: %{} do
+    {i, :binary.copy(<<0>>, i)}
+  end)
+
+  # Fast zero lookup with compile-time binaries
+  def get_zero_binary(length) when length >= 1 and length <= 32 do
+  Map.get(@zero_binaries, length)
+  end
+
+  def get_zero_binary(length), do: :binary.copy(<<0>>, length)
+
+
   # PUBLIC FUNCTIONS
+  def number_of_pages(%__MODULE__{} = memory) when memory.page_size == @page_size and memory.size == @size do
+    @number_of_pages
+  end
+
   def number_of_pages(%__MODULE__{} = memory) do
     div(memory.size, memory.page_size)
   end
 
   ## Read/Write functions
 
+  def read(_, _, 0), do: {:ok, <<>>}
+
+  def read(%{data: nil}, _, length), do: {:ok, get_zero_binary(length)}
+
   def read(%__MODULE__{} = memory, address, length) do
     wrapped_address = wrap_address(memory, address)
 
-    if wrapped_address < min_allowed_address() do
+    if wrapped_address < @min_allowed_address do
       {:error, :panic}
     else
       {start_page, end_page} = get_page_range(memory, wrapped_address, length)
@@ -53,7 +85,7 @@ defmodule PVM.Memory do
 
   def write(%__MODULE__{} = memory, _, <<>>), do: {:ok, memory}
 
-  def write(%__MODULE__{} = memory, address, value) when is_binary(value) do
+  def write(%__MODULE__{} = memory, address, value) do
     wrapped_address = wrap_address(memory, address)
 
     if wrapped_address < min_allowed_address() do
@@ -130,34 +162,103 @@ defmodule PVM.Memory do
 
 
   ## Private functions
-  @empty_page <<0::size(8 * page_size())>>
 
-  defp read_from_sparse(%__MODULE__{data: nil}, _, length) do
-    <<0::size(8*length)>>
-  end
 
-  defp read_from_sparse(%__MODULE__{data: data} = memory, address, length) do
+  defp read_from_sparse(%__MODULE__{data: _data} = memory, address, length) do
     {start_page, start_offset} = page_address(memory, address)
     end_address = address + length - 1
     {end_page, _end_offset} = page_address(memory, end_address)
 
-    # Get all pages involved in the read
-    page_range = get_sequential_pages(start_page, end_page, number_of_pages(memory))
-    # Concatenate all page binaries
-    full_binary =
-      Enum.reduce(page_range, <<>>, fn page, acc ->
-        current_page_value =
-          case :ets.lookup(data, page) do
-            [] -> @empty_page
-            [{_, v}] -> v
-          end
 
-        acc <> current_page_value
-      end)
-
-    # Extract the requested portion starting from start_offset with the requested length
-    binary_part(full_binary, start_offset, length)
+    do_read(memory, start_page, end_page, start_offset, length)
   end
+
+# Single page read
+  defp do_read(memory, start_page, end_page, start_offset, length) when start_page == end_page do
+    case :ets.lookup(memory.data, start_page) do
+      [] -> get_zero_binary(length)
+      [{_, v}] -> binary_part(v, start_offset, length)
+    end
+  end
+
+  # Two page read
+  defp do_read(%{data: data, page_size: page_size} = memory, start_page, end_page, start_offset, length)
+       when end_page == start_page + 1 do
+
+    bytes_from_first_page = page_size - start_offset
+    bytes_from_second_page = length - bytes_from_first_page
+
+    # Get first page data
+    first_page_data = case :ets.lookup(data, start_page) do
+      [] -> get_zero_binary(bytes_from_first_page)
+      [{_, v}] -> binary_part(v, start_offset, bytes_from_first_page)
+    end
+
+    # Get second page data
+    second_page_data = case :ets.lookup(data, end_page) do
+      [] -> get_zero_binary(bytes_from_second_page)
+      [{_, v}] -> binary_part(v, 0, bytes_from_second_page)
+    end
+
+      # Combine them
+      first_page_data <> second_page_data
+  end
+
+  # SLOW TRACK: Multi-page read - uses efficient whole page reads where possible
+  # defp do_read(%{data: data, page_size: page_size} = memory, start_page, end_page, start_offset, length) do
+  #   page_range = get_sequential_pages(start_page, end_page, number_of_pages(memory))
+
+  #   {first_page | middle_pages_and_last} = page_range
+  #   {middle_pages, [last_page]} = Enum.split(middle_pages_and_last, -1)
+
+  #   # Handle first page (partial read from start_offset)
+  #   first_page_data = get_page_data(data, first_page)
+  #   first_page_bytes_needed = page_size - start_offset
+  #   first_part = binary_part(first_page_data, start_offset, min(first_page_bytes_needed, length))
+
+  #   remaining_length = length - byte_size(first_part)
+
+  #   cond do
+  #     # If we got everything from the first page
+  #     remaining_length <= 0 ->
+  #       first_part
+
+  #     # If we have middle pages, read them whole + handle last page
+  #     length(middle_pages) > 0 ->
+  #       # Read all middle pages as whole pages (most efficient)
+  #       middle_parts = Enum.map(middle_pages, &get_whole_page(data, &1))
+  #       middle_binary = :erlang.iolist_to_binary(middle_parts)
+
+  #       remaining_after_middle = remaining_length - byte_size(middle_binary)
+
+  #       if remaining_after_middle > 0 do
+  #         # Need bytes from last page
+  #         last_page_data = get_page_data(data, last_page)
+  #         last_part = binary_part(last_page_data, 0, remaining_after_middle)
+  #         <<first_part::binary, middle_binary::binary, last_part::binary>>
+  #       else
+  #         # Middle pages provided enough
+  #         needed_from_middle = remaining_length
+  #         middle_part = binary_part(middle_binary, 0, needed_from_middle)
+  #         <<first_part::binary, middle_part::binary>>
+  #       end
+
+  #     # No middle pages, just first and last
+  #     true ->
+  #       last_page_data = get_page_data(data, last_page)
+  #       last_part = binary_part(last_page_data, 0, remaining_length)
+  #       <<first_part::binary, last_part::binary>>
+  #   end
+  # end
+
+  # Fast function to get whole page data (returns full page binary)
+  defp get_whole_page(data, page_num) do
+    case :ets.lookup(data, page_num) do
+      [] -> @empty_page
+      [{_, v}] -> v
+    end
+  end
+
 
   defp check_permissions(_, 0, 0, _), do: :ok
 

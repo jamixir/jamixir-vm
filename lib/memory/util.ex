@@ -29,7 +29,10 @@ defmodule PVM.Memory.Util do
     end
   end
 
-  # rem twice handles negative numbers as well
+  def wrap_address(%{size: size}, address) when size == 0x1_0000_0000 do
+    address &&& 0xFFFFFFFF
+  end
+
   def wrap_address(%{size: size}, address) do
     rem(rem(address, size) + size, size)
   end
@@ -39,7 +42,6 @@ defmodule PVM.Memory.Util do
   def write_to_sparse(%{data: nil} = memory, address, value), do:
     write_to_sparse(%{memory | data: :ets.new(:ets_binary_lazy, [:set, :public])}, address, value)
 
-  def write_to_sparse(memory, _, <<>>), do: memory.data
 
   # case when address is page-aligned and value is at least a full page
   def write_to_sparse(%{page_size: page_size} = memory, address, value)
@@ -107,15 +109,15 @@ defmodule PVM.Memory.Util do
   end
 
   def get_page_range(%{page_size: page_size} = memory, start_address, length) do
-    start_page = div(start_address, page_size)
+    start_page = start_address >>> 12
     end_address = wrap_address(memory, start_address + max(0, length - 1))
-    end_page = div(end_address, page_size)
+    end_page = end_address >>> 12
 
     {start_page, end_page}
   end
 
-  def page_address(memory, address),
-    do: {div(address, memory.page_size), rem(address, memory.page_size)}
+  def page_address(_memory, address),
+    do: {address >>> 12, address &&& 0xFFF}
 
   def pages_with_data(%{data: data}) do
     Map.keys(data)
