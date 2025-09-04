@@ -4,15 +4,14 @@ defmodule PVM.Memory do
 
   @type t :: %__MODULE__{
           # Page => {Offset => Byte}
-          data: %{non_neg_integer() => binary()},
+          data: any(),
           access_ranges: [{non_neg_integer(), non_neg_integer(), atom()}],
           page_size: pos_integer(),
           size: pos_integer(),
           current_heap_pointer: pos_integer(),
           max_heap_pointer: pos_integer()
         }
-
-  defstruct data: %{},
+  defstruct data: nil,
             access_ranges: [],
             page_size: page_size(),
             size: memory_size(),
@@ -129,8 +128,13 @@ defmodule PVM.Memory do
     check_permissions(memory, start_page, end_page, required_access) == :ok
   end
 
+
   ## Private functions
   @empty_page <<0::size(8 * page_size())>>
+
+  defp read_from_sparse(%__MODULE__{data: nil}, _, length) do
+    <<0::size(8*length)>>
+  end
 
   defp read_from_sparse(%__MODULE__{data: data, page_size: page_size} = memory, address, length) do
     {start_page, start_offset} = page_address(memory, address)
@@ -141,7 +145,15 @@ defmodule PVM.Memory do
     page_range = get_sequential_pages(start_page, end_page, number_of_pages(memory))
     # Concatenate all page binaries
     full_binary =
-      Enum.reduce(page_range, <<>>, fn page, acc -> acc <> Map.get(data, page, @empty_page) end)
+      Enum.reduce(page_range, <<>>, fn page, acc ->
+        current_page_value =
+          case :ets.lookup(data, page) do
+            [] -> @empty_page
+            [{_, v}] -> v
+          end
+
+        acc <> current_page_value
+      end)
 
     # Extract the requested portion starting from start_offset with the requested length
     binary_part(full_binary, start_offset, length)

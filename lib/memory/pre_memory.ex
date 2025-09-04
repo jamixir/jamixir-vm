@@ -10,7 +10,7 @@ defmodule PVM.PreMemory do
           size: pos_integer()
         }
 
-  defstruct data: %{},
+  defstruct data: nil,
             access_ranges: [],
             page_size: page_size(),
             size: memory_size()
