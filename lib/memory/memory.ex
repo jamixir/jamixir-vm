@@ -130,6 +130,8 @@ defmodule PVM.Memory do
   end
 
   ## Private functions
+  @empty_page <<0::size(8 * page_size())>>
+
   defp read_from_sparse(%__MODULE__{data: data, page_size: page_size} = memory, address, length) do
     {start_page, start_offset} = page_address(memory, address)
     end_address = address + length - 1
@@ -137,10 +139,9 @@ defmodule PVM.Memory do
 
     # Get all pages involved in the read
     page_range = get_sequential_pages(start_page, end_page, number_of_pages(memory))
-    empty_page = <<0::size(8 * page_size)>>
     # Concatenate all page binaries
     full_binary =
-      Enum.reduce(page_range, <<>>, fn page, acc -> acc <> Map.get(data, page, empty_page) end)
+      Enum.reduce(page_range, <<>>, fn page, acc -> acc <> Map.get(data, page, @empty_page) end)
 
     # Extract the requested portion starting from start_offset with the requested length
     binary_part(full_binary, start_offset, length)
