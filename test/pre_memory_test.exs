@@ -13,7 +13,6 @@ defmodule PVM.PreMemoryTest do
   describe "basic operations" do
     test "initializes with empty data and access ranges" do
       pre_memory = %PreMemory{}
-      assert pre_memory.data == %{}
       assert pre_memory.access_ranges == []
       assert pre_memory.page_size == page_size()
       assert pre_memory.size == memory_size()
@@ -35,9 +34,8 @@ defmodule PVM.PreMemoryTest do
 
       # Check that data was properly stored in the sparse structure
       page_num = div(address, page_size())
-      assert Map.has_key?(updated.data, page_num)
 
-      page = updated.data[page_num]
+      [{_, page}] = :ets.lookup(updated.data, page_num)
       assert byte_size(page) == pre_memory.page_size
       assert page == <<1, 2, 3, 4, 0::size(8*(pre_memory.page_size - 4))>>
     end
