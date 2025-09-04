@@ -136,7 +136,7 @@ defmodule PVM.Memory do
     <<0::size(8*length)>>
   end
 
-  defp read_from_sparse(%__MODULE__{data: data, page_size: page_size} = memory, address, length) do
+  defp read_from_sparse(%__MODULE__{data: data} = memory, address, length) do
     {start_page, start_offset} = page_address(memory, address)
     end_address = address + length - 1
     {end_page, _end_offset} = page_address(memory, end_address)
