@@ -11,7 +11,7 @@ defmodule Instructions.RegImmediateOffsetTest do
       start_set = basic_block_starts(program, bitmask)
 
       {exit_reason, state_} =
-        RegImmediateOffset.execute(:load_imm_jump, program, bitmask, start_set, %State{})
+        RegImmediateOffset.execute(:load_imm_jump, program, bitmask, start_set, State.new())
 
       assert state_.registers[1] == 42
       assert state_.counter == 4
@@ -25,7 +25,7 @@ defmodule Instructions.RegImmediateOffsetTest do
       start_set = basic_block_starts(program, bitmask)
 
       {exit_reason, _} =
-        RegImmediateOffset.execute(:load_imm_jump, program, bitmask, start_set, %State{})
+        RegImmediateOffset.execute(:load_imm_jump, program, bitmask, start_set, State.new())
 
       assert exit_reason == :panic
     end

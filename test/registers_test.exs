@@ -4,7 +4,7 @@ defmodule PVM.RegistersTest do
 
   describe "get/2" do
     test "get/2 with integer index" do
-      registers = %PVM.Registers{r: {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13}}
+      registers = PVM.Registers.from_list([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13])
 
       assert registers[0] == 1
       assert registers[1] == 2
@@ -12,7 +12,7 @@ defmodule PVM.RegistersTest do
     end
 
     test "get/2 with list of integers" do
-      registers = %PVM.Registers{r: {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13}}
+      registers = PVM.Registers.from_list([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13])
 
       assert Registers.get_3(registers, 0, 1, 2) == {1, 2, 3}
       assert Registers.get_3(registers, 12, 11, 10) == {13, 12, 11}
@@ -68,7 +68,7 @@ defmodule PVM.RegistersTest do
 
   describe "Access behavior - zero-cost integer access" do
     test "fetch/2 works with integer keys" do
-      registers = %PVM.Registers{r: {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13}}
+      registers = PVM.Registers.from_list([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13])
 
       assert Access.fetch(registers, 0) == {:ok, 1}
       assert Access.fetch(registers, 1) == {:ok, 2}
@@ -77,7 +77,7 @@ defmodule PVM.RegistersTest do
     end
 
     test "bracket syntax works (registers[0])" do
-      registers = %PVM.Registers{r: {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13}}
+      registers = PVM.Registers.from_list([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13])
 
       assert registers[0] == 1
       assert registers[1] == 2

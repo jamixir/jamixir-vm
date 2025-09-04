@@ -1,5 +1,6 @@
 defmodule PVM.Instructions.RegImmediate do
   use PVM.{Decoder, Encoder, Utils, Math}
+  alias PVM.Registers
   alias PVM.{Instructions.Executor}
   import PVM.Memory.Util
 
@@ -14,12 +15,7 @@ defmodule PVM.Instructions.RegImmediate do
       min(12, mod(binary_part_safe(program, state.counter + 1, 1) |> :binary.first(), 16))
 
     <<value::64-little>> = binary_part_safe(program, state.counter + 2, 8)
-
-    state = %{
-      state
-      | registers: %{state.registers | r: put_elem(state.registers.r, register_index, value)}
-    }
-
+    Registers.put_elem(state.registers.r, register_index, value)
     {:continue, state}
   end
 
@@ -43,10 +39,7 @@ defmodule PVM.Instructions.RegImmediate do
   def execute(:load_imm, program, bitmask, _jump_table, _start_set, state) do
     {register_index, value} = get_params(program, bitmask, state.counter)
 
-    state = %{
-      state
-      | registers: %{state.registers | r: put_elem(state.registers.r, register_index, value)}
-    }
+    Registers.put_elem(state.registers.r, register_index, value)
 
     {:continue, state}
   end
@@ -58,13 +51,10 @@ defmodule PVM.Instructions.RegImmediate do
       state,
       addr,
       1,
-      &%{
+      fn n ->
+        Registers.put_elem(state.registers.r, register_index, :binary.first(n))
         state
-        | registers: %{
-            state.registers
-            | r: put_elem(state.registers.r, register_index, :binary.first(&1))
-          }
-      }
+      end
     )
   end
 
@@ -73,14 +63,8 @@ defmodule PVM.Instructions.RegImmediate do
 
     read_memory(state, addr, 1, fn <<value>> ->
       signed_value = to_64bit(value, 1)
-
-      %{
-        state
-        | registers: %{
-            state.registers
-            | r: put_elem(state.registers.r, register_index, signed_value)
-          }
-      }
+      Registers.put_elem(state.registers.r, register_index, signed_value)
+      state
     end)
   end
 
@@ -88,10 +72,8 @@ defmodule PVM.Instructions.RegImmediate do
     {register_index, addr} = get_params(program, bitmask, state.counter)
 
     read_memory(state, addr, 2, fn <<v::16-little>> ->
-      %{
-        state
-        | registers: %{state.registers | r: put_elem(state.registers.r, register_index, v)}
-      }
+      Registers.put_elem(state.registers.r, register_index, v)
+      state
     end)
   end
 
@@ -99,15 +81,8 @@ defmodule PVM.Instructions.RegImmediate do
     {register_index, addr} = get_params(program, bitmask, state.counter)
 
     read_memory(state, addr, 2, fn <<value::16-little>> ->
-      signed_value = to_64bit(value, 2)
-
-      %{
-        state
-        | registers: %{
-            state.registers
-            | r: put_elem(state.registers.r, register_index, signed_value)
-          }
-      }
+      Registers.put_elem(state.registers.r, register_index, to_64bit(value, 2))
+      state
     end)
   end
 
@@ -115,10 +90,8 @@ defmodule PVM.Instructions.RegImmediate do
     {register_index, addr} = get_params(program, bitmask, state.counter)
 
     read_memory(state, addr, 4, fn <<v::32-little>> ->
-      %{
-        state
-        | registers: %{state.registers | r: put_elem(state.registers.r, register_index, v)}
-      }
+      Registers.put_elem(state.registers.r, register_index, v)
+      state
     end)
   end
 
@@ -126,15 +99,8 @@ defmodule PVM.Instructions.RegImmediate do
     {register_index, addr} = get_params(program, bitmask, state.counter)
 
     read_memory(state, addr, 4, fn <<value::32-little>> ->
-      signed_value = to_64bit(value, 4)
-
-      %{
-        state
-        | registers: %{
-            state.registers
-            | r: put_elem(state.registers.r, register_index, signed_value)
-          }
-      }
+      Registers.put_elem(state.registers.r, register_index, to_64bit(value, 4))
+      state
     end)
   end
 
@@ -142,10 +108,8 @@ defmodule PVM.Instructions.RegImmediate do
     {register_index, addr} = get_params(program, bitmask, state.counter)
 
     read_memory(state, addr, 8, fn <<v::64-little>> ->
-      %{
-        state
-        | registers: %{state.registers | r: put_elem(state.registers.r, register_index, v)}
-      }
+      Registers.put_elem(state.registers.r, register_index, v)
+      state
     end)
   end
 

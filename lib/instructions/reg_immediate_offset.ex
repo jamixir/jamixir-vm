@@ -1,5 +1,6 @@
 defmodule PVM.Instructions.RegImmediateOffset do
   use PVM.Utils
+  alias PVM.Registers
   alias PVM.{Instructions.Executor}
   use PVM.Math
   @type comparison_op :: :eq | :ne | :lt_u | :le_u | :ge_u | :gt_u | :lt_s | :le_s | :ge_s | :gt_s
@@ -9,12 +10,8 @@ defmodule PVM.Instructions.RegImmediateOffset do
 
     {exit_reason, counter} = Executor.branch(v_y, true, state.counter, start_set)
 
-    {exit_reason,
-     %{
-       state
-       | counter: counter,
-         registers: %{state.registers | r: put_elem(state.registers.r, r_a, v_x)}
-     }}
+    Registers.put_elem(state.registers.r, r_a, v_x)
+    {exit_reason,     %{       state| counter: counter,}}
   end
 
   def execute(:branch_eq_imm, program, bitmask, start_set, state) do

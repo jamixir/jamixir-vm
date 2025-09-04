@@ -20,7 +20,7 @@ defmodule Instructions.RegTwoImmTest do
       # Set up register 1 with base address 10
       program = <<op(:store_imm_ind_u8), 17, @offset, 42>>
       bitmask = <<8::4>>
-      state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, 1, stack_addr)}}
+      Registers.put_elem(state.registers.r, 1, stack_addr)
 
       {_, state} = RegTwoImm.execute(:store_imm_ind_u8, program, bitmask, state)
       assert Memory.read(state.memory, stack_addr + @offset, 1) == {:ok, <<42>>}
@@ -32,7 +32,7 @@ defmodule Instructions.RegTwoImmTest do
     } do
       program = <<op(:store_imm_ind_u16), 33, @offset, 0, 34, 12>>
       bitmask = <<64::6>>
-      state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, 1, stack_addr)}}
+      Registers.put_elem(state.registers.r, 1, stack_addr)
 
       {_, state} = RegTwoImm.execute(:store_imm_ind_u16, program, bitmask, state)
       assert Memory.read(state.memory, stack_addr + @offset, 2) == {:ok, <<34, 12>>}
@@ -44,7 +44,7 @@ defmodule Instructions.RegTwoImmTest do
     } do
       program = <<op(:store_imm_ind_u32), 33, @offset, 0, 78, 56, 34, 12>>
       bitmask = <<128>>
-      state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, 1, stack_addr)}}
+      Registers.put_elem(state.registers.r, 1, stack_addr)
 
       {_, state} = RegTwoImm.execute(:store_imm_ind_u32, program, bitmask, state)
       assert Memory.read(state.memory, stack_addr + @offset, 4) == {:ok, <<78, 56, 34, 12>>}
@@ -56,7 +56,7 @@ defmodule Instructions.RegTwoImmTest do
     } do
       program = <<op(:store_imm_ind_u64), 33, @offset, 0, 78, 56, 34, 12, 0, 0, 0, 0>>
       bitmask = <<128>>
-      state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, 1, stack_addr)}}
+      Registers.put_elem(state.registers.r, 1, stack_addr)
 
       {_, state} = RegTwoImm.execute(:store_imm_ind_u64, program, bitmask, state)
 
@@ -67,8 +67,7 @@ defmodule Instructions.RegTwoImmTest do
     test "store_imm_ind_u8 handles value wrapping", %{state: state, stack_addr: stack_addr} do
       program = <<op(:store_imm_ind_u8), 0x11, @offset, 300>>
       bitmask = <<8::4>>
-      state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, 1, stack_addr)}}
-
+      Registers.put_elem(state.registers.r, 1, stack_addr)
       {_, state} = RegTwoImm.execute(:store_imm_ind_u8, program, bitmask, state)
       assert Memory.read(state.memory, stack_addr + @offset, 1) == {:ok, <<44>>}
     end
@@ -76,7 +75,7 @@ defmodule Instructions.RegTwoImmTest do
     test "store_imm_ind_u16 handles value wrapping", %{state: state, stack_addr: stack_addr} do
       program = <<op(:store_imm_ind_u16), 0x11, @offset, 0xFF, 0xFF>>
       bitmask = <<16::5>>
-      state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, 1, stack_addr)}}
+      Registers.put_elem(state.registers.r, 1, stack_addr)
 
       {_, state} = RegTwoImm.execute(:store_imm_ind_u16, program, bitmask, state)
       # Should write full 16-bit value
@@ -87,7 +86,7 @@ defmodule Instructions.RegTwoImmTest do
       # Test with register index > 12 (should be capped at 12)
       program = <<op(:store_imm_ind_u8), 0x1F, @offset, 42>>
       bitmask = <<8::4>>
-      state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, 12, stack_addr)}}
+      Registers.put_elem(state.registers.r, 12, stack_addr)
 
       {_, state} = RegTwoImm.execute(:store_imm_ind_u8, program, bitmask, state)
       assert Memory.read(state.memory, stack_addr + @offset, 1) == {:ok, <<42>>}

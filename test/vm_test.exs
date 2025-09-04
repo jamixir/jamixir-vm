@@ -368,7 +368,7 @@ defmodule VMTest do
       p = create_program(program, bitmask)
 
       # Mark page 1 (starting at 4096) as read-only
-      state = %State{memory: Memory.set_access(%State{}.memory, 0x10000, 2, :read)}
+      state = %State{memory: Memory.set_access(State.new().memory, 0x10000, 2, :read)}
 
       # Initial register state to verify no changes
       initial_registers = state.registers

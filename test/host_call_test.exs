@@ -28,7 +28,7 @@ defmodule PVM.HostCallTest do
       initial_context = %{test: :context}
 
       {exit_reason, final_state, final_context} =
-        HostCall.execute(p, %State{}, host_fn, initial_context)
+        HostCall.execute(p, State.new(), host_fn, initial_context)
 
       assert exit_reason == :halt
       assert final_state.counter == 0
@@ -48,7 +48,7 @@ defmodule PVM.HostCallTest do
       initial_context = %{test: :context}
 
       {exit_reason, final_state, final_context} =
-        HostCall.execute(p, %State{}, host_fn, initial_context)
+        HostCall.execute(p, State.new(), host_fn, initial_context)
 
       assert exit_reason == :panic
       assert final_state.counter == 0

@@ -15,7 +15,7 @@ defmodule PVM.Utils.ProgramUtilsTest do
     test "create_halt_program creates minimal halting program" do
       {program, bitmask} = ProgramUtils.create_halt_program()
       p = PVM.Encoder.encode_program(program, bitmask, {}, 1)
-      {exit_reason, state} = VM.execute(p, %State{})
+      {exit_reason, state} = VM.execute(p, State.new())
       assert exit_reason == :halt
       assert state.counter == 0
     end

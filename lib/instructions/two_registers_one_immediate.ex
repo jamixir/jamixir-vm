@@ -121,7 +121,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     w_b = state.registers[r_b]
 
     result = mod(w_b + v_x, @two_32) |> to_64bit(4)
-    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, result)}}
+    Registers.put_elem(state.registers.r, r_a, result)
     {:continue, state}
   end
 
@@ -130,7 +130,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     w_b = state.registers[r_b]
 
     result = mod(w_b * v_x, @two_32) |> to_64bit(4)
-    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, result)}}
+    Registers.put_elem(state.registers.r, r_a, result)
     {:continue, state}
   end
 
@@ -139,7 +139,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     w_b = state.registers[r_b]
 
     result = mod(v_x + @two_32 - w_b, @two_32) |> to_64bit(4)
-    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, result)}}
+    Registers.put_elem(state.registers.r, r_a, result)
     {:continue, state}
   end
 
@@ -184,7 +184,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     w_b = state.registers[r_b]
     result = bool_to_int(w_b < v_x)
 
-    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, result)}}
+    Registers.put_elem(state.registers.r, r_a, result)
     {:continue, state}
   end
 
@@ -193,7 +193,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     w_b = state.registers[r_b]
     result = bool_to_int(u2i(w_b, 8) < u2i(v_x, 8))
 
-    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, result)}}
+    Registers.put_elem(state.registers.r, r_a, result)
     {:continue, state}
   end
 
@@ -202,7 +202,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     w_b = state.registers[r_b]
     result = bool_to_int(w_b > v_x)
 
-    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, result)}}
+    Registers.put_elem(state.registers.r, r_a, result)
     {:continue, state}
   end
 
@@ -211,7 +211,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     w_b = state.registers[r_b]
     result = bool_to_int(u2i(w_b, 8) > u2i(v_x, 8))
 
-    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, result)}}
+    Registers.put_elem(state.registers.r, r_a, result)
     {:continue, state}
   end
 
@@ -221,7 +221,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     shift = mod(v_x, 32)
     result = mod(w_b * (1 <<< shift), @two_32) |> to_64bit(4)
 
-    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, result)}}
+    Registers.put_elem(state.registers.r, r_a, result)
     {:continue, state}
   end
 
@@ -231,7 +231,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     shift = mod(v_x, 32)
     result = mod(w_b, @two_32) >>> shift |> to_64bit(4)
 
-    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, result)}}
+    Registers.put_elem(state.registers.r, r_a, result)
     {:continue, state}
   end
 
@@ -241,7 +241,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     shift = mod(v_x, 32)
     result = u2i(mod(w_b, @two_32), 4) |> Bitwise.bsr(shift) |> i2u(8)
 
-    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, result)}}
+    Registers.put_elem(state.registers.r, r_a, result)
     {:continue, state}
   end
 
@@ -251,7 +251,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     shift = mod(w_b, 32)
     result = mod(v_x * (1 <<< shift), @two_32) |> to_64bit(4)
 
-    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, result)}}
+    Registers.put_elem(state.registers.r, r_a, result)
     {:continue, state}
   end
 
@@ -261,7 +261,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     shift = mod(w_b, 32)
     result = mod(v_x, @two_32) >>> shift |> to_64bit(4)
 
-    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, result)}}
+    Registers.put_elem(state.registers.r, r_a, result)
     {:continue, state}
   end
 
@@ -271,7 +271,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     shift = mod(w_b, 32)
     result = u2i(mod(v_x, @two_32), 4) |> Bitwise.bsr(shift) |> i2u(8)
 
-    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, result)}}
+    Registers.put_elem(state.registers.r, r_a, result)
     {:continue, state}
   end
 
@@ -280,7 +280,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     {w_a, w_b} = Registers.get_2(state.registers, r_a, r_b)
     result = if w_b == 0, do: v_x, else: w_a
 
-    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, result)}}
+    Registers.put_elem(state.registers.r, r_a, result)
     {:continue, state}
   end
 
@@ -289,7 +289,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     {w_a, w_b} = Registers.get_2(state.registers, r_a, r_b)
     result = if w_b != 0, do: v_x, else: w_a
 
-    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, result)}}
+    Registers.put_elem(state.registers.r, r_a, result)
     {:continue, state}
   end
 
@@ -297,7 +297,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
     w_b = state.registers[r_b]
     result = mod(w_b + v_x, @two_64)
-    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, result)}}
+    Registers.put_elem(state.registers.r, r_a, result)
     {:continue, state}
   end
 
@@ -305,7 +305,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
     w_b = state.registers[r_b]
     result = mod(w_b * v_x, @two_64)
-    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, result)}}
+    Registers.put_elem(state.registers.r, r_a, result)
     {:continue, state}
   end
 
@@ -313,7 +313,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
     w_b = state.registers[r_b]
     result = mod(v_x + @two_64 - w_b, @two_64)
-    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, result)}}
+    Registers.put_elem(state.registers.r, r_a, result)
     {:continue, state}
   end
 
@@ -322,7 +322,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     w_b = state.registers[r_b]
     shift = mod(v_x, 64)
     result = mod(w_b * (1 <<< shift), @two_64)
-    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, result)}}
+    Registers.put_elem(state.registers.r, r_a, result)
     {:continue, state}
   end
 
@@ -331,7 +331,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     w_b = state.registers[r_b]
     shift = mod(v_x, 64)
     result = w_b >>> shift
-    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, result)}}
+    Registers.put_elem(state.registers.r, r_a, result)
     {:continue, state}
   end
 
@@ -340,7 +340,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     w_b = state.registers[r_b]
     shift = mod(v_x, 64)
     result = u2i(w_b, 8) >>> shift |> i2u(8)
-    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, result)}}
+    Registers.put_elem(state.registers.r, r_a, result)
     {:continue, state}
   end
 
@@ -349,7 +349,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     w_b = state.registers[r_b]
     shift = mod(w_b, 64)
     result = mod(v_x * (1 <<< shift), @two_64)
-    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, result)}}
+    Registers.put_elem(state.registers.r, r_a, result)
     {:continue, state}
   end
 
@@ -358,7 +358,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     w_b = state.registers[r_b]
     shift = mod(w_b, 64)
     result = v_x >>> shift
-    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, result)}}
+    Registers.put_elem(state.registers.r, r_a, result)
     {:continue, state}
   end
 
@@ -367,7 +367,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     w_b = state.registers[r_b]
     shift = mod(w_b, 64)
     result = u2i(v_x, 8) >>> shift |> i2u(8)
-    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, result)}}
+    Registers.put_elem(state.registers.r, r_a, result)
     {:continue, state}
   end
 
@@ -379,7 +379,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     shift = mod(v_x, 64)
     result = rotate(number, shift, 64, :right)
 
-    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, result)}}
+    Registers.put_elem(state.registers.r, r_a, result)
     {:continue, state}
   end
 
@@ -389,7 +389,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     shift = mod(w_b, 64)
     result = rotate(v_x, shift, 64, :right)
 
-    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, result)}}
+    Registers.put_elem(state.registers.r, r_a, result)
     {:continue, state}
   end
 
@@ -399,7 +399,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     shift = mod(v_x, 32)
     result = rotate(w_b, shift, 32, :right) |> Utils.extend_to_64bit(4)
 
-    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, result)}}
+    Registers.put_elem(state.registers.r, r_a, result)
     {:continue, state}
   end
 
@@ -409,7 +409,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     shift = mod(w_b, 32)
     result = rotate(v_x, shift, 32, :right) |> Utils.extend_to_64bit(4)
 
-    state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, result)}}
+    Registers.put_elem(state.registers.r, r_a, result)
     {:continue, state}
   end
 

@@ -1,4 +1,5 @@
 defmodule PVM.Instructions.TwoRegisters do
+  alias PVM.Registers
   alias PVM.Memory
   use PVM.Math
   use PVM.{Encoder, Decoder, Utils}
@@ -8,9 +9,8 @@ defmodule PVM.Instructions.TwoRegisters do
   def execute(:move_reg, program, state) do
     {r_d, r_a} = get_params(program, state.counter)
     w_a = state.registers[r_a]
-
-    {:continue,
-     %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_d, w_a)}}}
+    Registers.put_elem(state.registers.r, r_d, w_a)
+    {:continue, state}
   end
 
   def execute(:sbrk, program, state) do
@@ -24,18 +24,16 @@ defmodule PVM.Instructions.TwoRegisters do
     {r_d, r_a} = get_params(program, state.counter)
     w_a = state.registers[r_a]
     bits_sum = count_set_bits(w_a)
-
-    {:continue,
-     %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_d, bits_sum)}}}
+    Registers.put_elem(state.registers.r, r_d, bits_sum)
+    {:continue, state}
   end
 
   def execute(:count_set_bits_32, program, state) do
     {r_d, r_a} = get_params(program, state.counter)
     w_a = state.registers[r_a]
     bits_sum = count_set_bits(w_a &&& 0xFFFFFFFF)
-
-    {:continue,
-     %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_d, bits_sum)}}}
+    Registers.put_elem(state.registers.r, r_d, bits_sum)
+    {:continue, state}
   end
 
   def execute(:leading_zero_bits_64, program, state) do
@@ -43,12 +41,8 @@ defmodule PVM.Instructions.TwoRegisters do
     w_a = state.registers[r_a]
 
     leading_zero_bits = leading_zeros(w_a, 8)
-
-    {:continue,
-     %{
-       state
-       | registers: %{state.registers | r: put_elem(state.registers.r, r_d, leading_zero_bits)}
-     }}
+    Registers.put_elem(state.registers.r, r_d, leading_zero_bits)
+    {:continue, state}
   end
 
   def execute(:leading_zero_bits_32, program, state) do
@@ -57,11 +51,8 @@ defmodule PVM.Instructions.TwoRegisters do
 
     leading_zero_bits = leading_zeros(w_a, 4)
 
-    {:continue,
-     %{
-       state
-       | registers: %{state.registers | r: put_elem(state.registers.r, r_d, leading_zero_bits)}
-     }}
+    Registers.put_elem(state.registers.r, r_d, leading_zero_bits)
+    {:continue, state}
   end
 
   def execute(:trailing_zero_bits_64, program, state) do
@@ -69,12 +60,8 @@ defmodule PVM.Instructions.TwoRegisters do
     w_a = state.registers[r_a]
 
     trailing_zero_bits = count_trailing_zeros(w_a, 64)
-
-    {:continue,
-     %{
-       state
-       | registers: %{state.registers | r: put_elem(state.registers.r, r_d, trailing_zero_bits)}
-     }}
+    Registers.put_elem(state.registers.r, r_d, trailing_zero_bits)
+    {:continue, state}
   end
 
   def execute(:trailing_zero_bits_32, program, state) do
@@ -83,38 +70,33 @@ defmodule PVM.Instructions.TwoRegisters do
 
     trailing_zero_bits = count_trailing_zeros(w_a, 32)
 
-    {:continue,
-     %{
-       state
-       | registers: %{state.registers | r: put_elem(state.registers.r, r_d, trailing_zero_bits)}
-     }}
+        Registers.put_elem(state.registers.r, r_d, trailing_zero_bits)
+    {:continue, state}
+
   end
 
   def execute(:sign_extend_8, program, state) do
     {r_d, r_a} = get_params(program, state.counter)
     w_a = state.registers[r_a]
     sign_extended = w_a |> mod(0x100) |> u2i(1) |> i2u(8)
-
-    {:continue,
-     %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_d, sign_extended)}}}
+    Registers.put_elem(state.registers.r, r_d, sign_extended)
+    {:continue, state}
   end
 
   def execute(:sign_extend_16, program, state) do
     {r_d, r_a} = get_params(program, state.counter)
     w_a = state.registers[r_a]
     sign_extended = w_a |> mod(0x10000) |> u2i(2) |> i2u(8)
-
-    {:continue,
-     %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_d, sign_extended)}}}
+    Registers.put_elem(state.registers.r, r_d, sign_extended)
+    {:continue, state}
   end
 
   def execute(:zero_extend_16, program, state) do
     {r_d, r_a} = get_params(program, state.counter)
     w_a = state.registers[r_a]
     zero_extended = w_a |> mod(0x10000)
-
-    {:continue,
-     %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_d, zero_extended)}}}
+    Registers.put_elem(state.registers.r, r_d, zero_extended)
+    {:continue, state}
   end
 
   def execute(:reverse_bytes, program, state) do
@@ -127,9 +109,8 @@ defmodule PVM.Instructions.TwoRegisters do
       |> :binary.bin_to_list()
       |> Enum.reverse()
       |> :binary.list_to_bin()
-
-    {:continue,
-     %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_d, reversed)}}}
+    Registers.put_elem(state.registers.r, r_d, reversed)
+    {:continue, state}
   end
 
   # Handle sbrk with pattern matching for size == 0 (query heap pointer)

@@ -16,7 +16,7 @@ defmodule SingleStepTest do
       bitmask = <<1::1>>
       jump_table = []
       start_set = basic_block_starts(program, bitmask)
-      state = %State{}
+      state = State.new()
       {exit_reason, state_} = SingleStep.run(program, bitmask, jump_table, start_set, state)
       assert exit_reason == :panic
       assert state_.counter == 0
@@ -38,7 +38,7 @@ defmodule SingleStepTest do
       bitmask = <<1::1>>
       jump_table = []
       start_set = basic_block_starts(program, bitmask)
-      state = %State{}
+      state = State.new()
       {exit_reason, state_} = SingleStep.run(program, bitmask, jump_table, start_set, state)
       assert exit_reason == :continue
       assert state_.counter == 1
@@ -53,7 +53,7 @@ defmodule SingleStepTest do
       jump_table = []
       start_set = basic_block_starts(program, bitmask)
 
-      {exit_reason, state_} = SingleStep.run(program, bitmask, jump_table, start_set, %State{})
+      {exit_reason, state_} = SingleStep.run(program, bitmask, jump_table, start_set, State.new())
       assert exit_reason == :panic
 
       state_ = %{state_ | counter: 1}
@@ -66,7 +66,7 @@ defmodule SingleStepTest do
       bitmask = <<10::4>>
       jump_table = []
       start_set = basic_block_starts(program, bitmask)
-      {exit_reason, state_} = SingleStep.run(program, bitmask, jump_table, start_set, %State{})
+      {exit_reason, state_} = SingleStep.run(program, bitmask, jump_table, start_set, State.new())
       assert exit_reason == {:ecall, 42}
 
       state_ = %{state_ | counter: 2}
@@ -161,7 +161,7 @@ defmodule SingleStepTest do
       start_set = basic_block_starts(program, bitmask)
       jump_table = []
 
-      state = %State{}
+      state = State.new()
 
       # First execute load_imm
       {exit_reason, state_} = SingleStep.run(program, bitmask, jump_table, start_set, state)

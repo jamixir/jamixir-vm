@@ -16,6 +16,15 @@ defmodule PVM.State do
 
   defstruct counter: 0,
             gas: 0,
-            registers: Registers.new(),
+            registers: nil,
             memory: %PVM.Memory{}
+
+  def new() do
+    %__MODULE__{
+      counter: 0,
+      gas: 0,
+      registers: Registers.new(),
+      memory: %PVM.Memory{}
+    }
+  end
 end

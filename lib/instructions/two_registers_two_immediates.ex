@@ -1,5 +1,6 @@
 defmodule PVM.Instructions.TwoRegistersTwoImmediates do
   use PVM.Utils
+  alias PVM.Registers
   alias PVM.{Instructions.Executor}
   use PVM.Math
 
@@ -13,8 +14,8 @@ defmodule PVM.Instructions.TwoRegistersTwoImmediates do
 
     {exit_status, counter} = Executor.djump(jump_addr, state.counter, jump_table, start_set)
 
-    {exit_status,
-     %{state | counter: counter, registers: %{state.registers | r: put_elem(state.registers.r, r_a, v_x)}}}
+    Registers.put_elem(state.registers.r, r_a, v_x)
+    {exit_status, %{state | counter: counter}}
   end
 
   # Formula (A.30) v0.7.0

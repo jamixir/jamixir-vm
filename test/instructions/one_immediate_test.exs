@@ -9,7 +9,7 @@ defmodule Instructions.OneImmediateTest do
       program = <<op(:ecalli), 42>>
       bitmask = <<2::2>>
       start_set = basic_block_starts(program, bitmask)
-      {exit_reason, _} = OneImmediate.execute(:ecalli, program, bitmask, start_set, %State{})
+      {exit_reason, _} = OneImmediate.execute(:ecalli, program, bitmask, start_set, State.new())
       assert exit_reason == {:ecall, 42}
     end
 
@@ -17,7 +17,7 @@ defmodule Instructions.OneImmediateTest do
       program = <<op(:ecalli), 0x78, 0x56, 0x34, 0x12>>
       bitmask = <<16::5>>
       start_set = basic_block_starts(program, bitmask)
-      {exit_reason, _} = OneImmediate.execute(:ecalli, program, bitmask, start_set, %State{})
+      {exit_reason, _} = OneImmediate.execute(:ecalli, program, bitmask, start_set, State.new())
       assert exit_reason == {:ecall, 0x12345678}
     end
   end
@@ -27,7 +27,7 @@ defmodule Instructions.OneImmediateTest do
       program = <<op(:jump), 3, 0, op(:fallthrough)>>
       bitmask = <<9::4>>
       start_set = basic_block_starts(program, bitmask)
-      {exit_reason, state_} = OneImmediate.execute(:jump, program, bitmask, start_set, %State{})
+      {exit_reason, state_} = OneImmediate.execute(:jump, program, bitmask, start_set, State.new())
       assert exit_reason == :continue
       assert state_.counter == 3
     end
@@ -48,7 +48,7 @@ defmodule Instructions.OneImmediateTest do
       program = <<op(:jump), 1>>
       bitmask = <<2::2>>
       start_set = basic_block_starts(program, bitmask)
-      {exit_reason, _} = OneImmediate.execute(:jump, program, bitmask, start_set, %State{})
+      {exit_reason, _} = OneImmediate.execute(:jump, program, bitmask, start_set, State.new())
       assert exit_reason == :panic
     end
   end

@@ -18,7 +18,7 @@ defmodule Instructions.RegImmediateTest do
       jump_table = {}
 
       {exit_status, state} =
-        RegImmediate.execute(:load_imm, program, bitmask, jump_table, start_set, %State{})
+        RegImmediate.execute(:load_imm, program, bitmask, jump_table, start_set, State.new())
 
       assert exit_status == :continue
       assert state.registers[1] == 42
@@ -145,7 +145,7 @@ defmodule Instructions.RegImmediateTest do
       start_set = basic_block_starts(program, bitmask)
 
       {exit_status, state} =
-        RegImmediate.execute(:load_imm_64, program, bitmask, jump_table, start_set, %State{})
+        RegImmediate.execute(:load_imm_64, program, bitmask, jump_table, start_set, State.new())
 
       assert exit_status == :continue
       assert state.registers[1] == 0x98BADEFC12345602
@@ -159,7 +159,7 @@ defmodule Instructions.RegImmediateTest do
       start_set = basic_block_starts(program, bitmask)
 
       {exit_status, state} =
-        RegImmediate.execute(:load_imm_64, program, bitmask, jump_table, start_set, %State{})
+        RegImmediate.execute(:load_imm_64, program, bitmask, jump_table, start_set, State.new())
 
       assert exit_status == :continue
       assert state.registers[12] == 0x98BADEFC1234560F

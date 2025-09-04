@@ -22,7 +22,7 @@ Here's a basic example of how to use JamixirVM:
 alias PVM.State
 
 # Create an initial state with default values
-initial_state = %State{}
+initial_state = State.new()
 
 # Create your program (example: store value 42 at memory address 10)
 program = <<
