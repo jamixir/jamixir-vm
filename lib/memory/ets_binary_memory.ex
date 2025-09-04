@@ -24,15 +24,14 @@ defmodule PVM.Memory.EtsBinaryMemory do
 
   # Compile-time zero binaries for common lengths (1-32)
   @zero_binaries (for i <- 1..32, into: %{} do
-    {i, :binary.copy(<<0>>, i)}
-  end)
-
-
+                    {i, :binary.copy(<<0>>, i)}
+                  end)
 
   # Fast zero lookup with compile-time binaries
   defp get_zero_binary(length) when length >= 1 and length <= 32 do
     Map.get(@zero_binaries, length)
   end
+
   defp get_zero_binary(length), do: :binary.copy(<<0>>, length)
 
   # PUBLIC FUNCTIONS
@@ -75,7 +74,7 @@ defmodule PVM.Memory.EtsBinaryMemory do
 
   def write(%__MODULE__{} = memory, _, <<>>), do: {:ok, memory}
 
-  def write(%__MODULE__{} = memory, address, value) when is_binary(value) do
+  def write(%__MODULE__{} = memory, address, value) do
     wrapped_address = wrap_address(memory, address)
 
     if wrapped_address < min_allowed_address() do
@@ -152,14 +151,20 @@ defmodule PVM.Memory.EtsBinaryMemory do
   ## Private functions - ETS Binary Implementation
 
   # FAST TRACK: Single page read
-  defp read_data(%__MODULE__{data: table, page_size: _page_size} = memory, address, length, start_page, end_page)
+  defp read_data(
+         %__MODULE__{data: table, page_size: _page_size} = memory,
+         address,
+         length,
+         start_page,
+         end_page
+       )
        when start_page == end_page do
     {_page_num, page_offset} = page_address(memory, address)
 
     case :ets.lookup(table, start_page) do
       [] ->
         # Page not allocated, return zeros using optimized function
-        read_zeros(length)
+        get_zero_binary(length)
 
       [{^start_page, page_binary}] ->
         read_from_page_binary(page_binary, page_offset, length)
@@ -168,16 +173,14 @@ defmodule PVM.Memory.EtsBinaryMemory do
 
   # Function argument matching for nil vs binary cases
   defp read_from_page_binary(nil, _page_offset, length) do
-    read_zeros(length)
+    get_zero_binary(length)
   end
 
-  defp read_from_page_binary(page_binary, page_offset, length) when is_binary(page_binary) do
+  defp read_from_page_binary(page_binary, page_offset, length) do
     binary_part(page_binary, page_offset, length)
   end
 
-  # Optimized zero reading with compile-time binaries
-  defp read_zeros(length) when length <= 32, do: get_zero_binary(length)
-  defp read_zeros(length), do: :binary.copy(<<0>>, length)
+
 
   # SLOW TRACK: Multi-page read
   defp read_data(%__MODULE__{} = memory, address, length, _start_page, _end_page) do
@@ -201,7 +204,7 @@ defmodule PVM.Memory.EtsBinaryMemory do
   # Function argument matching for byte reads
   defp read_byte_from_page_binary(nil, _page_offset), do: 0
 
-  defp read_byte_from_page_binary(page_binary, page_offset) when is_binary(page_binary) do
+  defp read_byte_from_page_binary(page_binary, page_offset) do
     if page_offset < byte_size(page_binary) do
       :binary.at(page_binary, page_offset)
     else
@@ -210,19 +213,27 @@ defmodule PVM.Memory.EtsBinaryMemory do
   end
 
   # FAST TRACK: Single page write
-  defp write_data(%__MODULE__{data: table, page_size: page_size} = memory, address, value, start_page, end_page)
+  defp write_data(
+         %__MODULE__{data: table, page_size: page_size} = memory,
+         address,
+         value,
+         start_page,
+         end_page
+       )
        when start_page == end_page do
     {_page_num, page_offset} = page_address(memory, address)
     value_length = byte_size(value)
 
     # Get or create the page binary using pattern matching
-    page_binary = case :ets.lookup(table, start_page) do
-      [] -> @empty_page
-      [{^start_page, existing_page}] -> get_page_binary(existing_page)
-    end
+    page_binary =
+      case :ets.lookup(table, start_page) do
+        [] -> @empty_page
+        [{^start_page, existing_page}] -> get_page_binary(existing_page)
+      end
 
     # Update the page with new data
-    new_page_binary = write_to_page_binary(page_binary, page_offset, value, value_length, page_size)
+    new_page_binary =
+      write_to_page_binary(page_binary, page_offset, value, value_length, page_size)
 
     # Store the updated page
     :ets.insert(table, {start_page, new_page_binary})
@@ -230,16 +241,17 @@ defmodule PVM.Memory.EtsBinaryMemory do
 
   # Function argument matching for getting page binary
   defp get_page_binary(nil), do: @empty_page
-  defp get_page_binary(existing) when is_binary(existing), do: existing
+  defp get_page_binary(existing), do: existing
 
   # Function argument matching for different write scenarios
-  defp write_to_page_binary(page_binary, page_offset, value, value_length, page_size) when page_offset + value_length <= page_size do
+  defp write_to_page_binary(page_binary, page_offset, value, value_length, page_size)
+       when page_offset + value_length <= page_size do
     # Simple case: write fits entirely within page
-    <<prefix::binary-size(page_offset), _::binary-size(value_length), suffix::binary>> = page_binary
+    <<prefix::binary-size(page_offset), _::binary-size(value_length), suffix::binary>> =
+      page_binary
+
     <<prefix::binary, value::binary, suffix::binary>>
   end
-
-
 
   # SLOW TRACK: Multi-page write
   defp write_data(%__MODULE__{} = memory, address, value, _start_page, _end_page) do
@@ -256,10 +268,11 @@ defmodule PVM.Memory.EtsBinaryMemory do
       {page_num, page_offset} = page_address(memory, byte_address)
 
       # Get or create the page binary using pattern matching
-      page_binary = case :ets.lookup(table, page_num) do
-        [] -> @empty_page
-        [{^page_num, existing_page}] -> get_page_binary(existing_page)
-      end
+      page_binary =
+        case :ets.lookup(table, page_num) do
+          [] -> @empty_page
+          [{^page_num, existing_page}] -> get_page_binary(existing_page)
+        end
 
       # Update single byte in the page
       new_page_binary = write_byte_to_page_binary(page_binary, page_offset, byte_value)
@@ -287,17 +300,21 @@ defmodule PVM.Memory.EtsBinaryMemory do
 
       # Find the first page that doesn't have the required access
       Enum.find_value(page_range, :ok, fn page ->
-        case find_access_for_page(memory.access_ranges, page) do
-          access when required_access == :read and access in [:read, :write] -> nil
-          access when required_access == :write and access == :write -> nil
-          _ -> {:error, page * memory.page_size}
-        end
+        access = find_access_for_page(memory.access_ranges, page)
+        check_access_permission(access, required_access, page, memory.page_size)
       end)
     end
   end
 
+  # Fast dedicated functions for access permission checking
+  defp check_access_permission(:read, :read, _page, _page_size), do: nil
+  defp check_access_permission(:write, :read, _page, _page_size), do: nil
+  defp check_access_permission(:write, :write, _page, _page_size), do: nil
+  defp check_access_permission(_access, _required_access, page, page_size), do: {:error, page * page_size}
+
   def find_access_for_page(access_ranges, page) do
     ranges_tuple = List.to_tuple(access_ranges)
+
     {_, _, access} =
       RangeManager.binary_search_range(ranges_tuple, page, 0, tuple_size(ranges_tuple) - 1)
 
