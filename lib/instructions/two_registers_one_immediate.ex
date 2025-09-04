@@ -43,13 +43,8 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     addr = state.registers[r_b] + v_x
 
     read_memory(state, addr, 1, fn <<v::8-little>> ->
-      %{
-        state
-        | registers: %{
-            state.registers
-            | r: put_elem(state.registers.r, r_a, v)
-          }
-      }
+      Registers.put_elem(state.registers.r, r_a, v)
+      state
     end)
   end
 
@@ -58,10 +53,8 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     addr = state.registers[r_b] + v_x
 
     read_memory(state, addr, 2, fn <<v::16-little>> ->
-      %{
-        state
-        | registers: %{state.registers | r: put_elem(state.registers.r, r_a, v)}
-      }
+      Registers.put_elem(state.registers.r, r_a, v)
+      state
     end)
   end
 
@@ -70,10 +63,8 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     addr = state.registers[r_b] + v_x
 
     read_memory(state, addr, 4, fn <<v::32-little>> ->
-      %{
-        state
-        | registers: %{state.registers | r: put_elem(state.registers.r, r_a, v)}
-      }
+      Registers.put_elem(state.registers.r, r_a, v)
+      state
     end)
   end
 
@@ -82,7 +73,8 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     addr = state.registers[r_b] + v_x
 
     read_memory(state, addr, 8, fn <<v::64-little>> ->
-      %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, v)}}
+      Registers.put_elem(state.registers.r, r_a, v)
+      state
     end)
   end
 
@@ -92,7 +84,8 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
 
     read_memory(state, addr, 1, fn <<v::8-little>> ->
       val = v |> u2i(1) |> i2u(8)
-      %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, val)}}
+      Registers.put_elem(state.registers.r, r_a, val)
+      state
     end)
   end
 
@@ -102,7 +95,8 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
 
     read_memory(state, addr, 2, fn <<v::16-little>> ->
       val = v |> u2i(2) |> i2u(8)
-      %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, val)}}
+      Registers.put_elem(state.registers.r, r_a, val)
+      state
     end)
   end
 
@@ -112,7 +106,8 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
 
     read_memory(state, addr, 4, fn <<v::32-little>> ->
       val = v |> u2i(4) |> i2u(8)
-      %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_a, val)}}
+      Registers.put_elem(state.registers.r, r_a, val)
+      state
     end)
   end
 
@@ -146,36 +141,21 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
   def execute(:and_imm, program, bitmask, state) do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
     w_b = state.registers[r_b]
-
-    state = %{
-      state
-      | registers: %{state.registers | r: put_elem(state.registers.r, r_a, w_b &&& v_x)}
-    }
-
+    Registers.put_elem(state.registers.r, r_a, w_b &&& v_x)
     {:continue, state}
   end
 
   def execute(:xor_imm, program, bitmask, state) do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
     w_b = state.registers[r_b]
-
-    state = %{
-      state
-      | registers: %{state.registers | r: put_elem(state.registers.r, r_a, bxor(w_b, v_x))}
-    }
-
+    Registers.put_elem(state.registers.r, r_a, bxor(w_b, v_x))
     {:continue, state}
   end
 
   def execute(:or_imm, program, bitmask, state) do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
     w_b = state.registers[r_b]
-
-    state = %{
-      state
-      | registers: %{state.registers | r: put_elem(state.registers.r, r_a, w_b ||| v_x)}
-    }
-
+    Registers.put_elem(state.registers.r, r_a, w_b ||| v_x)
     {:continue, state}
   end
 
@@ -183,7 +163,6 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
     w_b = state.registers[r_b]
     result = bool_to_int(w_b < v_x)
-
     Registers.put_elem(state.registers.r, r_a, result)
     {:continue, state}
   end
@@ -192,7 +171,6 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
     w_b = state.registers[r_b]
     result = bool_to_int(u2i(w_b, 8) < u2i(v_x, 8))
-
     Registers.put_elem(state.registers.r, r_a, result)
     {:continue, state}
   end

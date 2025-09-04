@@ -37,8 +37,7 @@ defmodule Instructions.TwoRegistersTest do
   describe "execute(:sbrk)" do
     test "returns current heap pointer when size is 0", %{state: state} do
       # Set up registers: r1 = destination, r2 = size (0)
-      state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, 2, 0)}}
-
+      Registers.put_elem(state.registers.r, 2, 0)
       {status, new_state} = TwoRegisters.execute(:sbrk, <<op(:sbrk), 0x21>>, state)
 
       assert status == :continue
@@ -53,9 +52,10 @@ defmodule Instructions.TwoRegistersTest do
       request_size = 100
       initial_heap_pointer = state.memory.current_heap_pointer
 
-      state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, 2, request_size)}}
+      Registers.put_elem(state.registers.r, 2, request_size)
       # asset memory is not writable
-      assert Memory.check_pages_access?(state.memory, initial_heap_pointer, request_size, :write) == false
+      assert Memory.check_pages_access?(state.memory, initial_heap_pointer, request_size, :write) ==
+               false
 
       {status, new_state} = TwoRegisters.execute(:sbrk, <<op(:sbrk), 0x21>>, state)
 
@@ -73,7 +73,7 @@ defmodule Instructions.TwoRegistersTest do
       request_size = page_size()
       initial_heap_pointer = state.memory.current_heap_pointer
 
-      state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, 2, request_size)}}
+      Registers.put_elem(state.registers.r, 2, request_size)
 
       {status, new_state} = TwoRegisters.execute(:sbrk, <<op(:sbrk), 0x21>>, state)
 
@@ -92,7 +92,7 @@ defmodule Instructions.TwoRegistersTest do
       request_size = 3 * page_size()
       initial_heap_pointer = state.memory.current_heap_pointer
 
-      state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, 2, request_size)}}
+      Registers.put_elem(state.registers.r, 2, request_size)
 
       {status, new_state} = TwoRegisters.execute(:sbrk, <<op(:sbrk), 0x21>>, state)
 
@@ -110,9 +110,7 @@ defmodule Instructions.TwoRegistersTest do
       # Calculate how much space is left in the heap
       available_space = state.memory.max_heap_pointer - state.memory.current_heap_pointer
       initial_heap_pointer = state.memory.current_heap_pointer
-
-      state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, 2, available_space)}}
-
+      Registers.put_elem(state.registers.r, 2, available_space)
       {status, new_state} = TwoRegisters.execute(:sbrk, <<op(:sbrk), 0x21>>, state)
 
       assert status == :continue
@@ -120,7 +118,13 @@ defmodule Instructions.TwoRegistersTest do
       assert new_state.registers[1] == initial_heap_pointer
       # Heap pointer should reach the maximum
       assert new_state.memory.current_heap_pointer == state.memory.max_heap_pointer
-      assert Memory.check_pages_access?(new_state.memory, initial_heap_pointer, available_space, :write) == true
+
+      assert Memory.check_pages_access?(
+               new_state.memory,
+               initial_heap_pointer,
+               available_space,
+               :write
+             ) == true
     end
 
     test "fails when requesting 1 byte over the heap limit", %{state: state} do
@@ -128,8 +132,7 @@ defmodule Instructions.TwoRegistersTest do
       available_space = state.memory.max_heap_pointer - state.memory.current_heap_pointer
       request_size = available_space + 1
       initial_heap_pointer = state.memory.current_heap_pointer
-
-      state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, 2, request_size)}}
+      Registers.put_elem(state.registers.r, 2, request_size)
 
       {status, new_state} = TwoRegisters.execute(:sbrk, <<op(:sbrk), 0x21>>, state)
 
@@ -138,7 +141,13 @@ defmodule Instructions.TwoRegistersTest do
       assert new_state.registers[1] == 0
       # Heap pointer should not change
       assert new_state.memory.current_heap_pointer == initial_heap_pointer
-      assert Memory.check_pages_access?(new_state.memory, initial_heap_pointer, available_space, :write) == false
+
+      assert Memory.check_pages_access?(
+               new_state.memory,
+               initial_heap_pointer,
+               available_space,
+               :write
+             ) == false
     end
 
     test "fails when requesting way more than available heap space", %{state: state} do
@@ -146,8 +155,7 @@ defmodule Instructions.TwoRegistersTest do
       available_space = state.memory.max_heap_pointer - state.memory.current_heap_pointer
       huge_request = available_space + 1_000_000_000
       initial_heap_pointer = state.memory.current_heap_pointer
-
-      state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, 2, huge_request)}}
+      Registers.put_elem(state.registers.r, 2, huge_request)
 
       {status, new_state} = TwoRegisters.execute(:sbrk, <<op(:sbrk), 0x21>>, state)
 
@@ -156,32 +164,51 @@ defmodule Instructions.TwoRegistersTest do
       assert new_state.registers[1] == 0
       # Heap pointer should not change
       assert new_state.memory.current_heap_pointer == initial_heap_pointer
-      assert Memory.check_pages_access?(new_state.memory, initial_heap_pointer, available_space, :write) == false
+
+      assert Memory.check_pages_access?(
+               new_state.memory,
+               initial_heap_pointer,
+               available_space,
+               :write
+             ) == false
     end
 
     test "multiple allocations work correctly", %{state: state} do
       # First allocation
       first_request = 50
       initial_heap_pointer = state.memory.current_heap_pointer
-
-      state = %{state | registers: %{state.registers | r: put_elem(state.registers.r, 2, first_request)}}
+      Registers.put_elem(state.registers.r, 2, first_request)
       {status, state1} = TwoRegisters.execute(:sbrk, <<op(:sbrk), 0x21>>, state)
 
       assert status == :continue
       assert state1.registers[1] == initial_heap_pointer
       assert state1.memory.current_heap_pointer == initial_heap_pointer + first_request
-      assert Memory.check_range_access?(state1.memory, initial_heap_pointer, first_request, :write) == true
+
+      assert Memory.check_range_access?(
+               state1.memory,
+               initial_heap_pointer,
+               first_request,
+               :write
+             ) == true
 
       # Second allocation
       second_request = 75 + page_size()
-      state1 = %{state1 | registers: %{state1.registers | r: put_elem(state1.registers.r, 2, second_request)}}
+      Registers.put_elem(state1.registers.r, 2, second_request)
+
       {status, state2} = TwoRegisters.execute(:sbrk, <<op(:sbrk), 0x21>>, state1)
 
       assert status == :continue
       assert state2.registers[1] == initial_heap_pointer + first_request
-      assert state2.memory.current_heap_pointer == initial_heap_pointer + first_request + second_request
 
-      assert Memory.check_range_access?(state2.memory, initial_heap_pointer, first_request + second_request, :write) == true
+      assert state2.memory.current_heap_pointer ==
+               initial_heap_pointer + first_request + second_request
+
+      assert Memory.check_range_access?(
+               state2.memory,
+               initial_heap_pointer,
+               first_request + second_request,
+               :write
+             ) == true
     end
   end
 

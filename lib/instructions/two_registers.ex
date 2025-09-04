@@ -70,9 +70,8 @@ defmodule PVM.Instructions.TwoRegisters do
 
     trailing_zero_bits = count_trailing_zeros(w_a, 32)
 
-        Registers.put_elem(state.registers.r, r_d, trailing_zero_bits)
+    Registers.put_elem(state.registers.r, r_d, trailing_zero_bits)
     {:continue, state}
-
   end
 
   def execute(:sign_extend_8, program, state) do
@@ -109,6 +108,7 @@ defmodule PVM.Instructions.TwoRegisters do
       |> :binary.bin_to_list()
       |> Enum.reverse()
       |> :binary.list_to_bin()
+
     Registers.put_elem(state.registers.r, r_d, reversed)
     {:continue, state}
   end
@@ -116,14 +116,8 @@ defmodule PVM.Instructions.TwoRegisters do
   # Handle sbrk with pattern matching for size == 0 (query heap pointer)
   defp handle_sbrk(0, r_d, state) do
     # The guest wants to know the current heap pointer
-    {:continue,
-     %{
-       state
-       | registers: %{
-           state.registers
-           | r: put_elem(state.registers.r, r_d, state.memory.current_heap_pointer)
-         }
-     }}
+    Registers.put_elem(state.registers.r, r_d, state.memory.current_heap_pointer)
+    {:continue, state}
   end
 
   # Handle sbrk for size > 0 (allocate memory)
@@ -141,7 +135,8 @@ defmodule PVM.Instructions.TwoRegisters do
 
   defp handle_allocation(true, _size, r_d, state, _new_heap_pointer) do
     # Allocation failed
-    {:continue, %{state | registers: %{state.registers | r: put_elem(state.registers.r, r_d, 0)}}}
+    Registers. put_elem(state.registers.r, r_d, 0)
+    {:continue, state}
   end
 
   defp handle_allocation(false, size, r_d, state, new_heap_pointer) do
@@ -150,13 +145,8 @@ defmodule PVM.Instructions.TwoRegisters do
 
     updated_memory = ensure_writable_memory(is_writable, state.memory, old_heap_pointer, size)
     updated_memory = %{updated_memory | current_heap_pointer: new_heap_pointer}
-
-    {:continue,
-     %{
-       state
-       | memory: updated_memory,
-         registers: %{state.registers | r: put_elem(state.registers.r, r_d, old_heap_pointer)}
-     }}
+    Registers.put_elem(state.registers.r, r_d, old_heap_pointer)
+    {:continue, %{state | memory: updated_memory}}
   end
 
   defp ensure_writable_memory(true, memory, _old_heap_pointer, _size), do: memory

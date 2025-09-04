@@ -25,7 +25,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
     test "store_ind_u8 writes byte value", %{state: state, stack_addr: stack_addr} do
       program = <<op(:store_ind_u8), @registers, @offset>>
       bitmask = <<4::3>>
-      state = %{state | registers: %{state.registers |  r: put_elem(state.registers.r, 1, 42)}}
+      Registers.put_elem(state.registers.r, 1, 42)
 
       {exit_status, state} =
         TwoRegistersOneImmediate.execute(:store_ind_u8, program, bitmask, state)
@@ -37,7 +37,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
     test "store_ind_u16 writes 16-bit value", %{state: state, stack_addr: stack_addr} do
       program = <<op(:store_ind_u16), @registers, @offset>>
       bitmask = <<4::3>>
-      state = %{state | registers: %{state.registers |  r: put_elem(state.registers.r, 1, 0x1234)}}
+      Registers.put_elem(state.registers.r, 1, 0x1234)
 
       {exit_status, state} =
         TwoRegistersOneImmediate.execute(:store_ind_u16, program, bitmask, state)
@@ -49,7 +49,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
     test "store_ind_u32 writes 32-bit value", %{state: state, stack_addr: stack_addr} do
       program = <<op(:store_ind_u32), @registers, @offset>>
       bitmask = <<4::3>>
-      state = %{state | registers: %{state.registers |  r: put_elem(state.registers.r, 1, 0x12345678)}}
+      Registers.put_elem(state.registers.r, 1, 0x12345678)
 
       {exit_status, state} =
         TwoRegistersOneImmediate.execute(:store_ind_u32, program, bitmask, state)
@@ -63,7 +63,7 @@ defmodule Instructions.TwoRegistersOneImmediateTest do
     test "store_ind_u64 writes 64-bit value", %{state: state, stack_addr: stack_addr} do
       program = <<op(:store_ind_u64), @registers, @offset>>
       bitmask = <<4::3>>
-      state = %{state | registers: %{state.registers |  r: put_elem(state.registers.r, 1, 0x123456789ABCDEF0)}}
+      Registers.put_elem(state.registers.r, 1, 0x123456789ABCDEF0)
 
       {exit_status, state} =
         TwoRegistersOneImmediate.execute(:store_ind_u64, program, bitmask, state)
