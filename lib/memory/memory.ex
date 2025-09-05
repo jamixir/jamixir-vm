@@ -24,13 +24,13 @@ defmodule PVM.Memory do
   @min_allowed_address min_allowed_address()
 
   # Compile-time zero binaries for common lengths (1-32)
-  @zero_binaries for(i <- 1..8, do: :binary.copy(<<0>>, i)) |> List.to_tuple()
+  @zero_binaries for(i <- 1..32, do: :binary.copy(<<0>>, i)) |> List.to_tuple()
   @empty_page :binary.copy(<<0>>, @page_size)
 
   # Fast zero lookup with compile-time binaries
-  def get_zero_binary(length) do
-    elem(@zero_binaries, length - 1)
-  end
+  def get_zero_binary(0), do: <<>>
+  def get_zero_binary(length) when length > 32, do: <<0::size(8*length)>>
+  def get_zero_binary(length), do: elem(@zero_binaries, length - 1)
 
   # PUBLIC FUNCTIONS
   def number_of_pages(%__MODULE__{} = memory)
