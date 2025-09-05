@@ -124,6 +124,11 @@ defmodule PVM.Memory do
 
   def write(%__MODULE__{} = memory, _, <<>>), do: {:ok, memory}
 
+  def write(%__MODULE__{data: nil} = memory, address, value) do
+    data = :ets.new(:ets_binary_lazy, [:set, :public])
+    write(%{memory | data: data}, address, value)
+  end
+
   def write(%__MODULE__{} = memory, address, value) do
     wrapped_address = wrap_address(memory, address)
     do_write(memory, wrapped_address, value)
@@ -138,6 +143,11 @@ defmodule PVM.Memory do
 
   defp do_write(_memory, wrapped_address, _value) when wrapped_address < @min_allowed_address do
     {:error, :panic}
+  end
+
+  defp do_write(memory, wrapped_address, value) when byte_size(value) == 1 do
+    {page, offset} = page_address(wrapped_address)
+    single_page_write(memory, page, offset, value)
   end
 
   defp do_write(memory, wrapped_address, value) do
@@ -212,11 +222,6 @@ defmodule PVM.Memory do
     end
   end
 
-  defp write_to_page(%__MODULE__{data: nil} = memory, page, offset, value) do
-    data = :ets.new(:ets_binary_lazy, [:set, :public])
-    write_to_page(%{memory | data: data}, page, offset, value)
-  end
-
   # Case 1: Writing at offset 0 (start-aligned case)
   defp write_to_page(%__MODULE__{} = memory, page, 0, value) do
     <<_::binary-size(byte_size(value)), remaining_part::binary>> =
@@ -255,11 +260,6 @@ defmodule PVM.Memory do
 
   defp write_full_pages(%__MODULE__{} = memory, _start_page, <<>>) do
     memory
-  end
-
-  defp write_full_pages(%__MODULE__{data: nil} = memory, start_page, pages_data) do
-    data = :ets.new(:ets_binary_lazy, [:set, :public])
-    write_full_pages(%{memory | data: data}, start_page, pages_data)
   end
 
   defp write_full_pages(%__MODULE__{} = memory, start_page, pages_data) do
