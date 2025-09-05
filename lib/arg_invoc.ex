@@ -1,7 +1,7 @@
 defmodule PVM.ArgInvoc do
   # Formula (A.43) v0.7.0
 
-  alias PVM.{InitProgram, HostCall, State, Types, Memory, Registers}
+  alias PVM.{InitProgram, HostCall, State, Types, Memory}
 
   @spec execute(
           binary(),

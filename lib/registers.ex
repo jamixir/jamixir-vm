@@ -1,7 +1,6 @@
 defmodule PVM.Registers do
   # :atomics.new(13, [])
   defstruct r: nil
-
   @type register :: 0..12
   @type t :: %__MODULE__{}
 
@@ -12,12 +11,6 @@ defmodule PVM.Registers do
   def new(updates) when is_map(updates) do
     registers = new()
     for {k, v} <- updates, k <= 12, do: :atomics.put(registers.r, k + 1, v)
-
-    for {k, v} <- updates,
-        k <= 12,
-        v < 0,
-        do: :atomics.put(registers.r, k + 1, -rem(v, 0x1_0000_0000_0000_0000))
-
     registers
   end
 

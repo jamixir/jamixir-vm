@@ -1,6 +1,6 @@
 defmodule PVM.Instructions.TwoRegistersOneOffset do
   use PVM.Utils
-  alias PVM.{Instructions.Executor, Registers}
+  alias PVM.{Instructions.Executor}
   use PVM.Math
 
   def execute(:branch_eq, program, bitmask, start_set, state) do
