@@ -1,11 +1,10 @@
 defmodule PVM.Memory do
   import PVM.Memory.{Constants, Util}
   alias PVM.Memory.RangeManager
-  import Bitwise, only: [ >>>: 2 ]
+  import Bitwise
 
   @type t :: %__MODULE__{
-          # Page => {Offset => Byte}
-          data: any(),
+          data: :ets.tid() | nil,
           access_ranges: [{non_neg_integer(), non_neg_integer(), atom()}],
           page_size: pos_integer(),
           size: pos_integer(),
@@ -19,31 +18,23 @@ defmodule PVM.Memory do
             current_heap_pointer: 0,
             max_heap_pointer: 0
 
-
   @page_size page_size()
   @size memory_size()
   @number_of_pages @size >>> 12
   @min_allowed_address min_allowed_address()
 
+  # Compile-time zero binaries for common lengths (1-32)
+  @zero_binaries for(i <- 1..8, do: :binary.copy(<<0>>, i)) |> List.to_tuple()
   @empty_page :binary.copy(<<0>>, @page_size)
 
-
-
-  # Compile-time zero binaries for common lengths (1-32)
-  @zero_binaries (for i <- 1..32, into: %{} do
-    {i, :binary.copy(<<0>>, i)}
-  end)
-
   # Fast zero lookup with compile-time binaries
-  def get_zero_binary(length) when length >= 1 and length <= 32 do
-  Map.get(@zero_binaries, length)
+  def get_zero_binary(length) do
+    elem(@zero_binaries, length - 1)
   end
 
-  def get_zero_binary(length), do: :binary.copy(<<0>>, length)
-
-
   # PUBLIC FUNCTIONS
-  def number_of_pages(%__MODULE__{} = memory) when memory.page_size == @page_size and memory.size == @size do
+  def number_of_pages(%__MODULE__{} = memory)
+      when memory.page_size == @page_size and memory.size == @size do
     @number_of_pages
   end
 
@@ -57,23 +48,16 @@ defmodule PVM.Memory do
 
   def read(%{data: nil}, _, length), do: {:ok, get_zero_binary(length)}
 
+  # 1-byte read - fast path (always single page, no page boundary checks needed)
+  def read(%__MODULE__{} = memory, address, 1) do
+    wrapped_address = wrap_address(memory, address)
+    do_read(memory, wrapped_address, 1)
+  end
+
+  #  length is always, 2,4,8
   def read(%__MODULE__{} = memory, address, length) do
     wrapped_address = wrap_address(memory, address)
-
-    if wrapped_address < @min_allowed_address do
-      {:error, :panic}
-    else
-      {start_page, end_page} = get_page_range(memory, wrapped_address, length)
-
-      case check_permissions(memory, start_page, end_page, :read) do
-        :ok ->
-          data = read_from_sparse(memory, wrapped_address, length)
-          {:ok, data}
-
-        {:error, page} ->
-          {:error, {:fault, page}}
-      end
-    end
+    do_read(memory, wrapped_address, length)
   end
 
   def read!(%__MODULE__{} = memory, address, length) do
@@ -83,27 +67,66 @@ defmodule PVM.Memory do
     end
   end
 
+  defp do_read(_mem, wrapped_address, _length) when wrapped_address < @min_allowed_address do
+    {:error, :panic}
+  end
+
+  defp do_read(memory, wrapped_address, 1) do
+    {start_page, start_offset} = page_address(wrapped_address)
+    single_page_read(memory, start_page, start_offset, 1)
+  end
+
+  defp do_read(memory, wrapped_address, length) do
+    {start_page, start_offset} = page_address(wrapped_address)
+    end_address = wrapped_address + length - 1
+    end_page = end_address >>> 12
+    do_read_by_page_span(memory, start_page, end_page, start_offset, length)
+  end
+
+  defp do_read_by_page_span(memory, page, page, start_offset, length) do
+    single_page_read(memory, page, start_offset, length)
+  end
+
+  defp do_read_by_page_span(memory, start_page, _end_page, start_offset, length) do
+    two_page_read(memory, start_page, start_offset, length)
+  end
+
+  def single_page_read(%__MODULE__{} = memory, page, offset, length) do
+    case check_single_page_permission(memory, page, :read) do
+      :ok -> {:ok, get_page_data(memory.data, page, offset, length)}
+      {:error, page_addr} -> {:error, {:fault, page_addr}}
+    end
+  end
+
+  defp get_page_data(data, page, offset, length) do
+    case :ets.lookup(data, page) do
+      [] -> get_zero_binary(length)
+      [{_, v}] -> binary_part(v, offset, length)
+    end
+  end
+
+  def two_page_read(%__MODULE__{} = memory, start_page, start_offset, length) do
+    case check_two_page_permission(memory, start_page, start_page + 1, :read) do
+      :ok -> {:ok, get_two_page_data(memory, start_page, start_offset, length)}
+      {:error, page_addr} -> {:error, {:fault, page_addr}}
+    end
+  end
+
+  defp get_two_page_data(%__MODULE__{} = memory, start_page, start_offset, length) do
+    bytes_from_first_page = memory.page_size - start_offset
+    bytes_from_second_page = length - bytes_from_first_page
+
+    first_page_data = get_page_data(memory.data, start_page, start_offset, bytes_from_first_page)
+    second_page_data = get_page_data(memory.data, start_page + 1, 0, bytes_from_second_page)
+
+    first_page_data <> second_page_data
+  end
+
   def write(%__MODULE__{} = memory, _, <<>>), do: {:ok, memory}
 
   def write(%__MODULE__{} = memory, address, value) do
     wrapped_address = wrap_address(memory, address)
-
-    if wrapped_address < min_allowed_address() do
-      {:error, :panic}
-    else
-      length = byte_size(value)
-
-      {start_page, end_page} = get_page_range(memory, wrapped_address, length)
-
-      case check_permissions(memory, start_page, end_page, :write) do
-        :ok ->
-          new_data = write_to_sparse(memory, wrapped_address, value)
-          {:ok, %__MODULE__{memory | data: new_data}}
-
-        {:error, page} ->
-          {:error, {:fault, page}}
-      end
-    end
+    do_write(memory, wrapped_address, value)
   end
 
   def write!(%__MODULE__{} = memory, address, value) do
@@ -111,6 +134,150 @@ defmodule PVM.Memory do
       {:ok, memory} -> memory
       {:error, reason} -> raise PVM.MemoryFaultError, reason: reason
     end
+  end
+
+  defp do_write(_memory, wrapped_address, _value) when wrapped_address < @min_allowed_address do
+    {:error, :panic}
+  end
+
+  defp do_write(memory, wrapped_address, value) do
+    {start_page, start_offset} = page_address(wrapped_address)
+    end_address = wrapped_address + byte_size(value) - 1
+    end_page = end_address >>> 12
+    do_write_by_page_span(memory, start_page, end_page, start_offset, value)
+  end
+
+  defp do_write_by_page_span(memory, page, page, start_offset, value) do
+    single_page_write(memory, page, start_offset, value)
+  end
+
+  defp do_write_by_page_span(memory, start_page, end_page, start_offset, value)
+       when end_page == start_page + 1 do
+    two_page_write(memory, start_page, start_offset, value)
+  end
+
+  # efficency is less critical here, this is not used by "regular" opcodes (they can only write values of up to 8 bytes)
+  #  it is only used by sbrk and by init program
+  defp do_write_by_page_span(memory, start_page, end_page, start_offset, value) do
+    # Multi-page write: first partial page + full middle pages + last partial page
+    bytes_in_first_page = memory.page_size - start_offset
+    total_middle_pages = end_page - start_page - 1
+    bytes_in_middle_pages = total_middle_pages * memory.page_size
+    bytes_in_last_page = byte_size(value) - bytes_in_first_page - bytes_in_middle_pages
+
+    # Split the value into parts
+    <<first_part::binary-size(bytes_in_first_page),
+      middle_part::binary-size(bytes_in_middle_pages),
+      last_part::binary-size(bytes_in_last_page)>> = value
+
+    # Check permissions for all pages first
+    case check_multi_page_permission(memory, start_page, end_page, :write) do
+      :ok ->
+        memory_ =
+          write_to_page(memory, start_page, start_offset, first_part)
+          |> write_full_pages(start_page + 1, middle_part)
+          |> write_to_page(end_page, 0, last_part)
+
+        {:ok, memory_}
+
+      {:error, page_addr} ->
+        {:error, {:fault, page_addr}}
+    end
+  end
+
+  def single_page_write(%__MODULE__{} = memory, page, offset, value) do
+    case check_single_page_permission(memory, page, :write) do
+      :ok -> {:ok, write_to_page(memory, page, offset, value)}
+      {:error, page_addr} -> {:error, {:fault, page_addr}}
+    end
+  end
+
+  defp two_page_write(%__MODULE__{} = memory, start_page, start_offset, value) do
+    case check_two_page_permission(memory, start_page, start_page + 1, :write) do
+      :ok ->
+        bytes_in_first_page = memory.page_size - start_offset
+        bytes_in_second_page = byte_size(value) - bytes_in_first_page
+
+        <<first_part::binary-size(bytes_in_first_page),
+          second_part::binary-size(bytes_in_second_page)>> = value
+
+        memory_ =
+          write_to_page(memory, start_page, start_offset, first_part)
+          |> write_to_page(start_page + 1, 0, second_part)
+
+        {:ok, memory_}
+
+      {:error, page_addr} ->
+        {:error, {:fault, page_addr}}
+    end
+  end
+
+  defp write_to_page(%__MODULE__{data: nil} = memory, page, offset, value) do
+    data = :ets.new(:ets_binary_lazy, [:set, :public])
+    write_to_page(%{memory | data: data}, page, offset, value)
+  end
+
+  # Case 1: Writing at offset 0 (start-aligned case)
+  defp write_to_page(%__MODULE__{} = memory, page, 0, value) do
+    <<_::binary-size(byte_size(value)), remaining_part::binary>> =
+      get_current_page_value(memory.data, page)
+
+    :ets.insert(memory.data, {page, value <> remaining_part})
+    %__MODULE__{memory | data: memory.data}
+  end
+
+  # Case 2: Writing such that the value ends exactly at page length (end-aligned case)
+  defp write_to_page(%__MODULE__{} = memory, page, offset, value)
+       when offset + byte_size(value) == memory.page_size do
+    <<prefix_part::binary-size(offset), _::binary>> = get_current_page_value(memory.data, page)
+    :ets.insert(memory.data, {page, prefix_part <> value})
+    %__MODULE__{memory | data: memory.data}
+  end
+
+  # Case 3: Default case - writing somewhere in the middle
+  defp write_to_page(%__MODULE__{} = memory, page, offset, value) do
+    current_page_value = get_current_page_value(memory.data, page)
+
+    <<prefix_part::binary-size(offset), _::binary-size(byte_size(value)), suffix_part::binary>> =
+      current_page_value
+
+    new_page_value = prefix_part <> value <> suffix_part
+    :ets.insert(memory.data, {page, new_page_value})
+    %__MODULE__{memory | data: memory.data}
+  end
+
+  defp get_current_page_value(data, page) do
+    case :ets.lookup(data, page) do
+      [] -> @empty_page
+      [{_, value}] -> value
+    end
+  end
+
+  defp write_full_pages(%__MODULE__{} = memory, _start_page, <<>>) do
+    memory
+  end
+
+  defp write_full_pages(%__MODULE__{data: nil} = memory, start_page, pages_data) do
+    data = :ets.new(:ets_binary_lazy, [:set, :public])
+    write_full_pages(%{memory | data: data}, start_page, pages_data)
+  end
+
+  defp write_full_pages(%__MODULE__{} = memory, start_page, pages_data) do
+    <<page_data::binary-size(memory.page_size), remaining::binary>> = pages_data
+    :ets.insert(memory.data, {start_page, page_data})
+    write_full_pages(%{memory | data: memory.data}, start_page + 1, remaining)
+  end
+
+  # Check permissions for multiple pages
+  defp check_multi_page_permission(memory, start_page, end_page, required_access) do
+    page_range = start_page..end_page
+
+    Enum.find_value(page_range, :ok, fn page ->
+      case check_single_page_permission(memory, page, required_access) do
+        :ok -> nil
+        {:error, page_addr} -> {:error, page_addr}
+      end
+    end)
   end
 
   ## SET Access functions
@@ -150,6 +317,29 @@ defmodule PVM.Memory do
     check_permissions(memory, start_page, end_page, required_access) == :ok
   end
 
+  defp check_single_page_permission(memory, page, :read) do
+    case find_access_for_page(memory.access_ranges, page) do
+      access when access == :read or access == :write -> :ok
+      _ -> {:error, page * memory.page_size}
+    end
+  end
+
+  defp check_single_page_permission(memory, page, :write) do
+    case find_access_for_page(memory.access_ranges, page) do
+      :write -> :ok
+      _ -> {:error, page * memory.page_size}
+    end
+  end
+
+  def check_two_page_permission(memory, start_page, end_page, required_access) do
+    with :ok <- check_single_page_permission(memory, start_page, required_access),
+         :ok <- check_single_page_permission(memory, end_page, required_access) do
+      :ok
+    else
+      {:error, page_addr} -> {:error, page_addr}
+    end
+  end
+
   def check_pages_access?(%__MODULE__{} = _memory, _start_page, 0, _required_access), do: true
 
   def check_pages_access?(%__MODULE__{} = memory, start_page, num_pages, required_access) do
@@ -160,105 +350,7 @@ defmodule PVM.Memory do
     check_permissions(memory, start_page, end_page, required_access) == :ok
   end
 
-
   ## Private functions
-
-
-  defp read_from_sparse(%__MODULE__{data: _data} = memory, address, length) do
-    {start_page, start_offset} = page_address(memory, address)
-    end_address = address + length - 1
-    {end_page, _end_offset} = page_address(memory, end_address)
-
-
-    do_read(memory, start_page, end_page, start_offset, length)
-  end
-
-# Single page read
-  defp do_read(memory, start_page, end_page, start_offset, length) when start_page == end_page do
-    case :ets.lookup(memory.data, start_page) do
-      [] -> get_zero_binary(length)
-      [{_, v}] -> binary_part(v, start_offset, length)
-    end
-  end
-
-  # Two page read
-  defp do_read(%{data: data, page_size: page_size} = memory, start_page, end_page, start_offset, length)
-       when end_page == start_page + 1 do
-
-    bytes_from_first_page = page_size - start_offset
-    bytes_from_second_page = length - bytes_from_first_page
-
-    # Get first page data
-    first_page_data = case :ets.lookup(data, start_page) do
-      [] -> get_zero_binary(bytes_from_first_page)
-      [{_, v}] -> binary_part(v, start_offset, bytes_from_first_page)
-    end
-
-    # Get second page data
-    second_page_data = case :ets.lookup(data, end_page) do
-      [] -> get_zero_binary(bytes_from_second_page)
-      [{_, v}] -> binary_part(v, 0, bytes_from_second_page)
-    end
-
-      # Combine them
-      first_page_data <> second_page_data
-  end
-
-  # SLOW TRACK: Multi-page read - uses efficient whole page reads where possible
-  # defp do_read(%{data: data, page_size: page_size} = memory, start_page, end_page, start_offset, length) do
-  #   page_range = get_sequential_pages(start_page, end_page, number_of_pages(memory))
-
-  #   {first_page | middle_pages_and_last} = page_range
-  #   {middle_pages, [last_page]} = Enum.split(middle_pages_and_last, -1)
-
-  #   # Handle first page (partial read from start_offset)
-  #   first_page_data = get_page_data(data, first_page)
-  #   first_page_bytes_needed = page_size - start_offset
-  #   first_part = binary_part(first_page_data, start_offset, min(first_page_bytes_needed, length))
-
-  #   remaining_length = length - byte_size(first_part)
-
-  #   cond do
-  #     # If we got everything from the first page
-  #     remaining_length <= 0 ->
-  #       first_part
-
-  #     # If we have middle pages, read them whole + handle last page
-  #     length(middle_pages) > 0 ->
-  #       # Read all middle pages as whole pages (most efficient)
-  #       middle_parts = Enum.map(middle_pages, &get_whole_page(data, &1))
-  #       middle_binary = :erlang.iolist_to_binary(middle_parts)
-
-  #       remaining_after_middle = remaining_length - byte_size(middle_binary)
-
-  #       if remaining_after_middle > 0 do
-  #         # Need bytes from last page
-  #         last_page_data = get_page_data(data, last_page)
-  #         last_part = binary_part(last_page_data, 0, remaining_after_middle)
-  #         <<first_part::binary, middle_binary::binary, last_part::binary>>
-  #       else
-  #         # Middle pages provided enough
-  #         needed_from_middle = remaining_length
-  #         middle_part = binary_part(middle_binary, 0, needed_from_middle)
-  #         <<first_part::binary, middle_part::binary>>
-  #       end
-
-  #     # No middle pages, just first and last
-  #     true ->
-  #       last_page_data = get_page_data(data, last_page)
-  #       last_part = binary_part(last_page_data, 0, remaining_length)
-  #       <<first_part::binary, last_part::binary>>
-  #   end
-  # end
-
-  # Fast function to get whole page data (returns full page binary)
-  defp get_whole_page(data, page_num) do
-    case :ets.lookup(data, page_num) do
-      [] -> @empty_page
-      [{_, v}] -> v
-    end
-  end
-
 
   defp check_permissions(_, 0, 0, _), do: :ok
 

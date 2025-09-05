@@ -51,7 +51,7 @@ defmodule PVM.Memory.Util do
     write_to_sparse(memory, address + page_size, rest_value)
   end
 
-  @empty_page <<0::size(8 * PVM.Memory.Constants.page_size)>>
+  @empty_page <<0::size(8 * PVM.Memory.Constants.page_size())>>
 
   # last chunk which is less than a full page
   def write_to_sparse(%{page_size: page_size} = memory, address, value)
@@ -116,7 +116,7 @@ defmodule PVM.Memory.Util do
     {start_page, end_page}
   end
 
-  def page_address(_memory, address),
+  def page_address(address),
     do: {address >>> 12, address &&& 0xFFF}
 
   def pages_with_data(%{data: data}) do
