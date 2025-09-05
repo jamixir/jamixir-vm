@@ -12,28 +12,27 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
   # Store instructions
   def execute(:store_ind_u8, program, bitmask, state) do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
-    {w_a, w_b} = Registers.get_2(state.registers, r_a, r_b)
-
+    {w_a, w_b} = {state.registers[r_a], state.registers[r_b]}
     write_memory(state, w_b + v_x, <<mod(w_a, 0x100)::8-little>>)
   end
 
   def execute(:store_ind_u16, program, bitmask, state) do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
-    {w_a, w_b} = Registers.get_2(state.registers, r_a, r_b)
+    {w_a, w_b} = {state.registers[r_a], state.registers[r_b]}
 
     write_memory(state, w_b + v_x, <<mod(w_a, 0x1_0000)::16-little>>)
   end
 
   def execute(:store_ind_u32, program, bitmask, state) do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
-    {w_a, w_b} = Registers.get_2(state.registers, r_a, r_b)
+    {w_a, w_b} = {state.registers[r_a], state.registers[r_b]}
 
     write_memory(state, w_b + v_x, <<mod(w_a, @two_32)::32-little>>)
   end
 
   def execute(:store_ind_u64, program, bitmask, state) do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
-    {w_a, w_b} = Registers.get_2(state.registers, r_a, r_b)
+    {w_a, w_b} = {state.registers[r_a], state.registers[r_b]}
 
     write_memory(state, w_b + v_x, <<w_a::64-little>>)
   end
@@ -255,7 +254,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
 
   def execute(:cmov_iz_imm, program, bitmask, state) do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
-    {w_a, w_b} = Registers.get_2(state.registers, r_a, r_b)
+    {w_a, w_b} = {state.registers[r_a], state.registers[r_b]}
     result = if w_b == 0, do: v_x, else: w_a
 
     Registers.put_elem(state.registers.r, r_a, result)
@@ -264,7 +263,7 @@ defmodule PVM.Instructions.TwoRegistersOneImmediate do
 
   def execute(:cmov_nz_imm, program, bitmask, state) do
     {r_a, r_b, v_x} = get_params(program, bitmask, state.counter)
-    {w_a, w_b} = Registers.get_2(state.registers, r_a, r_b)
+    {w_a, w_b} = {state.registers[r_a], state.registers[r_b]}
     result = if w_b != 0, do: v_x, else: w_a
 
     Registers.put_elem(state.registers.r, r_a, result)

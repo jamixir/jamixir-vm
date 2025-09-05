@@ -8,16 +8,13 @@ defmodule PVM.Instructions.TwoRegisters do
   # Section (A.5.9) v0.7.0
   def execute(:move_reg, program, state) do
     {r_d, r_a} = get_params(program, state.counter)
-    w_a = state.registers[r_a]
-    Registers.put_elem(state.registers.r, r_d, w_a)
+    Registers.put_elem(state.registers.r, r_d, state.registers[r_a])
     {:continue, state}
   end
 
   def execute(:sbrk, program, state) do
     {r_d, r_a} = get_params(program, state.counter)
-    size = state.registers[r_a]
-
-    handle_sbrk(size, r_d, state)
+    handle_sbrk(state.registers[r_a], r_d, state)
   end
 
   def execute(:count_set_bits_64, program, state) do

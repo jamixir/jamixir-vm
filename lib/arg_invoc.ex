@@ -42,9 +42,7 @@ defmodule PVM.ArgInvoc do
   # Formula (A.43) v0.7.0
   # R Function
   defp transform_result(used_gas, :halt, state_, context_) do
-    {start_addr, length} = Registers.get_2(state_.registers, 7, 8)
-
-    case Memory.read(state_.memory, start_addr, length) do
+    case Memory.read(state_.memory, state_.registers[7], state_.registers[8]) do
       {:ok, data} -> {used_gas, data, context_}
       {:error, _} -> {used_gas, <<>>, context_}
     end

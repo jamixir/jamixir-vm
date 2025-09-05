@@ -85,7 +85,7 @@ defmodule PVM.Utils.ProgramUtilsTest do
       # Should halt and have executed the original instructions
       assert exit_reason == :halt
       assert state.counter == 0
-      assert Registers.get_3(state.registers, 1, 2, 3) == {30, 11, 10}
+      assert Registers.get(state.registers, [1, 2, 3]) == [30, 11, 10]
       assert Memory.read!(state.memory, stack_addr, 4) == <<30, 0, 0, 0>>
     end
   end

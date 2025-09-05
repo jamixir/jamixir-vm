@@ -56,7 +56,7 @@ defmodule PVM.Trace do
       counter_str = String.pad_leading("#{counter}", 5)
       pc_str = String.pad_leading("#{pc}", 5)
 
-      regs = Enum.join(PVM.Registers.to_list(post_state.registers), " ")
+      regs = Enum.join(PVM.Registers.values(post_state.registers), " ")
       line = "#{counter_str}: PC #{pc_str} #{instruction_str(opcode)} g=#{post_state.gas} reg=[#{regs}]"
 
       log_file = Process.get(:trace_log_file) || @default_log_file

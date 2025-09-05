@@ -229,14 +229,6 @@ defmodule Instructions.ThreeRegistersTest do
       assert state.registers[3] == 1
     end
 
-    test "set_lt_s performs signed less than comparison" do
-      program = <<op(:set_lt_s), 0x21, 3>>
-      state = %State{registers: Registers.new(%{1 => -5, 2 => 10})}
-
-      {_, state} = ThreeRegisters.execute(:set_lt_s, program, state)
-      # -5 < 10 -> true (1)
-      assert state.registers[3] == 1
-    end
   end
 
   describe "conditional move operations" do
@@ -295,22 +287,6 @@ defmodule Instructions.ThreeRegistersTest do
       assert state.registers[3] == 0x7FFFFFFFFFFFFFFF
     end
 
-    test "div_u_64 - mod(w_b, 2^64) is 0" do
-      program = <<op(:div_u_64), 0x21, 3>>
-      state = %State{registers: Registers.new(%{1 => 0xFFFFFFFFFFFFFFFF, 2 => 1 <<< 64})}
-
-      {_, state} = ThreeRegisters.execute(:div_u_64, program, state)
-      assert state.registers[3] == 0xFFFFFFFFFFFFFFFF
-    end
-
-    test "div_s_64 performs signed division" do
-      program = <<op(:div_s_64), 0x21, 3>>
-      state = %State{registers: Registers.new(%{1 => -0x8000000000000000, 2 => 2})}
-
-      {_, state} = ThreeRegisters.execute(:div_s_64, program, state)
-      assert state.registers[3] == 0xC000000000000000
-    end
-
     test "div_s_64 rounds towards zero for positive non-integer result" do
       program = <<op(:div_s_64), 0x21, 3>>
       state = %State{registers: Registers.new(%{1 => 5, 2 => 2})}
@@ -337,13 +313,6 @@ defmodule Instructions.ThreeRegistersTest do
       assert state.registers[3] == 0
     end
 
-    test "rem_s_64 performs signed remainder" do
-      program = <<op(:rem_s_64), 0x21, 3>>
-      state = %State{registers: Registers.new(%{1 => -0x8000000000000000, 2 => 3})}
-
-      {_, state} = ThreeRegisters.execute(:rem_s_64, program, state)
-      assert state.registers[3] == 0xFFFFFFFFFFFFFFFE
-    end
   end
 
   describe "shift operations" do

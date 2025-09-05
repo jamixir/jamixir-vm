@@ -79,7 +79,7 @@ defmodule VMTest do
       # Ended after fallthrough
       assert state_.counter == 0
       # From first and jumped-to load_imm
-      assert Registers.get_2(state_.registers, 1, 2) == {10, 55}
+      assert {state_.registers[1], state.registers[2]} == {10, 55}
 
       # Verify skipped store_imm_u8 instructions didn't execute
       assert Memory.read(state_.memory, 0x1000A, 1) == {:ok, <<0>>}
@@ -117,7 +117,7 @@ defmodule VMTest do
 
       assert exit_reason == :panic
       assert state_.counter == 0
-      assert Registers.get_2(state_.registers, 1, 2) == {42, 42}
+      assert {state_.registers[1], state_.registers[2]} == {42, 42}
       assert Memory.read(state_.memory, stack_addr, 1) == {:ok, <<42>>}
       assert Memory.read(state_.memory, stack_addr + 10, 1) == {:ok, <<42>>}
     end
@@ -354,7 +354,7 @@ defmodule VMTest do
       assert Memory.read(state_.memory, stack_addr, 4) == {:ok, <<30, 0, 0, 0>>}
       # Verify final register values
       # sum, final i value, loop end condition
-      assert Registers.get_3(state_.registers, 1, 2, 3) == {30, 11, 10}
+      assert Registers.get(state_.registers, [1, 2, 3]) == [30, 11, 10]
     end
   end
 

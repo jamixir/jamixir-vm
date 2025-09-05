@@ -1,17 +1,23 @@
 defmodule PVM.Registers do
-  defstruct r: nil #:atomics.new(13, [])
+  # :atomics.new(13, [])
+  defstruct r: nil
 
   @type register :: 0..12
   @type t :: %__MODULE__{}
 
   # @spec new() :: t()
-  def new(), do: %__MODULE__{r: :atomics.new(13, [signed: false])}
+  def new(), do: %__MODULE__{r: :atomics.new(13, signed: false)}
 
   @spec new(map()) :: t()
   def new(updates) when is_map(updates) do
     registers = new()
-    for {k, v} <- updates, k <= 12, v >= 0, do: :atomics.put(registers.r, k + 1, v)
-    for {k, v} <- updates, k <= 12, v < 0, do: :atomics.put(registers.r, k + 1, -rem(v, 0x1_0000_0000_0000_0000))
+    for {k, v} <- updates, k <= 12, do: :atomics.put(registers.r, k + 1, v)
+
+    for {k, v} <- updates,
+        k <= 12,
+        v < 0,
+        do: :atomics.put(registers.r, k + 1, -rem(v, 0x1_0000_0000_0000_0000))
+
     registers
   end
 
@@ -42,7 +48,8 @@ defmodule PVM.Registers do
   @spec get_4(t(), integer(), integer(), integer(), integer()) ::
           {integer(), integer(), integer(), integer()}
   def get_4(%__MODULE__{r: r}, i1, i2, i3, i4) do
-    {:atomics.get(r, i1+1), :atomics.get(r, i2+1), :atomics.get(r, i3+1), :atomics.get(r, i4+1)}
+    {:atomics.get(r, i1 + 1), :atomics.get(r, i2 + 1), :atomics.get(r, i3 + 1),
+     :atomics.get(r, i4 + 1)}
   end
 
   def put_elem(ref, k, v), do: :atomics.put(ref, k + 1, v)
@@ -50,11 +57,12 @@ defmodule PVM.Registers do
   @spec get_5(t(), integer(), integer(), integer(), integer(), integer()) ::
           {integer(), integer(), integer(), integer(), integer()}
   def get_5(%__MODULE__{r: r}, i1, i2, i3, i4, i5) do
-    {:atomics.get(r, i1+1), :atomics.get(r, i2+1), :atomics.get(r, i3+1), :atomics.get(r, i4+1), :atomics.get(r, i5+1)}
+    {:atomics.get(r, i1 + 1), :atomics.get(r, i2 + 1), :atomics.get(r, i3 + 1),
+     :atomics.get(r, i4 + 1), :atomics.get(r, i5 + 1)}
   end
 
-  @spec to_list(t()) :: [integer()]
-  def to_list(%__MODULE__{r: r}), do: for(i <- 1..13, do: :atomics.get(r, i))
+  @spec values(t()) :: [integer()]
+  def values(%__MODULE__{r: r}), do: for(i <- 1..13, do: :atomics.get(r, i))
 
   @behaviour Access
 

@@ -356,8 +356,6 @@ defmodule PVM.Instructions.ThreeRegisters do
     r_b = min(12, byte1 >>> 4)
     r_d = min(12, byte2)
 
-    {w_a, w_b} = Registers.get_2(state.registers, r_a, r_b)
-
-    {w_a, w_b, r_d}
+    {state.registers[r_a], state.registers[r_b], r_d}
   end
 end
