@@ -17,7 +17,7 @@ defmodule PVM.PreMemory do
 
   def init_nil_memory() do
     set_access(
-      %__MODULE__{},
+      %__MODULE__{data: Memory.new().data},
       min_allowed_address(),
       memory_size() - min_allowed_address(),
       nil

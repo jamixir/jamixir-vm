@@ -27,9 +27,11 @@ defmodule PVM.Memory do
   @zero_binaries for(i <- 1..32, do: :binary.copy(<<0>>, i)) |> List.to_tuple()
   @empty_page :binary.copy(<<0>>, @page_size)
 
+  def new, do: %__MODULE__{   data: :ets.new(:ets_binary_lazy, [:set, :public])}
+
   # Fast zero lookup with compile-time binaries
   def get_zero_binary(0), do: <<>>
-  def get_zero_binary(length) when length > 32, do: <<0::size(8*length)>>
+  def get_zero_binary(length) when length > 32, do: <<0::size(8 * length)>>
   def get_zero_binary(length), do: elem(@zero_binaries, length - 1)
 
   # PUBLIC FUNCTIONS
@@ -125,8 +127,7 @@ defmodule PVM.Memory do
   def write(%__MODULE__{} = memory, _, <<>>), do: {:ok, memory}
 
   def write(%__MODULE__{data: nil} = memory, address, value) do
-    data = :ets.new(:ets_binary_lazy, [:set, :public])
-    write(%{memory | data: data}, address, value)
+    write(%{memory | data: new().data}, address, value)
   end
 
   def write(%__MODULE__{} = memory, address, value) do
