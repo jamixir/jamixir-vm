@@ -46,7 +46,6 @@ defmodule PVM.Memory do
 
   def read(_, _, 0), do: {:ok, <<>>}
 
-  def read(%{data: nil}, _, length), do: {:ok, get_zero_binary(length)}
 
   # 1-byte read - fast path (always single page, no page boundary checks needed)
   def read(%__MODULE__{} = memory, address, 1) do
@@ -97,6 +96,8 @@ defmodule PVM.Memory do
       {:error, page_addr} -> {:error, {:fault, page_addr}}
     end
   end
+
+  defp get_page_data(nil, _page, _offset, length),do: get_zero_binary(length)
 
   defp get_page_data(data, page, offset, length) do
     case :ets.lookup(data, page) do
