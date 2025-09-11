@@ -32,7 +32,7 @@ defmodule PVM.SingleStep do
         | gas: state.gas - gas_cost
       }
 
-      Trace.instruction_executed(opcode, state.counter, deduct_gas)
+      # Trace.instruction_executed(opcode, state.counter, deduct_gas)
 
       case exit_reason do
         {:fault, page} ->
