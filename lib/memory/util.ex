@@ -1,6 +1,9 @@
 defmodule PVM.Memory.Util do
   import Bitwise
   alias PVM.Math
+  @mask64 0xFFFF_FFFF_FFFF_FFFF
+  @signbit64 0x8000_0000_0000_0000
+  @wrap64 0x1_0000_0000_0000_0000
 
   def write_memory(state, addr, value) do
     case PVM.Memory.write(state.memory, addr, value) do
@@ -39,34 +42,30 @@ defmodule PVM.Memory.Util do
 
   defguard start_of_page(address, page_size) when (address &&& page_size - 1) == 0
 
-  def write_to_sparse(%{data: nil} = memory, address, value), do:
-    write_to_sparse(%{memory | data: :ets.new(:ets_binary_lazy, [:set, :public])}, address, value)
-
+  def write_to_sparse(%{data: nil} = memory, address, value),
+    do:
+      write_to_sparse(
+        %{memory | data: :ets.new(:ets_binary_lazy, [:set, :public])},
+        address,
+        value
+      )
 
   # case when address is page-aligned and value is at least a full page
   def write_to_sparse(%{page_size: page_size} = memory, address, value)
       when start_of_page(address, page_size) and byte_size(value) >= page_size do
     <<p1_value::binary-size(page_size), rest_value::binary>> = value
-    :ets.insert(memory.data, {div(address, page_size), p1_value})
+    page_num = div(address, page_size)
+    ref = ensure_page_atomix(memory.data, page_num, page_size)
+    write_full_page_atomix(ref, p1_value, page_size)
     write_to_sparse(memory, address + page_size, rest_value)
   end
-
-  @empty_page <<0::size(8 * PVM.Memory.Constants.page_size())>>
 
   # last chunk which is less than a full page
   def write_to_sparse(%{page_size: page_size} = memory, address, value)
       when start_of_page(address, page_size) and byte_size(value) < page_size do
     page_num = address >>> 12
-
-    current_page_value =
-      case :ets.lookup(memory.data, page_num) do
-        [] -> @empty_page
-        [{_, v}] -> v
-      end
-
-    last_part = binary_slice(current_page_value, byte_size(value), page_size)
-    new_page_value = value <> last_part
-    :ets.insert(memory.data, {page_num, new_page_value})
+    ref = ensure_page_atomix(memory.data, page_num, page_size)
+    write_bytes_atomix(ref, 0, value)
     memory.data
   end
 
@@ -78,37 +77,20 @@ defmodule PVM.Memory.Util do
 
     if page_num == end_page_num do
       offset = Math.mod(address, page_size)
-
-      current_page_value =
-        case :ets.lookup(memory.data, page_num) do
-          [] -> @empty_page
-          [{_, v}] -> v
-        end
-
-      first_part = binary_slice(current_page_value, 0, offset)
-      last_part = binary_slice(current_page_value, offset + byte_size(value), page_size)
-      new_page_value = first_part <> value <> last_part
-      :ets.insert(memory.data, {page_num, new_page_value})
+      ref = ensure_page_atomix(memory.data, page_num, page_size)
+      write_bytes_atomix(ref, offset, value)
       memory.data
     else
       # case when address is not page-aligned and ends after first page
       offset = Math.mod(address, page_size)
-
-      current_page_value =
-        case :ets.lookup(memory.data, page_num) do
-          [] -> @empty_page
-          [{_, v}] -> v
-        end
-
-      first_part = binary_slice(current_page_value, 0, offset)
-      <<last_part::binary-size(page_size - offset), rest::binary>> = value
-      new_page_value = first_part <> last_part
-      :ets.insert(memory.data, {page_num, new_page_value})
+      ref = ensure_page_atomix(memory.data, page_num, page_size)
+      <<first_chunk::binary-size(page_size - offset), rest::binary>> = value
+      write_bytes_atomix(ref, offset, first_chunk)
       write_to_sparse(memory, address - offset + page_size, rest)
     end
   end
 
-  def get_page_range(%{page_size: page_size} = memory, start_address, length) do
+  def get_page_range(%{page_size: _page_size} = memory, start_address, length) do
     start_page = start_address >>> 12
     end_address = wrap_address(memory, start_address + max(0, length - 1))
     end_page = end_address >>> 12
@@ -151,5 +133,86 @@ defmodule PVM.Memory.Util do
         binary
       end
     end
+  end
+
+  # Internal helpers to store pages as :atomics in ETS
+  defp ensure_page_atomix(ets, page_num, page_size) do
+    case :ets.lookup(ets, page_num) do
+      [{_, ref}] ->
+        ref
+
+      [] ->
+        words = div(page_size, 8)
+        ref = :atomics.new(words, [])
+        :ets.insert(ets, {page_num, ref})
+        ref
+    end
+  end
+
+  defp write_full_page_atomix(ref, page_binary, _page_size) do
+    write_words_stream(ref, 1, page_binary)
+  end
+
+  defp write_words_stream(_ref, _idx, <<>>), do: :ok
+
+  defp write_words_stream(ref, idx, <<w::little-unsigned-integer-size(64), rest::binary>>) do
+    :atomics.put(ref, idx, to_signed64(w))
+    write_words_stream(ref, idx + 1, rest)
+  end
+
+  defp write_bytes_atomix(ref, offset, value) do
+    len = byte_size(value)
+    start_word = div(offset, 8) + 1
+    start_in_word = offset &&& 7
+
+    if start_in_word + len <= 8 do
+      <<ival::little-unsigned-integer-size(len * 8)>> = value
+      word = :atomics.get(ref, start_word) &&& @mask64
+      shift = start_in_word * 8
+      mask = ((1 <<< (len * 8)) - 1) <<< shift
+      new_word = (word &&& bnot(mask)) ||| ival <<< shift
+      :atomics.put(ref, start_word, to_signed64(new_word))
+      :ok
+    else
+      # First partial
+      bytes_in_first = 8 - start_in_word
+      <<first::binary-size(bytes_in_first), rest::binary>> = value
+      <<first_val::little-unsigned-integer-size(bytes_in_first * 8)>> = first
+      word0 = :atomics.get(ref, start_word) &&& @mask64
+      shift0 = start_in_word * 8
+      mask0 = ((1 <<< (bytes_in_first * 8)) - 1) <<< shift0
+      new0 = (word0 &&& bnot(mask0)) ||| first_val <<< shift0
+      :atomics.put(ref, start_word, to_signed64(new0))
+
+      # Middle full words
+      full_words = div(byte_size(rest), 8)
+      rem_tail = rem(byte_size(rest), 8)
+      write_full_words(ref, start_word + 1, rest, full_words)
+
+      # Last partial
+      if rem_tail > 0 do
+        base = full_words * 8
+        <<_::binary-size(base), last::binary-size(rem_tail)>> = rest
+        <<last_val::little-unsigned-integer-size(rem_tail * 8)>> = last
+        last_word = :atomics.get(ref, start_word + full_words + 1) &&& @mask64
+        mask_last = (1 <<< (rem_tail * 8)) - 1
+        new_last = (last_word &&& bnot(mask_last)) ||| last_val
+        :atomics.put(ref, start_word + full_words + 1, to_signed64(new_last))
+      end
+
+      :ok
+    end
+  end
+
+  defp write_full_words(_ref, _start_idx, _bin, 0), do: :ok
+
+  defp write_full_words(ref, start_idx, <<w::little-unsigned-integer-size(64), rest::binary>>, n) do
+    :atomics.put(ref, start_idx, to_signed64(w))
+    write_full_words(ref, start_idx + 1, rest, n - 1)
+  end
+
+  defp to_signed64(n) do
+    n = n &&& @mask64
+    if n >= @signbit64, do: n - @wrap64, else: n
   end
 end

@@ -25,9 +25,12 @@ defmodule PVM.Memory do
 
   # Compile-time zero binaries for common lengths (1-32)
   @zero_binaries for(i <- 1..32, do: :binary.copy(<<0>>, i)) |> List.to_tuple()
-  @empty_page :binary.copy(<<0>>, @page_size)
+  @words_per_page div(@page_size, 8)
+  @mask64 0xFFFF_FFFF_FFFF_FFFF
+  @signbit64 0x8000_0000_0000_0000
+  @wrap64 0x1_0000_0000_0000_0000
 
-  def new, do: %__MODULE__{   data: :ets.new(:ets_binary_lazy, [:set, :public])}
+  def new, do: %__MODULE__{data: :ets.new(:ets_binary_lazy, [:set, :public])}
 
   # Fast zero lookup with compile-time binaries
   def get_zero_binary(0), do: <<>>
@@ -103,7 +106,7 @@ defmodule PVM.Memory do
   defp get_page_data(data, page, offset, length) do
     case :ets.lookup(data, page) do
       [] -> get_zero_binary(length)
-      [{_, v}] -> binary_part(v, offset, length)
+      [{_, ref}] -> read_from_atomix(ref, offset, length)
     end
   end
 
@@ -223,50 +226,20 @@ defmodule PVM.Memory do
     end
   end
 
-  # Case 1: Writing at offset 0 (start-aligned case)
-  defp write_to_page(%__MODULE__{} = memory, page, 0, value) do
-    <<_::binary-size(byte_size(value)), remaining_part::binary>> =
-      get_current_page_value(memory.data, page)
-
-    :ets.insert(memory.data, {page, value <> remaining_part})
-    %__MODULE__{memory | data: memory.data}
-  end
-
-  # Case 2: Writing such that the value ends exactly at page length (end-aligned case)
-  defp write_to_page(%__MODULE__{} = memory, page, offset, value)
-       when offset + byte_size(value) == memory.page_size do
-    <<prefix_part::binary-size(offset), _::binary>> = get_current_page_value(memory.data, page)
-    :ets.insert(memory.data, {page, prefix_part <> value})
-    %__MODULE__{memory | data: memory.data}
-  end
-
-  # Case 3: Default case - writing somewhere in the middle
+  # Write bytes to a page stored as :atomics; creates the page if missing
   defp write_to_page(%__MODULE__{} = memory, page, offset, value) do
-    current_page_value = get_current_page_value(memory.data, page)
-
-    <<prefix_part::binary-size(offset), _::binary-size(byte_size(value)), suffix_part::binary>> =
-      current_page_value
-
-    new_page_value = prefix_part <> value <> suffix_part
-    :ets.insert(memory.data, {page, new_page_value})
-    %__MODULE__{memory | data: memory.data}
-  end
-
-  defp get_current_page_value(data, page) do
-    case :ets.lookup(data, page) do
-      [] -> @empty_page
-      [{_, value}] -> value
-    end
-  end
-
-  defp write_full_pages(%__MODULE__{} = memory, _start_page, <<>>) do
+    ref = ensure_page_atomix(memory.data, page)
+    write_to_atomix(ref, offset, value)
     memory
   end
 
+  defp write_full_pages(%__MODULE__{} = memory, _start_page, <<>>), do: memory
+
   defp write_full_pages(%__MODULE__{} = memory, start_page, pages_data) do
     <<page_data::binary-size(memory.page_size), remaining::binary>> = pages_data
-    :ets.insert(memory.data, {start_page, page_data})
-    write_full_pages(%{memory | data: memory.data}, start_page + 1, remaining)
+    ref = ensure_page_atomix(memory.data, start_page)
+    write_full_page_atomix(ref, page_data)
+    write_full_pages(memory, start_page + 1, remaining)
   end
 
   # Check permissions for multiple pages
@@ -388,5 +361,115 @@ defmodule PVM.Memory do
     else
       Enum.to_list(start_page..(total_pages - 1)) ++ Enum.to_list(0..end_page)
     end
+  end
+
+  ## Internal helpers: atomics-backed pages
+
+  # Ensure a page exists as :atomics in ETS and return its ref
+  defp ensure_page_atomix(ets, page) do
+    case :ets.lookup(ets, page) do
+      [{_, ref}] ->
+        ref
+
+      [] ->
+        ref = :atomics.new(@words_per_page, [])
+        :ets.insert(ets, {page, ref})
+        ref
+    end
+  end
+
+  # Read `length` bytes starting from `offset` from a page atomics (64-bit words)
+  defp read_from_atomix(ref, offset, length) do
+    start_word = div(offset, 8) + 1
+    start_in_word = offset &&& 7
+    last_word = div(offset + length - 1, 8) + 1
+
+    # Read each required 64-bit word once
+    iodata =
+      for i <- start_word..last_word do
+        w = :atomics.get(ref, i) &&& @mask64
+        <<w::little-unsigned-integer-size(64)>>
+      end
+
+    big = :erlang.iolist_to_binary(iodata)
+    <<_skip::binary-size(start_in_word), needed::binary-size(length), _::binary>> = big
+    needed
+  end
+
+  # Write bytes into the :atomics page at offset (64-bit words), minimizing get/put
+  defp write_to_atomix(ref, offset, value) do
+    len = byte_size(value)
+    start_word = div(offset, 8) + 1
+    start_in_word = offset &&& 7
+
+    # Single word fast path
+    if start_in_word + len <= 8 do
+      <<ival::little-unsigned-integer-size(len * 8)>> = value
+      word = :atomics.get(ref, start_word) &&& @mask64
+      shift = start_in_word * 8
+      mask = ((1 <<< (len * 8)) - 1) <<< shift
+      new_word = (word &&& bnot(mask)) ||| ival <<< shift
+      :atomics.put(ref, start_word, to_signed64(new_word))
+      :ok
+    else
+      # First partial
+      bytes_in_first = 8 - start_in_word
+      <<first::binary-size(bytes_in_first), rest::binary>> = value
+      <<first_val::little-unsigned-integer-size(bytes_in_first * 8)>> = first
+      word0 = :atomics.get(ref, start_word) &&& @mask64
+      shift0 = start_in_word * 8
+      mask0 = ((1 <<< (bytes_in_first * 8)) - 1) <<< shift0
+      new0 = (word0 &&& bnot(mask0)) ||| first_val <<< shift0
+      :atomics.put(ref, start_word, to_signed64(new0))
+
+      # Middle full words
+      full_words = div(byte_size(rest), 8)
+      rem_tail = rem(byte_size(rest), 8)
+
+      if full_words > 0 do
+        write_full_words(ref, start_word + 1, rest, full_words)
+      end
+
+      # Last partial
+      if rem_tail > 0 do
+        base = full_words * 8
+        <<_::binary-size(base), last::binary-size(rem_tail)>> = rest
+        <<last_val::little-unsigned-integer-size(rem_tail * 8)>> = last
+        last_word = :atomics.get(ref, start_word + full_words + 1) &&& @mask64
+        mask_last = (1 <<< (rem_tail * 8)) - 1
+        new_last = (last_word &&& bnot(mask_last)) ||| last_val
+        :atomics.put(ref, start_word + full_words + 1, to_signed64(new_last))
+      end
+
+      :ok
+    end
+  end
+
+  # Write a full 4096-byte page into atomics efficiently word-by-word (little-endian 8 bytes per word)
+  defp write_full_page_atomix(ref, page_binary) do
+    write_words_stream(ref, 1, page_binary)
+  end
+
+  defp write_words_stream(_ref, _idx, <<>>), do: :ok
+
+  defp write_words_stream(ref, idx, <<w::little-unsigned-integer-size(64), rest::binary>>) do
+    :atomics.put(ref, idx, to_signed64(w))
+    write_words_stream(ref, idx + 1, rest)
+  end
+
+  defp write_full_words(ref, start_idx, bin, count) do
+    write_full_words(ref, start_idx, bin, 0, count)
+  end
+
+  defp write_full_words(_ref, _idx, _bin, i, count) when i >= count, do: :ok
+
+  defp write_full_words(ref, idx, <<w::little-unsigned-integer-size(64), rest::binary>>, i, count) do
+    :atomics.put(ref, idx, to_signed64(w))
+    write_full_words(ref, idx + 1, rest, i + 1, count)
+  end
+
+  defp to_signed64(n) do
+    n = n &&& @mask64
+    if n >= @signbit64, do: n - @wrap64, else: n
   end
 end
