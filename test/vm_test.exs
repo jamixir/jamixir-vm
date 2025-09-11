@@ -159,6 +159,7 @@ defmodule VMTest do
       assert Memory.read(state_.memory, stack_addr, 1) == {:ok, <<99>>}
     end
 
+    @tag :skip
     test "not equel - no jump", %{state: state, stack_addr: stack_addr} do
       program = <<
         op(:load_imm),

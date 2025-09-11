@@ -2,6 +2,7 @@ defmodule PVM.PreMemoryTest do
   use ExUnit.Case
   alias PVM.{PreMemory, Memory}
   import PVM.Memory.Constants
+  import Bitwise
 
   setup_all do
     min_page = min_page()
@@ -35,9 +36,23 @@ defmodule PVM.PreMemoryTest do
       # Check that data was properly stored in the sparse structure
       page_num = div(address, page_size())
 
-      [{_, page}] = :ets.lookup(updated.data, page_num)
-      assert byte_size(page) == pre_memory.page_size
-      assert page == <<1, 2, 3, 4, 0::size(8*(pre_memory.page_size - 4))>>
+      [{_, ref}] = :ets.lookup(updated.data, page_num)
+      # Pages are stored as :atomics references; verify size and contents
+      assert is_reference(ref)
+      # The atomics array stores 64-bit words; page_size is in bytes
+      words = div(pre_memory.page_size, 8)
+      # :atomics.info/1 returns a property list; get size to ensure correct words count
+      info = :atomics.info(ref)
+      assert Map.get(info, :size) == words
+      # First 4 bytes should be 1,2,3,4 in little-endian order within the first word
+      word0 = :atomics.get(ref, 1)
+      b0 = word0 &&& 0xFF
+      b1 = word0 >>> 8 &&& 0xFF
+      b2 = word0 >>> 16 &&& 0xFF
+      b3 = word0 >>> 24 &&& 0xFF
+      assert <<b0, b1, b2, b3>> == <<1, 2, 3, 4>>
+      # Remaining words in the page should be zero
+      assert Enum.all?(2..words, fn i -> :atomics.get(ref, i) == 0 end)
     end
   end
 
@@ -90,6 +105,7 @@ defmodule PVM.PreMemoryTest do
 
       # Scenario 3: Complex overlapping with multiple ranges
       base_addr = min_allowed_address()
+
       ranges =
         %PreMemory{}
         |> PreMemory.set_access(base_addr, page_size() * 3, :read)
