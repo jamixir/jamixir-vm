@@ -2,8 +2,6 @@ defmodule PVM.Memory.Util do
   import Bitwise
   alias PVM.Math
   @mask64 0xFFFF_FFFF_FFFF_FFFF
-  @signbit64 0x8000_0000_0000_0000
-  @wrap64 0x1_0000_0000_0000_0000
 
   def write_memory(state, addr, value) do
     case PVM.Memory.write(state.memory, addr, value) do
@@ -143,7 +141,7 @@ defmodule PVM.Memory.Util do
 
       [] ->
         words = div(page_size, 8)
-        ref = :atomics.new(words, [])
+        ref = :atomics.new(words, signed: false)
         :ets.insert(ets, {page_num, ref})
         ref
     end
@@ -156,7 +154,7 @@ defmodule PVM.Memory.Util do
   defp write_words_stream(_ref, _idx, <<>>), do: :ok
 
   defp write_words_stream(ref, idx, <<w::little-unsigned-integer-size(64), rest::binary>>) do
-    :atomics.put(ref, idx, to_signed64(w))
+    :atomics.put(ref, idx, w)
     write_words_stream(ref, idx + 1, rest)
   end
 
@@ -165,24 +163,29 @@ defmodule PVM.Memory.Util do
     start_word = div(offset, 8) + 1
     start_in_word = offset &&& 7
 
-    if start_in_word + len <= 8 do
+    if len == 8 and start_in_word == 0 do
+      # Full 8-byte aligned overwrite: no read-modify needed
+      <<ival::little-unsigned-integer-size(64)>> = value
+      :atomics.put(ref, start_word, ival)
+      :ok
+    else if start_in_word + len <= 8 do
       <<ival::little-unsigned-integer-size(len * 8)>> = value
-      word = :atomics.get(ref, start_word) &&& @mask64
+      word = :atomics.get(ref, start_word)
       shift = start_in_word * 8
       mask = ((1 <<< (len * 8)) - 1) <<< shift
       new_word = (word &&& bnot(mask)) ||| ival <<< shift
-      :atomics.put(ref, start_word, to_signed64(new_word))
+      :atomics.put(ref, start_word, new_word &&& @mask64)
       :ok
     else
       # First partial
       bytes_in_first = 8 - start_in_word
       <<first::binary-size(bytes_in_first), rest::binary>> = value
       <<first_val::little-unsigned-integer-size(bytes_in_first * 8)>> = first
-      word0 = :atomics.get(ref, start_word) &&& @mask64
+      word0 = :atomics.get(ref, start_word)
       shift0 = start_in_word * 8
       mask0 = ((1 <<< (bytes_in_first * 8)) - 1) <<< shift0
       new0 = (word0 &&& bnot(mask0)) ||| first_val <<< shift0
-      :atomics.put(ref, start_word, to_signed64(new0))
+      :atomics.put(ref, start_word, new0 &&& @mask64)
 
       # Middle full words
       full_words = div(byte_size(rest), 8)
@@ -194,25 +197,23 @@ defmodule PVM.Memory.Util do
         base = full_words * 8
         <<_::binary-size(base), last::binary-size(rem_tail)>> = rest
         <<last_val::little-unsigned-integer-size(rem_tail * 8)>> = last
-        last_word = :atomics.get(ref, start_word + full_words + 1) &&& @mask64
+        last_word = :atomics.get(ref, start_word + full_words + 1)
         mask_last = (1 <<< (rem_tail * 8)) - 1
         new_last = (last_word &&& bnot(mask_last)) ||| last_val
-        :atomics.put(ref, start_word + full_words + 1, to_signed64(new_last))
+        :atomics.put(ref, start_word + full_words + 1, new_last &&& @mask64)
       end
 
       :ok
-    end
+  end
+  end
   end
 
   defp write_full_words(_ref, _start_idx, _bin, 0), do: :ok
 
   defp write_full_words(ref, start_idx, <<w::little-unsigned-integer-size(64), rest::binary>>, n) do
-    :atomics.put(ref, start_idx, to_signed64(w))
+    :atomics.put(ref, start_idx, w)
     write_full_words(ref, start_idx + 1, rest, n - 1)
   end
 
-  defp to_signed64(n) do
-    n = n &&& @mask64
-    if n >= @signbit64, do: n - @wrap64, else: n
-  end
+  # no conversion needed; using unsigned atomics
 end
