@@ -92,7 +92,6 @@ defmodule PVM.Utils do
 
   defp process_bits(program, bitmask, <<1::1, rest::bitstring>>, pos, acc) do
     <<opcode_byte>> = program |> binary_part_safe(pos, 1)
-    # Only check termination instructions when bit is 1
     opcode = op(opcode_byte)
 
     new_acc =
@@ -141,9 +140,8 @@ defmodule PVM.Utils do
     v
   end
 
-  def decode_bytes(program, start_index, count) when is_binary(program), do:
-    binary_part_safe(program, start_index, count) |> de_le(count)
-
+  def decode_bytes(program, start_index, count) when is_binary(program),
+    do: binary_part_safe(program, start_index, count) |> de_le(count)
 
   @doc """
   Decodes a little-endian number from a binary starting at start_index for count bytes,
@@ -195,24 +193,20 @@ defmodule PVM.Utils do
     end
   end
 
-  def binary_part_safe(binary, n, count) when is_integer(n) and is_integer(count) do
+  def binary_part_safe(binary, n, count) when n >= byte_size(binary), do:
+    <<0::size(count * 8)>>
+
+  def binary_part_safe(binary, n, count) when byte_size(binary) - n >= count, do:
+      binary_part(binary, n, count)
+
+  def binary_part_safe(binary, n, count) do
     size = byte_size(binary)
 
-    cond do
-      n >= size ->
-        <<0::size(count * 8)>>
+    remaining = size - n
 
-      true ->
-        remaining = size - n
-
-        if remaining >= count do
-          binary_part(binary, n, count)
-        else
-          part = binary_part(binary, n, remaining)
-          pad_bits = (count - remaining) * 8
-          part <> <<0::size(pad_bits)>>
-        end
-    end
+      part = binary_part(binary, n, remaining)
+      pad_bits = (count - remaining) * 8
+      part <> <<0::size(pad_bits)>>
   end
 
   @compile {:inline, bool_to_int: 1}
