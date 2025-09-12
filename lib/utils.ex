@@ -82,28 +82,17 @@ defmodule PVM.Utils do
     chunk_size = min(batch_size, bitmask_size - pos)
     <<_skip::size(pos), chunk::bitstring-size(chunk_size), _rest::bits>> = bitmask
 
-    # Create a program sub-binary starting at byte offset `pos` once per batch.
-    prog_size = byte_size(program)
-
-    program_sub =
-      if pos < prog_size, do: binary_part(program, pos, prog_size - pos), else: <<>>
-
-    {new_pos, new_acc} = process_bits(program_sub, bitmask, chunk, pos, acc)
+    {new_pos, new_acc} = process_bits(program, bitmask, chunk, pos, acc)
 
     # Recurse into the next batch
     process_batches(program, bitmask, bitmask_size, new_pos, batch_size, new_acc)
   end
 
-  defp process_bits(_program_sub, _bitmask, <<>>, pos, acc), do: {pos, acc}
+  defp process_bits(_program, _bitmask, <<>>, pos, acc), do: {pos, acc}
 
-  defp process_bits(program_sub, bitmask, <<1::1, rest::bitstring>>, pos, acc) do
+  defp process_bits(program, bitmask, <<1::1, rest::bitstring>>, pos, acc) do
+    <<opcode_byte>> = program |> binary_part_safe(pos, 1)
     # Only check termination instructions when bit is 1
-    {opcode_byte, program_next} =
-      case program_sub do
-        <<b, r::binary>> -> {b, r}
-        <<>> -> {0, <<>>}
-      end
-
     opcode = op(opcode_byte)
 
     new_acc =
@@ -113,58 +102,48 @@ defmodule PVM.Utils do
         acc
       end
 
-    process_bits(program_next, bitmask, rest, pos + 1, new_acc)
+    process_bits(program, bitmask, rest, pos + 1, new_acc)
   end
 
-  defp process_bits(program_sub, bitmask, <<0::1, rest::bitstring>>, pos, acc) do
-    # Advance the program sub-binary by one byte when possible to keep alignment
-    program_next =
-      case program_sub do
-        <<_skip, r::binary>> -> r
-        <<>> -> <<>>
-      end
-
-    process_bits(program_next, bitmask, rest, pos + 1, acc)
+  defp process_bits(program, bitmask, <<0::1, rest::bitstring>>, pos, acc) do
+    process_bits(program, bitmask, rest, pos + 1, acc)
   end
 
   @doc """
   Decodes a little-endian number from a binary starting at start_index for count bytes.
   Returns the decoded number.
   """
-  def decode_bytes(program, start_index, count) when is_binary(program) do
-    # Fast paths for common widths when fully in-bounds, avoiding intermediate binaries
-    size = byte_size(program)
+  def decode_bytes(_, _, 0), do: 0
 
-    if start_index + count <= size do
-      case count do
-        0 ->
-          0
-
-        1 ->
-          <<_::binary-size(start_index), v::little-integer-size(8), _::binary>> = program
-          v
-
-        2 ->
-          <<_::binary-size(start_index), v::little-integer-size(16), _::binary>> = program
-          v
-
-        3 ->
-          <<_::binary-size(start_index), v::little-integer-size(24), _::binary>> = program
-          v
-
-        4 ->
-          <<_::binary-size(start_index), v::little-integer-size(32), _::binary>> = program
-          v
-
-        c ->
-          <<_::binary-size(start_index), v::little-integer-size(8 * c), _::binary>> = program
-          v
-      end
-    else
-      # Fallback keeps zero-padding semantics when reading past end
-      binary_part_safe(program, start_index, count) |> de_le(count)
-    end
+  def decode_bytes(program, start_index, 1) when start_index + 1 <= byte_size(program) do
+    <<_::binary-size(start_index), v::little-integer-size(8), _::binary>> = program
+    v
   end
+
+  def decode_bytes(program, start_index, 2) when start_index + 2 <= byte_size(program) do
+    <<_::binary-size(start_index), v::little-integer-size(16), _::binary>> = program
+    v
+  end
+
+  def decode_bytes(program, start_index, 3) when start_index + 3 <= byte_size(program) do
+    <<_::binary-size(start_index), v::little-integer-size(24), _::binary>> = program
+    v
+  end
+
+  def decode_bytes(program, start_index, 4) when start_index + 4 <= byte_size(program) do
+    <<_::binary-size(start_index), v::little-integer-size(32), _::binary>> = program
+    v
+  end
+
+  def decode_bytes(program, start_index, count)
+      when is_binary(program) and start_index + count <= byte_size(program) do
+    <<_::binary-size(start_index), v::little-integer-size(8 * count), _::binary>> = program
+    v
+  end
+
+  def decode_bytes(program, start_index, count) when is_binary(program), do:
+    binary_part_safe(program, start_index, count) |> de_le(count)
+
 
   @doc """
   Decodes a little-endian number from a binary starting at start_index for count bytes,
@@ -217,7 +196,6 @@ defmodule PVM.Utils do
   end
 
   def binary_part_safe(binary, n, count) when is_integer(n) and is_integer(count) do
-    # Avoid creating an intermediate sub-binary just to check its size.
     size = byte_size(binary)
 
     cond do
