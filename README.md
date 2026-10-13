@@ -4,8 +4,9 @@ The Polkadot Virtual Machine (PVM) in Elixir, implemented from the
 [JAM Gray Paper](https://graypaper.com). It was the first PVM in
 [Jamixir](https://jamixir.org), an Elixir JAM client, before the node moved to the Rust
 version ([jamixir/pvm-rust](https://github.com/jamixir/pvm-rust)) for speed. It is kept
-here as a readable reference: one module per part of the spec, with comments pointing to
-the Gray Paper formulas.
+here as a readable reference, with comments pointing to the Gray Paper formulas.
+
+Written by Luke Fishman and Daniel Cukier.
 
 ## Example
 
