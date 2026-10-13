@@ -1,77 +1,61 @@
-# JamixirVM
+# jamixir-vm
 
-JamixirVM is an Elixir implementation of the Polkadot Virtual Machine (PVM).
+The Polkadot Virtual Machine (PVM) in Elixir, implemented from the
+[JAM Gray Paper](https://graypaper.com). It was the first PVM in
+[Jamixir](https://jamixir.org), an Elixir JAM client, before the node moved to the Rust
+version ([jamixir/pvm-rust](https://github.com/jamixir/pvm-rust)) for speed. It is kept
+here as a readable reference: one module per part of the spec, with comments pointing to
+the Gray Paper formulas.
 
-## Installation
-
-Add JamixirVM to your project's dependencies in `mix.exs`:
-
-```elixir
-def deps do
-  [
-    {:jamixir_vm, git: "https://github.com/jamixir/jamixir-vm.git"}
-  ]
-end
-```
-
-## Usage
-
-Here's a basic example of how to use JamixirVM:
+## Example
 
 ```elixir
-alias PVM.State
+defmodule Example do
+  use PVM.Instructions
+  alias PVM.{Encoder, Registers, State, VM}
 
-# Create an initial state with default values
-initial_state = %State{}
+  def run do
+    # load_imm r7, 42 ; trap
+    program = <<op(:load_imm), 7, 42, op(:trap)>>
+    # one bit per byte of code, set where an instruction starts (bytes 0 and 3)
+    bitmask = <<0b10010000>>
 
-# Create your program (example: store value 42 at memory address 10)
-program = <<
-  # store_imm_u8 addr=10, value=42
-  62, 1, 10, 42
->>
-bitmask = <<1, 0, 0, 0>>  # Mark instruction start
+    blob = Encoder.encode_program(program, bitmask, {}, 1)
+    {exit_reason, state} = VM.execute(blob, %State{gas: 100})
 
-# Encode the program
-encoded_program = PVM.Encoder.encode_program(program, bitmask)
-
-# Execute the program
-{exit_reason, final_state} = VM.execute(encoded_program, initial_state)
-
-# Handle the execution result
-case exit_reason do
-  :panic -> IO.puts "Program completed normally"
-  :halt -> IO.puts "Program halted"
-  {:fault, addr} -> IO.puts "Memory fault at address #{addr}"
-  :out_of_gas -> IO.puts "Program ran out of gas"
+    [r7] = Registers.get(state.registers, [7])
+    {exit_reason, r7, state.gas}
+  end
 end
+
+Example.run()
+# => {:panic, 42, 98}
 ```
 
-## Exit Reasons
+`VM.execute/2` returns `{exit_reason, state}`, where the exit reason is `:halt`, `:panic`,
+`:out_of_gas`, `{:fault, address}` or `{:ecall, host_call_id}`. A `trap` instruction
+ends in `:panic`.
 
-The VM can return the following exit reasons:
+## Layout
 
-- `:panic` - Normal program termination (usually via fallthrough)
-- `:halt` - Program explicitly halted
-- `{:fault, addr}` - Memory access fault at specified address
-- `:out_of_gas` - Program exceeded its gas allocation
+- `lib/codec`: program blob encoding and decoding
+- `lib/instructions`: opcode table and dispatch, grouped by argument shape
+- `lib/memory`: paged memory with access rights
+- `lib/single_step.ex`, `lib/vm.ex`: the step function and the run loop
+- `lib/init_program.ex`, `lib/arg_invoc.ex`, `lib/host_call.ex`: standard program
+  initialisation, argument invocation and host calls
+- `lib/trace`: execution traces as text or HTML
 
-## State Structure
+## Tests
 
-The VM state contains:
-
-- `counter` - Current instruction pointer
-- `gas` - Remaining gas for execution
-- `registers` - Array of 64-bit registers
-- `memory` - Program memory space with access controls
-
-
-## Testing
-
-Run the test suite with:
-
-```bash
+```sh
+git clone https://github.com/jamixir/jamtestvectors ../pvm-test-vectors
+mix deps.get
 mix test
 ```
 
-See `test/vm_test.exs` for comprehensive examples of VM programs and usage.
+The vector tests read the PVM test vectors from `../pvm-test-vectors/pvm/programs`.
 
+## License
+
+[Apache-2.0](LICENSE)
